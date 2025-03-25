@@ -5,18 +5,12 @@ import ProfessorView from '../views/ProfessorView.vue'; // 교수자 대시보�
 import ProfessorLesson from '../views/ProfessorLesson.vue'; // 수업하기 (녹화/녹음)
 import ProfessorQnA from '../views/ProfessorQnA.vue'; // 질문 & 답변 확인하기
 import ProfessorAssignments from '../views/ProfessorAssignments.vue'; // 과제 확인하기
-import Login from '../views/LoginPage.vue' // 추가
 
 const routes = [
   {
     path: '/',
     name: 'Home',
     component: HomeView,
-  },
-  {
-    path: '/login',
-    name: 'Login',
-    component: Login
   },
   {
     path: '/student',

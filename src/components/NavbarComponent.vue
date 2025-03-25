@@ -1,7 +1,9 @@
 <template>
   <nav class="navbar navbar-expand-lg bg-primary">
     <div class="container-fluid">
-      <router-link class="navbar-brand text-white fw-bold" to="/">Koreatech</router-link>
+      <!-- 로고: 클릭 시 이동하지 않도록 router-link 제거 -->
+      <span class="navbar-brand text-white fw-bold">Koreatech</span>
+
       <button
         class="navbar-toggler"
         type="button"
@@ -13,43 +15,21 @@
       >
         <span class="navbar-toggler-icon"></span>
       </button>
+
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <!-- 왼쪽 메뉴 -->
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <router-link class="nav-link text-white" aria-current="page" to="/">Home</router-link>
-          </li>
+          <!-- 필요 시 다른 메뉴 유지 -->
           <li class="nav-item">
             <router-link class="nav-link text-white" to="/student">Student</router-link>
           </li>
           <li class="nav-item">
             <router-link class="nav-link text-white" to="/professor">Professor</router-link>
           </li>
-          <li class="nav-item dropdown">
-            <a
-              class="nav-link dropdown-toggle text-white"
-              href="#"
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              Dropdown
-            </a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">Action</a></li>
-              <li><a class="dropdown-item" href="#">Another action</a></li>
-              <li><hr class="dropdown-divider" /></li>
-              <li><a class="dropdown-item" href="#">Something else here</a></li>
-            </ul>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link disabled text-white-50" aria-disabled="true">Disabled</a>
-          </li>
         </ul>
 
-        <!-- 오른쪽 로그인 버튼 -->
-        <div class="d-flex">
-          <router-link class="btn btn-outline-light" to="/login">Login</router-link>
+        <!-- 로그아웃 버튼 (로그인 상태일 때만 표시) -->
+        <div v-if="isLoggedIn" class="d-flex">
+          <button class="btn btn-outline-light" @click="logout">Logout</button>
         </div>
       </div>
     </div>
@@ -57,9 +37,35 @@
 </template>
 
 <script>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
 export default {
-  name: "NavbarComponent",
-};
+  name: 'NavbarComponent',
+  setup() {
+    const isLoggedIn = ref(false)
+    const router = useRouter()
+
+    const checkLogin = () => {
+      isLoggedIn.value = !!localStorage.getItem('user')
+    }
+
+    const logout = () => {
+      localStorage.removeItem('user')
+      isLoggedIn.value = false
+      router.push('/')
+    }
+
+    onMounted(() => {
+      checkLogin()
+    })
+
+    return {
+      isLoggedIn,
+      logout,
+    }
+  },
+}
 </script>
 
 <style scoped>
