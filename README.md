@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # test
 
 ## Project setup
@@ -22,3 +23,6 @@ npm run lint
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
+=======
+
+>>>>>>> 2a98cca67691431e4800e939dd93a42fc62d67f9
