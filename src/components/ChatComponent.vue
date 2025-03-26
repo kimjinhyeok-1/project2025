@@ -54,39 +54,44 @@ export default {
 
 <style scoped>
 .chat-container {
-  width: 500px;
-  margin: auto;
+  max-width: 1000px;
+  width: 90%;
+  margin: 40px auto;
   background: #f9f9f9;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 h2 {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.8rem;
 }
 
 .chat-box {
-  height: 300px;
+  height: 400px;
   overflow-y: auto;
-  padding: 10px;
-  background: #fff;
+  padding: 15px;
+  background: #ffffff;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .chat-bubble {
-  max-width: 75%;
-  padding: 10px 15px;
-  border-radius: 15px;
+  max-width: 80%;
+  padding: 12px 18px;
+  border-radius: 16px;
   word-break: break-word;
-  line-height: 1.4;
+  line-height: 1.5;
+  font-size: 1rem;
 }
 
-/* 학생 (오른쪽) */
+/* 사용자 메시지 (오른쪽) */
 .user {
   align-self: flex-end;
   background-color: #d0e7ff;
@@ -94,7 +99,7 @@ h2 {
   border-top-right-radius: 0;
 }
 
-/* GPT (왼쪽) */
+/* AI 응답 (왼쪽) */
 .assistant {
   align-self: flex-start;
   background-color: #e2e3e5;
@@ -103,24 +108,32 @@ h2 {
 }
 
 .input-area {
-  margin-top: 15px;
+  margin-top: 20px;
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 input {
   flex: 1;
-  padding: 10px;
-  border-radius: 5px;
+  padding: 12px;
+  border-radius: 6px;
   border: 1px solid #ccc;
+  font-size: 1rem;
 }
 
 button {
-  padding: 10px 15px;
+  padding: 12px 20px;
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
+
+button:hover {
+  background-color: #0056b3;
+}
+
 </style>
