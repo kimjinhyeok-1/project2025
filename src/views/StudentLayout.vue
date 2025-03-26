@@ -1,6 +1,6 @@
 <template>
     <div class="dashboard-container">
-      <!-- 왼쪽 사이드바 -->
+      <!-- 왼쪽 사이드바 깃허브 연결 완료 -->
       <aside class="sidebar">
         <router-link to="/student/qna" class="sidebar-btn">QnA</router-link>
         <router-link to="/student/assignment" class="sidebar-btn">과제</router-link>
