@@ -10,6 +10,7 @@
       <router-link to="/professor/lesson" class="btn btn-outline-success btn-lg">
         🎥 수업하기
       </router-link>
+      <router-link to="/professor-review" class="btn btn-outline-success">수업 복습하기</router-link>
       <router-link to="/professor/assignments" class="btn btn-outline-warning btn-lg">
         📝 과제 확인하기
       </router-link>

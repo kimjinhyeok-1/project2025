@@ -1,20 +1,21 @@
 <template>
-    <div class="dashboard-container">
-      <aside class="sidebar">
-        <router-link to="/professor/qna" class="sidebar-btn">질문 & 답변</router-link>
-        <router-link to="/professor/lesson" class="sidebar-btn">수업하기</router-link>
-        <router-link to="/professor/assignments" class="sidebar-btn">과제 확인</router-link>
-      </aside>
-  
-      <section class="main-content">
-        <router-view />
-      </section>
-    </div>
-  </template>
-  
-  <style scoped>
-  /* 전체 화면에서 네비게이션 바 아래부터 시작 */
-  .dashboard-container {
+  <div class="dashboard-container">
+    <aside class="sidebar">
+      <router-link to="/professor/qna" class="sidebar-btn">질문 & 답변</router-link>
+      <router-link to="/professor/lesson" class="sidebar-btn">수업하기</router-link>
+      <router-link to="/professor/review" class="sidebar-btn">수업 복습하기</router-link>
+      <router-link to="/professor/assignments" class="sidebar-btn">과제 확인</router-link>
+    </aside>
+
+    <section class="main-content">
+      <router-view />
+    </section>
+  </div>
+</template>
+
+<style scoped>
+/* 전체 화면에서 네비게이션 바 아래부터 시작 */
+.dashboard-container {
   display: flex;
   height: 100vh;
   margin: 0;
@@ -66,8 +67,4 @@
   padding: 20px;
   overflow-y: auto;
 }
-
-  </style>
-  
-  
-  
+</style>
