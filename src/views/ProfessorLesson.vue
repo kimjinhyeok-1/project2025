@@ -1,7 +1,7 @@
 <template>
   <div class="lecture-container text-center mt-5">
     <h2>🎤 수업 녹화 & 음성 인식</h2>
-    <p class="text-muted">음성 인식 중 키워드가 감지되면 자동으로 화면이 백그라운드에서 캡처됩니다. 결과는 '수업 복습하기'에서 확인하세요.</p>
+    <p class="text-muted">녹음 중 키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드에 전송됩니다.</p>
 
     <div class="btn-group mt-4">
       <button class="btn btn-danger m-2" @click="toggleScreenRecording">
@@ -16,6 +16,8 @@
 </template>
 
 <script>
+import { uploadSnapshot } from "@/api/sttService";
+
 export default {
   name: "ProfessorLesson",
   data() {
@@ -30,7 +32,7 @@ export default {
       recognition: null,
       triggerKeywords: ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"],
       lastTranscript: "",
-      displayStream: null, // 백그라운드 화면 스트림 저장용
+      displayStream: null,
     };
   },
   methods: {
@@ -64,7 +66,6 @@ export default {
             }
           };
 
-          // 화면 공유 요청 (한 번만)
           this.displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
 
           this.audioRecorder.start();
@@ -107,7 +108,7 @@ export default {
                     /보.*면|코드|화면|여기|이 부분|이쪽/.test(transcript);
 
         if (hit) {
-          this.takeScreenshot(transcript);
+          this.takeScreenshotAndUpload(transcript);
         }
       };
 
@@ -125,7 +126,7 @@ export default {
       }
     },
 
-    async takeScreenshot(transcript) {
+    async takeScreenshotAndUpload(transcript) {
       try {
         if (!this.displayStream) return;
 
@@ -138,16 +139,20 @@ export default {
         canvas.height = bitmap.height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(bitmap, 0, 0);
-        const imageUrl = canvas.toDataURL("image/png");
+        const imageBase64 = canvas.toDataURL("image/png");
 
         const now = new Date().toLocaleTimeString();
 
-        const log = JSON.parse(sessionStorage.getItem("screenshotLog") || "[]");
-        log.push({ screenshot: imageUrl, timestamp: now, transcript });
-        sessionStorage.setItem("screenshotLog", JSON.stringify(log));
+        await uploadSnapshot({
+          timestamp: now,
+          transcript,
+          screenshot_base64: imageBase64,
+        });
+
+        console.log("✅ 백엔드에 스냅샷 업로드 완료");
 
       } catch (err) {
-        console.error("❌ 스크린샷 실패:", err);
+        console.error("❌ 스크린샷 업로드 실패:", err);
       }
     },
   },

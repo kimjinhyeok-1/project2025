@@ -15,6 +15,7 @@ import ProfessorLesson from '../views/ProfessorLesson.vue'
 import ProfessorQnA from '../views/ProfessorQnA.vue'
 import ProfessorAssignments from '../views/ProfessorAssignments.vue'
 import ProfessorReviewView from '../views/ProfessorReviewView.vue'
+import ProfessorSummaryDetailView from '../views/ProfessorSummaryDetailView.vue'
 
 const routes = [
   {
@@ -70,6 +71,11 @@ const routes = [
         path: 'review',
         name: 'ProfessorReviewView',
         component: ProfessorReviewView,
+      },
+      {
+        path: 'review/:id',
+        name: 'ProfessorSummaryDetailView',
+        component: ProfessorSummaryDetailView,
       },
     ],
   },
