@@ -82,3 +82,20 @@ class LectureSnapshot(Base):
     transcript = Column(Text)
     image_url = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Recording(Base):
+    __tablename__ = "recordings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lecture_id = Column(Integer, ForeignKey("lectures.id"))  # 강의 ID와 연결
+    file_path = Column(String, nullable=False)  # 저장된 파일 경로
+    uploaded_at = Column(DateTime, default=func.now())  # 업로드 시간
+
+class Snapshot(Base):
+    __tablename__ = "snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lecture_id = Column(Integer, ForeignKey("lectures.id"))
+    time = Column(String)
+    text = Column(String)
+    image_path = Column(String)
