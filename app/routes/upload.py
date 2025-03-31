@@ -12,23 +12,19 @@ from PIL import Image
 import re
 import os
 from dotenv import load_dotenv
-import openai
 from openai import OpenAI
 import tiktoken
 import json
 
-# .env 파일에서 OPENAI_API_KEY 불러오기
 load_dotenv()
-
-# OpenAI 클라이언트 생성
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 router = APIRouter()
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
-
 POPPLER_PATH = r"C:\\poppler-24.08.0\\Library\\bin"  # Windows용
 
+# ✅ 전처리 함수들
 def clean_text(text: str) -> str:
     unwanted_symbols = r"[■▶▷\xb7▒▓□※☆★●○•◆◇△▽▲▼]"
     text = re.sub(unwanted_symbols, "", text)
@@ -52,8 +48,9 @@ def extract_images_from_pdf(pdf_path: Path, output_folder: Path) -> list:
         image_paths.append(image_path)
     return image_paths
 
-def split_text_into_chunks(text: str, chunk_size=8000, overlap=200):
-    encoding = tiktoken.encoding_for_model("text-embedding-ada-002")
+# ✅ tokenizer 및 chunk 분할 (최적화된 크기 사용)
+encoding = tiktoken.encoding_for_model("text-embedding-3-small")
+def split_text_into_chunks(text: str, chunk_size=500, overlap=50):
     tokens = encoding.encode(text)
     chunks = []
 
@@ -63,20 +60,20 @@ def split_text_into_chunks(text: str, chunk_size=8000, overlap=200):
 
     return chunks
 
+# ✅ 임베딩 생성 함수 (신모델 사용)
 def generate_embedding(text: str) -> list:
     if len(text) > 10000:
         text = text[:10000]
-
     response = client.embeddings.create(
-        model="text-embedding-ada-002",
+        model="text-embedding-3-small",
         input=text
     )
     embedding = response.data[0].embedding
-
     if not embedding:
         raise ValueError("임베딩 벡터가 비어 있습니다.")
     return embedding
 
+# ✅ 업로드 엔드포인트
 @router.post("/upload/")
 async def upload_file(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     file_location = UPLOAD_DIR / file.filename
@@ -98,6 +95,7 @@ async def upload_file(file: UploadFile = File(...), db: AsyncSession = Depends(g
 
     full_text = extracted_text + "\n" + "\n".join(extracted_image_texts)
 
+    # ✅ 텍스트 → chunk → embedding
     chunks = split_text_into_chunks(full_text)
     embedding_vectors = [generate_embedding(chunk) for chunk in chunks]
 
@@ -105,7 +103,11 @@ async def upload_file(file: UploadFile = File(...), db: AsyncSession = Depends(g
     existing_material = result.scalars().first()
 
     if existing_material:
-        await db.execute(f"DELETE FROM embedding WHERE material_id = {existing_material.id}")
+        # ✅ 기존 임베딩 삭제 (ORM 방식으로 안전하게)
+        old_embeddings = await db.execute(select(Embedding).where(Embedding.material_id == existing_material.id))
+        for e in old_embeddings.scalars():
+            await db.delete(e)
+
         for i, chunk in enumerate(chunks):
             db.add(Embedding(
                 material_id=existing_material.id,

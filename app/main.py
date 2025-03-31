@@ -1,17 +1,19 @@
 from fastapi import FastAPI
-from app.routes import health, upload, question, quiz, ask_rag, lecture_snapshots  # ✅ 추가
+from app.routes import health, upload,quiz, ask_rag, lecture_snapshots, chat_history  
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles  # ✅ 정적 파일 서빙을 위해 추가
+from fastapi.staticfiles import StaticFiles 
+from app.auth import router as auth_router
 
 app = FastAPI()
 
 # 라우터 등록
 app.include_router(health.router)
 app.include_router(upload.router)
-app.include_router(question.router)
+app.include_router(chat_history.router)
 app.include_router(quiz.router)
 app.include_router(ask_rag.router)
-app.include_router(lecture_snapshots.router)  # ✅ 새 라우터 등록
+app.include_router(lecture_snapshots.router)  
+app.include_router(auth_router)
 
 # CORS 설정
 app.add_middleware(

@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -18,10 +18,10 @@ class User(Base):
 class Student(Base):
     __tablename__ = "students"
 
-    id = Column(String, primary_key=True)  # 학번
-    name = Column(String, nullable=False)
+    name = Column(String, primary_key=True, index=True)  # ✅ 이름을 고유 ID로 사용
+    password = Column(String, nullable=False)  # ✅ 학번을 비밀번호로 저장 (해시)
+    is_admin = Column(Boolean, default=False)  # ✅ 관리자 여부 추가
 
-    # 질문 리스트 (1:N 관계)
     questions = relationship("QuestionAnswer", back_populates="student", cascade="all, delete-orphan")
 
 # ✅ 강의자료 테이블
@@ -68,9 +68,9 @@ class QuestionAnswer(Base):
     answer = Column(Text, nullable=False)
     created_at = Column(DateTime, default=func.now())
 
-    # 🔗 학생 정보 외래키
-    student_id = Column(String, ForeignKey("students.id"), nullable=False)
-    student = relationship("Student", back_populates="questions")
+    # 🔗 학생 이름 기반 외래키
+    student_name = Column(String, ForeignKey("students.name"), nullable=False)
+    student = relationship("Student", back_populates="questions", primaryjoin="Student.name==QuestionAnswer.student_name")
 
 # ✅ 강의 캡처/녹화 데이터
 class LectureSnapshot(Base):
