@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.snapshots import Snapshot
+from app.routes import snapshots
 import os
 import base64
 import uuid

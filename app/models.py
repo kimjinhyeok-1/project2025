@@ -2,6 +2,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from app.database import Base
 
 Base = declarative_base()
 
@@ -99,3 +100,10 @@ class Snapshot(Base):
     time = Column(String)
     text = Column(String)
     image_path = Column(String)
+
+class Lecture(Base):
+    __tablename__ = "lectures"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
