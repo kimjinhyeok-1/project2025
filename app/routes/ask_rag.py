@@ -12,7 +12,7 @@ import json
 from sklearn.metrics.pairwise import cosine_similarity
 import tiktoken
 import html
-from app.auth import get_current_student_name  # ✅ 로그인 학생 이름 불러오기
+from app.auth import get_current_user_id, verify_student  # ✅ 추가
 
 # ✅ 환경변수 로드 및 OpenAI 클라이언트 생성
 load_dotenv()
@@ -58,15 +58,16 @@ def build_context(chunks, max_total_tokens=3000):
 async def ask_rag(
     q: str = Query(..., description="질문을 입력하세요"),
     db: AsyncSession = Depends(get_db),
-    student_name: str = Depends(get_current_student_name)  # ✅ 로그인한 학생 이름 자동 주입
+    user_id: int = Depends(get_current_user_id),
+    _: str = Depends(verify_student)  # ✅ 학생만 접근 가능
 ):
     """RAG 방식으로 강의자료 기반 GPT 답변 제공"""
 
-    # ✅ 동일 학생이 이미 질문한 적 있다면 캐싱 응답 (선택)
+    # ✅ 동일 사용자가 이미 질문한 적 있다면 캐싱 응답
     existing = await db.execute(
         select(QuestionAnswer).where(
             QuestionAnswer.question == q,
-            QuestionAnswer.student_name == student_name
+            QuestionAnswer.user_id == user_id
         )
     )
     answer_obj = existing.scalar_one_or_none()
@@ -87,7 +88,7 @@ async def ask_rag(
     context = build_context(top_chunks, max_total_tokens=3000)
 
     prompt = f"""
-아래 강의자료 발췌를 참고하여 질문에 정확하고 간결하게 답변하세요. 줄바꿈은 <br>로 표시하세요.
+아래 강의자료 발췌를 참고하여 질문에 정확하고 너무 길지 않게 답변하세요. 줄바꿈은 <br>로 표시하세요.
 
 --- 자료 시작 ---
 {context}
@@ -112,7 +113,7 @@ async def ask_rag(
             question=q,
             answer=formatted_answer,
             created_at=datetime.utcnow(),
-            student_name=student_name  # ✅ 이름 저장
+            user_id=user_id
         )
         db.add(new_qa)
         await db.commit()

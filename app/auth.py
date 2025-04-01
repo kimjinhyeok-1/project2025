@@ -5,69 +5,115 @@ from sqlalchemy.future import select
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.database import get_db
-from app.models import Student
+from app.models import User
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
+from enum import Enum
 
 load_dotenv()
+
 SECRET_KEY = os.getenv("SECRET_KEY", "secret123")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 180
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")  # ⚠️ Swagger 인증 정상 작동용
 
-# ✅ JWT 토큰에서 사용자 이름 추출
-async def get_current_student_name(token: str = Depends(oauth2_scheme)) -> str:
+# ✅ 역할 Enum 정의
+class UserRole(str, Enum):
+    student = "student"
+    professor = "professor"
+
+# ✅ 현재 사용자 ID 반환
+async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        student_name = payload.get("sub")
-        if student_name is None:
+        user_id = payload.get("user_id")
+        if user_id is None:
             raise HTTPException(status_code=401, detail="유효하지 않은 토큰")
-        return student_name
+        return user_id
     except JWTError:
         raise HTTPException(status_code=401, detail="토큰 오류")
 
-# ✅ 관리자 권한 확인용 디펜던시
-async def verify_admin(token: str = Depends(oauth2_scheme)):
+# ✅ 교수자 권한 확인
+async def verify_professor(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        if not payload.get("admin"):
-            raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다.")
+        role = payload.get("role")
+        is_admin = payload.get("admin", False)
+        if role != "professor" and not is_admin:
+            raise HTTPException(status_code=403, detail="교수자 권한이 필요합니다.")
     except JWTError:
-        raise HTTPException(status_code=403, detail="토큰 오류 또는 관리자 아님")
+        raise HTTPException(status_code=403, detail="토큰 오류 또는 교수자 아님")
 
-# ✅ 회원가입 엔드포인트
+# ✅ 학생 권한 확인
+async def verify_student(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        role = payload.get("role")
+        is_admin = payload.get("admin", False)
+        if role != "student" and not is_admin:
+            raise HTTPException(status_code=403, detail="학생 전용 기능입니다.")
+    except JWTError:
+        raise HTTPException(status_code=403, detail="토큰 오류 또는 학생 아님")
+
+# ✅ 회원가입
 @router.post("/register")
-async def register(name: str, password: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Student).where(Student.name == name))
+async def register(
+    name: str,
+    password: str,
+    role: UserRole = UserRole.student,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(User).where(User.name == name))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="이미 등록된 사용자입니다")
 
     hashed_pw = pwd_context.hash(password)
-    student = Student(name=name, password=hashed_pw)
-    db.add(student)
+    user = User(name=name, password=hashed_pw, role=role.value, is_admin=False)
+    db.add(user)
     await db.commit()
-    return {"message": "회원가입 완료"}
+    return {"message": f"{'교수자' if role.value == 'professor' else '학생'} 회원가입 완료"}
 
-# ✅ 로그인 엔드포인트
+# ✅ 로그인
 @router.post("/login")
-async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Student).where(Student.name == form.username))
-    student = result.scalar_one_or_none()
+async def login(
+    form: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(User).where(User.name == form.username))
+    user = result.scalar_one_or_none()
 
-    if not student or not pwd_context.verify(form.password, student.password):
+    if not user or not pwd_context.verify(form.password, user.password):
         raise HTTPException(status_code=401, detail="이름 또는 비밀번호가 올바르지 않습니다")
 
     access_token = jwt.encode(
         {
-            "sub": student.name,
-            "admin": student.is_admin,  # ✅ 관리자 여부 포함
+            "sub": user.name,
+            "user_id": user.id,
+            "role": user.role,
+            "admin": user.is_admin,
             "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         },
         SECRET_KEY,
         algorithm=ALGORITHM
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+# ✅ 관리자 권한 부여 (검증 없음)
+@router.post("/set_admin")
+async def set_admin(
+    user_name: str,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(User).where(User.name == user_name))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+
+    user.is_admin = True
+    await db.commit()
+    return {"message": f"{user_name}에게 관리자 권한을 부여했습니다."}

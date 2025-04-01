@@ -1,31 +1,68 @@
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
 
-Base = declarative_base()
-
-# ✅ 사용자 테이블
+# ✅ 사용자 (학생 / 교수자)
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    password = Column(String)
+    name = Column(String, unique=True, index=True)
+    password = Column(String, nullable=False)
+    role = Column(String, nullable=False, default="student")  # 'student' 또는 'professor'
+    is_admin = Column(Boolean, default=False)
 
-# ✅ 학생 테이블
-class Student(Base):
-    __tablename__ = "students"
+    questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
 
-    name = Column(String, primary_key=True, index=True)  # ✅ 이름을 고유 ID로 사용
-    password = Column(String, nullable=False)  # ✅ 학번을 비밀번호로 저장 (해시)
-    is_admin = Column(Boolean, default=False)  # ✅ 관리자 여부 추가
+# ✅ 질문-응답 기록
+class QuestionAnswer(Base):
+    __tablename__ = "chat_history"
 
-    questions = relationship("QuestionAnswer", back_populates="student", cascade="all, delete-orphan")
+    id = Column(Integer, primary_key=True, index=True)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now())
 
-# ✅ 강의자료 테이블
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user = relationship("User", back_populates="questions")
+
+# ✅ 강의
+class Lecture(Base):
+    __tablename__ = "lectures"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+
+    recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
+    snapshots = relationship("LectureSnapshot", back_populates="lecture", cascade="all, delete-orphan")
+
+# ✅ 녹음 파일 (음성 업로드)
+class Recording(Base):
+    __tablename__ = "recordings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
+    file_path = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, default=func.now())
+
+    lecture = relationship("Lecture", back_populates="recordings")
+
+# ✅ 강의 중간 이미지 및 텍스트 캡처
+class LectureSnapshot(Base):
+    __tablename__ = "lecture_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
+    timestamp = Column(String)
+    transcript = Column(Text)
+    image_url = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    lecture = relationship("Lecture", back_populates="snapshots")
+
+# ✅ 강의자료 텍스트 전체 요약
 class LectureMaterial(Base):
     __tablename__ = "pdf_summary"
 
@@ -33,12 +70,11 @@ class LectureMaterial(Base):
     filename = Column(String, unique=True, index=True)
     file_path = Column(String)
     content = Column(Text)
-    embedding = Column(Text)  # 전체 요약 임베딩 (선택사항)
+    embedding = Column(Text)
 
-    # Embedding 관계 (1:N)
     embeddings = relationship("Embedding", back_populates="material", cascade="all, delete-orphan")
 
-# ✅ chunk 임베딩 저장 테이블
+# ✅ chunk 임베딩 저장
 class Embedding(Base):
     __tablename__ = "embedding"
 
@@ -50,60 +86,12 @@ class Embedding(Base):
 
     material = relationship("LectureMaterial", back_populates="embeddings")
 
-# ✅ 퀴즈 테이블
+# ✅ 퀴즈
 class Quiz(Base):
     __tablename__ = "quiz"
 
     id = Column(Integer, primary_key=True, index=True)
     question = Column(String)
-    options = Column(Text)  # JSON 문자열
+    options = Column(Text)
     answer = Column(String)
     material_id = Column(Integer, ForeignKey("pdf_summary.id"))
-
-# ✅ 질문-응답 기록 테이블
-class QuestionAnswer(Base):
-    __tablename__ = "chat_history"
-
-    id = Column(Integer, primary_key=True, index=True)
-    question = Column(Text, nullable=False)
-    answer = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=func.now())
-
-    # 🔗 학생 이름 기반 외래키
-    student_name = Column(String, ForeignKey("students.name"), nullable=False)
-    student = relationship("Student", back_populates="questions", primaryjoin="Student.name==QuestionAnswer.student_name")
-
-# ✅ 강의 캡처/녹화 데이터
-class LectureSnapshot(Base):
-    __tablename__ = "lecture_snapshots"
-
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(String, index=True)
-    timestamp = Column(String)
-    transcript = Column(Text)
-    image_url = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-class Recording(Base):
-    __tablename__ = "recordings"
-
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"))  # 강의 ID와 연결
-    file_path = Column(String, nullable=False)  # 저장된 파일 경로
-    uploaded_at = Column(DateTime, default=func.now())  # 업로드 시간
-
-class Snapshot(Base):
-    __tablename__ = "snapshots"
-
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"))
-    time = Column(String)
-    text = Column(String)
-    image_path = Column(String)
-
-class Lecture(Base):
-    __tablename__ = "lectures"
-
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(String, nullable=True)

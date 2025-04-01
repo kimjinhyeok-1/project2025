@@ -1,18 +1,21 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.models import Recording, Lecture
+from app.models import Recording
 from app.utils.gpt import summarize_text_with_gpt
+from app.auth import verify_professor  # ✅ 교수자 권한 확인
 import shutil
 import os
 import requests
 import json
 import time
+from dotenv import load_dotenv
 
 router = APIRouter()
 
+load_dotenv()
 UPLOAD_DIR = "uploads"
-DAGLO_API_KEY = "5eF1fuwJyKRaxgQJgUwh34zP"
+DAGLO_API_KEY = os.getenv("DAGLO_API_KEY")  # ✅ .env에서 불러옴
 DAGLO_UPLOAD_URL = "https://apis.daglo.ai/stt/v1/async/transcripts"
 DAGLO_RESULT_URL = "https://apis.daglo.ai/stt/v1/async/transcripts/"
 
@@ -23,7 +26,8 @@ print("🔑 DAGLO KEY:", DAGLO_API_KEY)
 async def upload_recording(
     lecture_id: int,
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(verify_professor)  # ✅ 교수자만 접근 가능
 ):
     print("📥 [1] 파일 업로드 요청 수신")
 
@@ -36,7 +40,6 @@ async def upload_recording(
         shutil.copyfileobj(file.file, buffer)
     print("✅ [2] 파일 저장 완료:", file_path)
 
-    # 🔁 Lecture 확인 없이 바로 진행
     print("📚 [3] Lecture 확인 건너뜀 → ID:", lecture_id)
 
     try:
@@ -78,6 +81,7 @@ async def upload_recording(
         transcript = result_data["sttResults"][0]["transcript"] if result_data.get("sttResults") else "(STT 결과 없음)"
         print("✅ [5] STT 텍스트 추출 완료")
         print("📄 [텍스트 본문]:", transcript[:100], "...")
+
     except Exception as e:
         print("❌ [5] STT 결과 요청 실패:", str(e))
         raise HTTPException(status_code=500, detail=f"STT 결과 요청 실패: {str(e)}")
