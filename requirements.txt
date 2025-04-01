@@ -8,4 +8,9 @@ requests
 openai
 PyMuPDF
 pdf2image
-pytesseract 
+pytesseract
+tiktoken
+httpx
+python-multipart
+passlib
+python-jose
