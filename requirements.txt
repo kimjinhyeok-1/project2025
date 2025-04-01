@@ -7,3 +7,4 @@ python-dotenv
 requests
 openai
 PyMuPDF
+pdf2image
