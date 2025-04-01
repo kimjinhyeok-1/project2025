@@ -20,13 +20,13 @@
       <li class="nav-item">
         <router-link class="nav-link" to="/professor/lesson">
           <i class="fas fa-chalkboard"></i>
-          <span> START</span>
+          <span> LECTURE START</span>
         </router-link>
       </li>
       <li class="nav-item">
         <router-link class="nav-link" to="/professor/review">
           <i class="fas fa-book-open"></i>
-          <span> REVIEW</span>
+          <span> LECTURE REVIEW</span>
         </router-link>
       </li>
       <li class="nav-item">

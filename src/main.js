@@ -6,7 +6,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
-import './assets/startbootstrap-sb-admin-2-master/startbootstrap-sb-admin-2-master/css/sb-admin-2.css'
+import './assets/startbootstrap-sb-admin-2-master/css/sb-admin-2.css'
 createApp(App).mount('#app')
 
 
