@@ -8,3 +8,4 @@ requests
 openai
 PyMuPDF
 pdf2image
+pytesseract 
