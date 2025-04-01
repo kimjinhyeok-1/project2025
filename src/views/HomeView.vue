@@ -1,38 +1,44 @@
-<!-- src/views/HomeView.vue -->
 <template>
   <div class="bg-gradient-primary min-vh-100 d-flex justify-content-center align-items-center">
-    <div class="card shadow p-5" style="width: 400px; border-radius: 1rem;">
-      <!-- 상단 로고 + 제목 -->
-      <div class="text-center mb-4">
-        <img src="/kut_logo.gif" alt="Logo" class="logo-gif mb-2" />
-        <h1 class="mb-1">KOREATECH</h1>
-        <p class="text-muted">온라인 교육</p>
+    <div class="card o-hidden border-0 shadow-lg my-5" style="width: 400px;">
+      <div class="card-body p-5">
+        <!-- 로고 + 제목 -->
+        <div class="text-center mb-4">
+          <img src="/kut_logo.gif" alt="Logo" class="img-fluid mb-3" style="width: 60px;" />
+          <h1 class="h4 text-gray-900 mb-1">KOREATECH</h1>
+          <p class="text-gray-600 mb-4">온라인 교육 로그인</p>
+        </div>
+
+        <!-- 로그인 폼 -->
+        <form @submit.prevent="handleLogin" class="user">
+          <div class="form-group mb-3">
+            <input
+              v-model="userId"
+              type="text"
+              class="form-control form-control-user"
+              placeholder="아이디"
+              required
+            />
+          </div>
+          <div class="form-group mb-3">
+            <input
+              v-model="password"
+              type="password"
+              class="form-control form-control-user"
+              placeholder="비밀번호"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-primary btn-user w-100">
+            로그인
+          </button>
+        </form>
+
+        <!-- 에러 메시지 -->
+        <p v-if="errorMessage" class="text-danger text-center mt-3 small">
+          {{ errorMessage }}
+        </p>
       </div>
-
-      <!-- 로그인 폼 -->
-      <form @submit.prevent="handleLogin">
-        <div class="form-group mb-3">
-          <input
-            v-model="userId"
-            type="text"
-            class="form-control rounded-pill"
-            placeholder="아이디"
-            required
-          />
-        </div>
-        <div class="form-group mb-3">
-          <input
-            v-model="password"
-            type="password"
-            class="form-control rounded-pill"
-            placeholder="비밀번호"
-            required
-          />
-        </div>
-        <button type="submit" class="btn btn-primary w-100 rounded-pill">로그인</button>
-      </form>
-
-      <p v-if="errorMessage" class="text-danger text-center mt-3">{{ errorMessage }}</p>
     </div>
   </div>
 </template>
@@ -61,13 +67,7 @@ export default {
 
       if (foundUser) {
         localStorage.setItem('user', JSON.stringify(foundUser))
-
-        // ✅ 역할에 따라 라우팅
-        if (foundUser.role === 'teacher') {
-          router.push('/professor')
-        } else if (foundUser.role === 'student') {
-          router.push('/student')
-        }
+        router.push(foundUser.role === 'teacher' ? '/professor' : '/student')
       } else {
         errorMessage.value = '아이디 또는 비밀번호가 올바르지 않습니다.'
       }
@@ -85,26 +85,23 @@ export default {
 
 <style scoped>
 .bg-gradient-primary {
-  background: linear-gradient(to bottom right, #4e73df, #224abe);
+  background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+  background-size: cover;
 }
 
-.logo-gif {
-  width: 60px;
-  height: auto;
-  border-radius: 8px;
+.card {
+  border-radius: 1rem;
 }
 
-.mb-1 {
-  font-family: 'Do Hyeon', sans-serif;
-  font-size: 2.0rem;
-  font-weight: 700;
-  color: #1a1a1a;
+.form-control-user {
+  border-radius: 10rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
 }
 
-.text-muted {
-  font-family: 'Do Hyeon', sans-serif;
-  font-size: 1.0rem;
-  font-weight: 600;
-  color: #555;
+.btn-user {
+  border-radius: 10rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
 }
 </style>

@@ -1,70 +1,77 @@
 <template>
-  <div class="dashboard-container">
-    <aside class="sidebar">
-      <router-link to="/professor/qna" class="sidebar-btn">질문 & 답변</router-link>
-      <router-link to="/professor/lesson" class="sidebar-btn">수업하기</router-link>
-      <router-link to="/professor/review" class="sidebar-btn">수업 복습하기</router-link>
-      <router-link to="/professor/assignments" class="sidebar-btn">과제 확인</router-link>
-    </aside>
+  <div id="wrapper" class="d-flex">
+    <!-- Sidebar -->
+    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+      <router-link class="sidebar-brand d-flex align-items-center justify-content-center" to="/professor">
+        <div class="sidebar-brand-icon">
+          <i class="fas fa-chalkboard-teacher"></i>
+        </div>
+        <div class="sidebar-brand-text mx-3">PROFESSOR</div>
+      </router-link>
 
-    <section class="main-content">
-      <router-view />
-    </section>
+      <hr class="sidebar-divider my-0" />
+
+      <li class="nav-item">
+        <router-link class="nav-link" to="/professor/qna">
+          <i class="fas fa-question-circle"></i>
+          <span> Q & A</span>
+        </router-link>
+      </li>
+      <li class="nav-item">
+        <router-link class="nav-link" to="/professor/lesson">
+          <i class="fas fa-chalkboard"></i>
+          <span> START</span>
+        </router-link>
+      </li>
+      <li class="nav-item">
+        <router-link class="nav-link" to="/professor/review">
+          <i class="fas fa-book-open"></i>
+          <span> REVIEW</span>
+        </router-link>
+      </li>
+      <li class="nav-item">
+        <router-link class="nav-link" to="/professor/assignments">
+          <i class="fas fa-tasks"></i>
+          <span> ASSIGNMENT</span>
+        </router-link>
+      </li>
+    </ul>
+
+    <!-- Main Content -->
+    <div id="content-wrapper" class="flex-grow-1">
+      <div id="content" class="p-4">
+        <router-view />
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* 전체 화면에서 네비게이션 바 아래부터 시작 */
-.dashboard-container {
-  display: flex;
-  height: 100vh;
+html, body, #app, #wrapper {
+  height: 100%;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
+}
+
+#wrapper {
+  display: flex;
 }
 
 .sidebar {
-  width: 250px; /* 🔹 더 넓게 */
-  background-color: #e3f2fd;
-  padding: 20px;
-  margin: 0;
-  border-right: 1px solid #ccc;
-  position: fixed;
-  top: 56px;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
   left: 0;
-  bottom: 0;
-  box-sizing: border-box;
 }
 
-.sidebar-btn {
-  display: block;
+#content-wrapper {
+  flex-grow: 1;
   width: 100%;
-  margin-bottom: 12px;
-  padding: 10px 15px;
-  background-color: white;
-  border: 1px solid #0d6efd; /* 🔹 테두리 얇게 */
-  border-radius: 10px;
-  color: #0d6efd;
-  font-weight: 500;
-  font-size: 14px;
-  cursor: pointer;
-  text-align: center;
-  text-decoration: none;
-  transition: all 0.2s;
+  background-color: #f8f9fc;
 }
 
-.sidebar-btn:hover {
-  background-color: #e0edff;
-}
-
-.sidebar-btn.router-link-active {
-  background-color: #0d6efd;
-  color: white;
-}
-
-.main-content {
-  flex: 1;
-  margin-left: 250px; /* 🔹 사이드바 너비만큼 밀어줌 */
-  padding: 20px;
-  overflow-y: auto;
+#content {
+  width: 100%;
 }
 </style>

@@ -4,7 +4,7 @@
     <NavbarComponent v-if="!isHome" />
 
     <!-- 라우터 뷰는 항상 표시 -->
-    <div class="container mt-4">
+    <div>
       <router-view></router-view>
     </div>
   </div>
@@ -21,7 +21,7 @@ export default {
   },
   setup() {
     const route = useRoute()
-    const isHome = computed(() => route.path === '/')
+    const isHome = computed(() => route?.path === '/') // ✅ 안전하게 체크
     return {
       isHome,
     }
