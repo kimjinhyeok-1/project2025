@@ -10,6 +10,7 @@ git status
 ```bash
 git add .
 git commit -m "Fix: 학생 QnA 페이지 UI 개선"
+git rebase --continue
 ```
 ### 👣 3. GitHub에 푸시!
 ```bash
