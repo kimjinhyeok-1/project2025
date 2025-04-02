@@ -15,4 +15,5 @@ python-multipart
 passlib
 python-jose
 numpy
-sklearn
+scikit-learn
+
