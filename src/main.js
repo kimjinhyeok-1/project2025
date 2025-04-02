@@ -10,8 +10,8 @@ import './assets/startbootstrap-sb-admin-2-master/css/sb-admin-2.css'
 createApp(App).mount('#app')
 
 
-console.log("환경 변수 체크:", process.env);
-console.log("VUE_APP_OPENAI_API_KEY:", process.env.VUE_APP_OPENAI_API_KEY);
+//console.log("환경 변수 체크:", process.env);
+//console.log("VUE_APP_OPENAI_API_KEY:", process.env.VUE_APP_OPENAI_API_KEY);
 
 
 const app = createApp(App);
