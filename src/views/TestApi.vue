@@ -1,4 +1,3 @@
-// src/views/TestApi.vue 또는 App.vue에 테스트용 코드 삽입
 import api from "@/api";
 
 export default {
