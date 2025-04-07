@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from app.database import get_db
 from app.models import Assignment, AssignmentQuestion, User
 from app.schemas import AssignmentQuestionCreate, AssignmentQuestionOut
-from utils.helper import generate_gpt_response
+from app.utils.helper import generate_gpt_response
 from app.auth import get_current_user_id, verify_student  # 🔐 인증 함수 활용
 from typing import List
 
