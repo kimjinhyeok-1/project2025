@@ -14,8 +14,10 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
 
     questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
+    assignment_questions = relationship("AssignmentQuestion", back_populates="user", cascade="all, delete-orphan")
 
-# ✅ 질문-응답 기록
+
+# ✅ 질문-응답 기록 (일반 대화형)
 class QuestionAnswer(Base):
     __tablename__ = "chat_history"
 
@@ -26,6 +28,7 @@ class QuestionAnswer(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", back_populates="questions")
+
 
 # ✅ 강의
 class Lecture(Base):
@@ -38,6 +41,7 @@ class Lecture(Base):
     recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
     snapshots = relationship("LectureSnapshot", back_populates="lecture", cascade="all, delete-orphan")
 
+
 # ✅ 녹음 파일 (음성 업로드)
 class Recording(Base):
     __tablename__ = "recordings"
@@ -48,6 +52,7 @@ class Recording(Base):
     uploaded_at = Column(DateTime, default=func.now())
 
     lecture = relationship("Lecture", back_populates="recordings")
+
 
 # ✅ 강의 중간 이미지 및 텍스트 캡처
 class LectureSnapshot(Base):
@@ -62,6 +67,7 @@ class LectureSnapshot(Base):
 
     lecture = relationship("Lecture", back_populates="snapshots")
 
+
 # ✅ 강의자료 텍스트 전체 요약
 class LectureMaterial(Base):
     __tablename__ = "pdf_summary"
@@ -73,6 +79,7 @@ class LectureMaterial(Base):
     embedding = Column(Text)
 
     embeddings = relationship("Embedding", back_populates="material", cascade="all, delete-orphan")
+
 
 # ✅ chunk 임베딩 저장
 class Embedding(Base):
@@ -86,6 +93,7 @@ class Embedding(Base):
 
     material = relationship("LectureMaterial", back_populates="embeddings")
 
+
 # ✅ 퀴즈
 class Quiz(Base):
     __tablename__ = "quiz"
@@ -95,3 +103,34 @@ class Quiz(Base):
     options = Column(Text)
     answer = Column(String)
     material_id = Column(Integer, ForeignKey("pdf_summary.id"))
+
+
+# ✅ 과제 정보
+class Assignment(Base):
+    __tablename__ = "assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    sample_answer = Column(Text)  # 정답/예시코드 (GPT 참고용)
+
+    created_at = Column(DateTime, default=func.now())
+
+    questions = relationship("AssignmentQuestion", back_populates="assignment", cascade="all, delete-orphan")
+
+
+# ✅ 과제 질문 + GPT 응답 저장
+class AssignmentQuestion(Base):
+    __tablename__ = "assignment_questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    question_text = Column(Text, nullable=True)     # 학생 질문
+    code_snippet = Column(Text, nullable=True)      # 코드 질문
+    gpt_answer = Column(Text, nullable=True)        # GPT 응답
+    created_at = Column(DateTime, default=func.now())
+
+    assignment = relationship("Assignment", back_populates="questions")
+    user = relationship("User", back_populates="assignment_questions")

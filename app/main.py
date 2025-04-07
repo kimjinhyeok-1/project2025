@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import health, upload, quiz, ask_rag, chat_history, recording, snapshots
+from app.routes import health, upload, quiz, ask_rag, chat_history, recording, snapshots, assignment, question
 from app.auth import router as auth_router
 from app.database import Base, engine
 from app.routes.lecture import router as lecture_router
@@ -27,6 +27,8 @@ app.include_router(recording.router, prefix="/recordings")
 app.include_router(snapshots.router, prefix="/snapshots")
 app.include_router(auth_router)
 app.include_router(lecture_router)
+app.include_router(assignment.router, prefix="/assignments", tags=["Assignments"])
+app.include_router(question.router, prefix="/questions", tags=["Questions"])
 
 # ✅ 정적 파일 경로 설정
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
