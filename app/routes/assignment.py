@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from models import Assignment
+from app.models import Assignment
 from schemas import AssignmentCreate, AssignmentOut
 from database import get_db
 
