@@ -1,9 +1,9 @@
 import os
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # ✅ 새로운 방식
 
 # ✅ 정답 요구 감지
 def contains_answer_request(text: str) -> bool:
@@ -30,7 +30,7 @@ async def generate_gpt_response(assignment_description, sample_answer, full_cont
     )
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -39,7 +39,7 @@ async def generate_gpt_response(assignment_description, sample_answer, full_cont
             temperature=0.4,
             max_tokens=600,
         )
-        return response['choices'][0]['message']['content'].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"[GPT ERROR] {str(e)}")  # 로그에 남기기
+        print(f"[GPT ERROR] {str(e)}")
         return "GPT 응답 생성 중 오류가 발생했습니다. 다시 시도해주세요."
