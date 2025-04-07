@@ -7,13 +7,13 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ✅ 정답 요구 감지
 def contains_answer_request(text: str) -> bool:
-    keywords = ["정답", 답좀, "코드 다", "해줘", "답 알려"]
+    keywords = ["정답", "답좀", "코드 다", "해줘", "답 알려"]
     return any(k in (text or "") for k in keywords)
 
-# ✅ GPT 응답 생성 함수
-async def generate_gpt_response(assignment_description, sample_answer, question_text, code_snippet):
+# ✅ GPT 응답 생성 함수 (통합 content 기반)
+async def generate_gpt_response(assignment_description, sample_answer, full_content):
     # 정답 요구 차단
-    if contains_answer_request(question_text or "") or contains_answer_request(code_snippet or ""):
+    if contains_answer_request(full_content or ""):
         return "한 번 차근차근 해볼까요? 궁금한 부분이나 막힌 부분이 있다면 도와드릴게요!"
 
     system_prompt = (
@@ -41,4 +41,5 @@ async def generate_gpt_response(assignment_description, sample_answer, question_
         )
         return response['choices'][0]['message']['content'].strip()
     except Exception as e:
-        return f"GPT 응답 생성 중 오류가 발생했습니다: {str(e)}"
+        print(f"[GPT ERROR] {str(e)}")  # 로그에 남기기
+        return "GPT 응답 생성 중 오류가 발생했습니다. 다시 시도해주세요."
