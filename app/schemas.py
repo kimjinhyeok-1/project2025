@@ -25,8 +25,7 @@ class AssignmentOut(BaseModel):
 # ✅ 과제 질문 등록 요청
 class AssignmentQuestionCreate(BaseModel):
     assignment_id: int
-    question_text: Optional[str] = None
-    code_snippet: Optional[str] = None
+    content: str  # ✅ 질문 + 코드가 함께 들어있는 필드
 
 
 # ✅ 과제 질문 응답

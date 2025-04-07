@@ -2,15 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.database import get_db
-from app.models import Assignment, AssignmentQuestion, User
+from app.models import Assignment, AssignmentQuestion
 from app.schemas import AssignmentQuestionCreate, AssignmentQuestionOut
 from app.utils.helper import generate_gpt_response
-from app.auth import get_current_user_id, verify_student  # 🔐 인증 함수 활용
+from app.auth import get_current_user_id, verify_student
 from typing import List
 
 router = APIRouter()
 
-# ✅ 질문 등록 + GPT 응답 생성
+# ✅ 질문 등록 + GPT 응답 생성 (content 하나만 받음)
 @router.post("/ask", response_model=AssignmentQuestionOut, dependencies=[Depends(verify_student)])
 async def ask_assignment_question(
     question: AssignmentQuestionCreate,
@@ -27,23 +27,21 @@ async def ask_assignment_question(
     gpt_answer = await generate_gpt_response(
         assignment_description=assignment.description,
         sample_answer=assignment.sample_answer,
-        question_text=question.question_text,
-        code_snippet=question.code_snippet,
+        full_content=question.content,  # ✅ content 하나만 전달
     )
 
     # 질문 저장
     new_question = AssignmentQuestion(
         assignment_id=question.assignment_id,
         user_id=current_user_id,
-        question_text=question.question_text,
-        code_snippet=question.code_snippet,
+        question_text=question.content,  # ✅ 통합 content 저장
+        code_snippet=None,
         gpt_answer=gpt_answer,
     )
     db.add(new_question)
     await db.commit()
     await db.refresh(new_question)
     return new_question
-
 
 # ✅ 로그인한 학생의 질문 목록 조회
 @router.get("/me", response_model=List[AssignmentQuestionOut], dependencies=[Depends(verify_student)])

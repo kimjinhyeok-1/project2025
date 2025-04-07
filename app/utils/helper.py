@@ -26,8 +26,7 @@ async def generate_gpt_response(assignment_description, sample_answer, question_
     user_prompt = (
         f"[과제 설명]\n{assignment_description}\n\n"
         f"[예시 코드]\n{sample_answer or '없음'}\n\n"
-        f"[학생 질문]\n{question_text or ''}\n\n"
-        f"[학생 코드]\n{code_snippet or ''}"
+        f"[학생 질문 및 코드]\n{full_content}"
     )
 
     try:
