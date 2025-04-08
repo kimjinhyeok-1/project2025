@@ -12,7 +12,6 @@ import json
 from sklearn.metrics.pairwise import cosine_similarity
 import tiktoken
 import html
-from app.auth import get_current_user_id, verify_student  # ✅ 추가
 
 # ✅ 환경변수 로드 및 OpenAI 클라이언트 생성
 load_dotenv()
@@ -53,15 +52,15 @@ def build_context(chunks, max_total_tokens=3000):
             break
     return context
 
-# ✅ 질문 처리 라우터
+# ✅ 질문 처리 라우터 (인증 제거 버전)
 @router.get("/ask_rag")
 async def ask_rag(
     q: str = Query(..., description="질문을 입력하세요"),
-    db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user_id),
-    _: str = Depends(verify_student)  # ✅ 학생만 접근 가능
+    db: AsyncSession = Depends(get_db)
 ):
-    """RAG 방식으로 강의자료 기반 GPT 답변 제공"""
+    """RAG 방식으로 강의자료 기반 GPT 답변 제공 (인증 없음 버전)"""
+
+    user_id = 0  # 임시 사용자 ID
 
     # ✅ 동일 사용자가 이미 질문한 적 있다면 캐싱 응답
     existing = await db.execute(
