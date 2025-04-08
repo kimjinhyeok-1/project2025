@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import LectureSnapshot  # Snapshot 모델을 사용 중
+from app.models import Snapshot  # Snapshot 모델을 사용 중
 import os
 import base64
 import uuid

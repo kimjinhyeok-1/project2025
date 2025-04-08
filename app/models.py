@@ -68,6 +68,7 @@ class Snapshot(Base):
     lecture = relationship("Lecture", back_populates="snapshots")
 
 
+
 # ✅ 강의자료 텍스트 전체 요약
 class LectureMaterial(Base):
     __tablename__ = "pdf_summary"
