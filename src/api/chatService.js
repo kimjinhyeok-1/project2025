@@ -7,7 +7,7 @@ export async function sendMessageToChatGPT(message) {
   try {
     console.log("FastAPI 백엔드로 요청 시작...");
 
-    const response = await axios.get(`${BASE_URL}`, {
+    const response = await axios.get(`${BASE_URL}/ask_rag`, {
       params: { q: message },
     });
 

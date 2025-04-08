@@ -1,30 +1,57 @@
 <template>
-  <div class="container-fluid">
-    <!-- Page Heading -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-      <h1 class="h3 mb-0 text-gray-800">📝 교수용 과제 관리</h1>
+  <div class="container mt-5">
+    <h2 class="mb-4">📝 교수용 과제 공지 목록</h2>
+
+    <div class="d-flex justify-content-end mb-3">
+      <router-link to="/professor/assignments/new" class="btn btn-primary">
+        ➕ 새 과제 공지 작성
+      </router-link>
     </div>
 
-    <!-- Assignment Card -->
-    <div class="row justify-content-center">
-      <div class="col-xl-8 col-md-10 mb-4">
-        <div class="card shadow border-left-primary">
-          <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">과제 현황</h6>
-            <i class="fas fa-tasks fa-lg text-primary"></i>
-          </div>
-          <div class="card-body text-center">
-            <p class="mb-2">이 페이지는 아직 준비 중입니다.</p>
-            <button class="btn btn-outline-primary" disabled>업데이트 예정</button>
-          </div>
+    <div v-if="loading" class="text-center">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <div v-else-if="assignments.length === 0" class="alert alert-info">
+      등록된 과제 공지가 없습니다.
+    </div>
+
+    <div v-else>
+      <div
+        v-for="assignment in assignments"
+        :key="assignment.id"
+        class="card mb-3 shadow-sm"
+      >
+        <div class="card-body">
+          <h5>{{ assignment.title }}</h5>
+          <p class="text-muted">{{ assignment.description }}</p>
+          <p>📅 마감일: {{ assignment.due }}</p>
+          <router-link :to="`/professor/assignments/${assignment.id}/submissions`" class="btn btn-outline-primary">
+            제출 현황 보기
+          </router-link>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: "ProfessorAssignments",
-};
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const assignments = ref([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    const res = await axios.get('http://localhost:8000/api/assignments') // ✨ 실제 API 주소로 교체
+    assignments.value = res.data
+  } catch (err) {
+    console.error('과제 공지 불러오기 실패:', err)
+  } finally {
+    loading.value = false
+  }
+})
 </script>

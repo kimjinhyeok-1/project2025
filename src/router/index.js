@@ -44,6 +44,10 @@ const routes = [
     ],
   },
   {
+    path: '/professor/assignments/new',
+    component: () => import('@/views/AssignmentPostForm.vue'),
+  },  
+  {
     path: '/professor',
     component: ProfessorLayout,
     children: [
@@ -79,6 +83,17 @@ const routes = [
       },
     ],
   },
+  {
+    path: '/student/assignments',
+    name: 'StudentAssignments',
+    component: () => import('@/views/StudentAssignment.vue'),
+  },
+  {
+    path: '/student/assignments/:id',
+    name: 'AssignmentDetail',
+    component: () => import('@/views/AssignmentDetail.vue'),
+  } 
+
 ]
 
 const router = createRouter({

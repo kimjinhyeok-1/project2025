@@ -1,60 +1,55 @@
 <template>
   <div class="container mt-5">
-    <h3>📂 과제 제출</h3>
-    <p class="text-muted">여러 개의 파일을 제출할 수 있어요!</p>
+    <h2 class="mb-4">📋 과제 공지 목록</h2>
 
-    <form @submit.prevent="handleUpload">
-      <div class="mb-3">
-        <label for="fileInput" class="form-label">파일 선택</label>
-        <input
-          class="form-control"
-          type="file"
-          id="fileInput"
-          multiple
-          @change="handleFileChange"
-        />
+    <div v-if="loading" class="text-center">
+      <div class="spinner-border" role="status"></div>
+    </div>
+
+    <div v-else-if="assignments.length === 0" class="alert alert-info">
+      등록된 과제 공지가 없습니다.
+    </div>
+
+    <div v-else class="row g-4">
+      <div
+        v-for="assignment in assignments"
+        :key="assignment.id"
+        class="col-md-6"
+      >
+        <router-link
+          :to="`/student/assignments/${assignment.id}`"
+          class="text-decoration-none"
+        >
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title text-dark">{{ assignment.title }}</h5>
+              <p class="card-text text-muted">{{ assignment.description }}</p>
+              <p class="card-text">
+                📅 마감일: <strong>{{ assignment.due }}</strong>
+              </p>
+            </div>
+          </div>
+        </router-link>
       </div>
-
-      <button type="submit" class="btn btn-primary">제출하기</button>
-    </form>
-
-    <p v-if="uploadStatus" class="mt-3">{{ uploadStatus }}</p>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
-const files = ref([])
-const uploadStatus = ref('')
+const assignments = ref([])
+const loading = ref(true)
 
-const handleFileChange = (event) => {
-  files.value = Array.from(event.target.files)
-}
-
-const handleUpload = async () => {
-  if (files.value.length === 0) {
-    uploadStatus.value = '❗ 업로드할 파일을 선택하세요.'
-    return
-  }
-
-  const formData = new FormData()
-  files.value.forEach((file) => {
-    formData.append('files', file)
-  })
-
+onMounted(async () => {
   try {
-    await axios.post('http://192.168.50.24:8000/upload', formData, {
-  headers: {
-    'Content-Type': 'multipart/form-data',
-  },
-})
-
-    uploadStatus.value = '✅ 업로드 성공!'
+    const res = await axios.get('http://localhost:8000/api/assignments') // 실제 API 주소로 교체
+    assignments.value = res.data
   } catch (err) {
-    console.error('업로드 실패:', err)
-    uploadStatus.value = '❌ 업로드 실패. 나중에 다시 시도해주세요.'
+    console.error('과제 공지 로딩 실패:', err)
+  } finally {
+    loading.value = false
   }
-}
+})
 </script>
