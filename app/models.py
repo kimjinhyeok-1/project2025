@@ -39,7 +39,7 @@ class Lecture(Base):
     description = Column(String, nullable=True)
 
     recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
-    snapshots = relationship("LectureSnapshot", back_populates="lecture", cascade="all, delete-orphan")
+    snapshots = relationship("Snapshot", back_populates="lecture", cascade="all, delete-orphan")
 
 
 # ✅ 녹음 파일 (음성 업로드)
