@@ -55,7 +55,7 @@ class Recording(Base):
 
 
 # ✅ 강의 중간 이미지 및 텍스트 캡처
-class LectureSnapshot(Base):
+class Snapshot(Base):
     __tablename__ = "lecture_snapshots"
 
     id = Column(Integer, primary_key=True, index=True)
