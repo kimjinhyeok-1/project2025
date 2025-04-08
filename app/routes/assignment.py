@@ -89,11 +89,13 @@ async def get_assignment(assignment_id: int, db: AsyncSession = Depends(get_db))
     return assignment
 
 
-# ✅ 과제 수정
+# ✅ 과제 수정 (Form 기반 - 필드 선택 수정 가능)
 @router.put("/{assignment_id}", response_model=AssignmentOut, tags=["Assignments"], dependencies=[Depends(verify_professor)])
-async def update_assignment(
+async def update_assignment_form(
     assignment_id: int,
-    update_data: AssignmentUpdate,
+    title: str = Form(None),
+    description: str = Form(None),
+    sample_answer: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
@@ -101,12 +103,12 @@ async def update_assignment(
     if assignment is None:
         raise HTTPException(status_code=404, detail="해당 과제를 찾을 수 없습니다.")
 
-    if update_data.title is not None:
-        assignment.title = update_data.title.strip()
-    if update_data.description is not None:
-        assignment.description = update_data.description.strip()
-    if update_data.sample_answer is not None:
-        assignment.sample_answer = update_data.sample_answer.strip()
+    if title is not None:
+        assignment.title = title.strip()
+    if description is not None:
+        assignment.description = description.strip()
+    if sample_answer is not None:
+        assignment.sample_answer = sample_answer.strip()
 
     await db.commit()
     await db.refresh(assignment)
