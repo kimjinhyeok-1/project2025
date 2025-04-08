@@ -60,7 +60,7 @@ async def ask_rag(
 ):
     """RAG 방식으로 강의자료 기반 GPT 답변 제공 (인증 없음 버전)"""
 
-    user_id = 0  # 임시 사용자 ID
+    user_id = 1  # 임시 사용자 ID
 
     # ✅ 동일 사용자가 이미 질문한 적 있다면 캐싱 응답
     existing = await db.execute(
@@ -96,7 +96,6 @@ async def ask_rag(
 질문: {q}
 답변:
 """
-
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
