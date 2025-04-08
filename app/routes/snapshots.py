@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.routes import snapshots
+from app.models import Snapshot  # Snapshot 모델을 사용 중
 import os
 import base64
 import uuid
@@ -13,13 +13,11 @@ IMAGE_DIR = "snapshots"
 if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
 
-# ✅ /snapshots: lecture_id 없이 timestamp 기반 저장
+# ✅ /snapshots: 스크린샷 + STT 텍스트 저장
 @router.post("/snapshots")
 def upload_snapshot(data: dict, db: Session = Depends(get_db)):
     print("📥 /snapshots 요청 도착!")
     print("📄 데이터 내용:", data)
-
-    # (이후 처리 생략)
 
     timestamp = data.get("timestamp")  # "2024-03-30 15:02:18" 형식
     text = data.get("transcript")
@@ -29,13 +27,11 @@ def upload_snapshot(data: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="필드 누락")
 
     try:
-        # 날짜 추출해서 yyyy-mm-dd 형식으로 그룹핑
         dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
         date_group = dt.strftime("%Y-%m-%d")
     except:
         raise HTTPException(status_code=400, detail="timestamp 형식 오류")
 
-    # base64 이미지 디코딩
     try:
         header, encoded = image_data.split(",", 1)
         image_bytes = base64.b64decode(encoded)
@@ -65,13 +61,13 @@ def upload_snapshot(data: dict, db: Session = Depends(get_db)):
         "image_path": file_path
     }
 
-# ✅ /summaries: 날짜별 스냅샷 요약 목록 조회
+# ✅ /summaries: 날짜 목록 조회
 @router.get("/summaries")
 def get_all_summary_dates(db: Session = Depends(get_db)):
     results = db.query(Snapshot.date).distinct().all()
     return {"dates": [r.date for r in results]}
 
-# ✅ /summaries/{date}: 해당 날짜의 스냅샷 목록 반환
+# ✅ /summaries/{date}: 해당 날짜의 스냅샷 요약 목록
 @router.get("/summaries/{date}")
 def get_summary_by_date(date: str, db: Session = Depends(get_db)):
     snapshots = db.query(Snapshot).filter(Snapshot.date == date).all()
@@ -85,4 +81,33 @@ def get_summary_by_date(date: str, db: Session = Depends(get_db)):
     return {
         "summary": f"{date} 강의 요약",
         "highlights": result
+    }
+
+# ✅ /snapshots/nearest: 요약문 클릭 시 가장 가까운 스냅샷 반환
+@router.get("/snapshots/nearest")
+def get_nearest_snapshot(
+    date: str = Query(..., description="예: 2024-03-30"),
+    time: str = Query(..., description="예: 15:02:18"),
+    db: Session = Depends(get_db)
+):
+    try:
+        target_time = datetime.strptime(time, "%H:%M:%S").time()
+    except:
+        raise HTTPException(status_code=400, detail="time 형식 오류")
+
+    snapshots = db.query(Snapshot).filter(Snapshot.date == date).all()
+    if not snapshots:
+        raise HTTPException(status_code=404, detail="해당 날짜에 저장된 스냅샷이 없습니다.")
+
+    # 가장 가까운 스냅샷 찾기
+    def time_diff(snap):
+        snap_time = datetime.strptime(snap.time, "%H:%M:%S").time()
+        return abs(datetime.combine(datetime.today(), snap_time) - datetime.combine(datetime.today(), target_time))
+
+    closest = min(snapshots, key=time_diff)
+
+    return {
+        "time": closest.time,
+        "text": closest.text,
+        "image_url": f"/{closest.image_path}"
     }

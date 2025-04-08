@@ -5,6 +5,7 @@ from app.routes import health, upload, quiz, ask_rag, chat_history, recording, s
 from app.auth import router as auth_router
 from app.database import Base, engine
 from app.routes.lecture import router as lecture_router
+
 app = FastAPI()
 
 # ✅ 비동기 테이블 생성 함수
@@ -32,6 +33,9 @@ app.include_router(question.router, prefix="/questions", tags=["Questions"])
 
 # ✅ 정적 파일 경로 설정
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# ✅ ✅ 스냅샷 이미지 정적 파일 서빙 경로 추가
+app.mount("/snapshots", StaticFiles(directory="snapshots"), name="snapshots")
 
 # ✅ 기본 응답
 @app.get("/")
