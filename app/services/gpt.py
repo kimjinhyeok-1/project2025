@@ -1,10 +1,12 @@
 import os
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 # .env 파일에서 OPENAI_API_KEY 로드
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# OpenAI 클라이언트 인스턴스 생성
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def generate_expected_questions(summary_text: str, num_questions: int = 3) -> list:
     prompt = (
@@ -15,15 +17,15 @@ def generate_expected_questions(summary_text: str, num_questions: int = 3) -> li
         "예: - 질문 1\n- 질문 2\n..."
     )
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # 여기서 gpt-3.5-turbo 사용
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "user", "content": prompt}
         ],
-        temperature=0.7,
+        temperature=0.7
     )
 
-    content = response['choices'][0]['message']['content']
+    content = response.choices[0].message.content
 
     # 응답에서 질문만 리스트로 정리
     questions = [
