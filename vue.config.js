@@ -18,7 +18,7 @@ module.exports = defineConfig({
       {
         apply: (compiler) => {
           compiler.hooks.done.tap('CopyRedirectsPlugin', () => {
-            const src = path.resolve(__dirname, 'public/_redirects');
+            const src = path.resolve(__dirname, 'public/redirects.txt');
             const dest = path.resolve(__dirname, 'dist/_redirects');
             if (fs.existsSync(src)) {
               fs.copyFileSync(src, dest);
