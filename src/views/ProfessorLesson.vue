@@ -16,7 +16,7 @@
 </template>
 
 <script>
-import { uploadSnapshot } from "@/api/snapshotService" // ✅ 새로 만든 파일에서 가져옴
+import { uploadSnapshot } from "@/api/snapshotService"
 
 export default {
   name: "ProfessorLesson",
@@ -67,7 +67,6 @@ export default {
           this.audioRecorder.start()
           this.isAudioRecording = true
           this.startRecognition()
-
         } catch (err) {
           console.error("❌ 오디오 녹음 또는 화면 캡처 권한 실패:", err)
         }
@@ -79,7 +78,7 @@ export default {
     },
 
     toggleScreenRecording() {
-      // 선택적: 화면 녹화 기능 미구현
+      // 선택적 기능 (생략)
     },
 
     startRecognition() {
@@ -122,6 +121,11 @@ export default {
 
     async takeScreenshotAndUpload(transcript) {
       try {
+        if (!("ImageCapture" in window)) {
+          console.error("❌ ImageCapture API를 지원하지 않는 브라우저입니다.")
+          return
+        }
+
         if (!this.displayStream) return
 
         const track = this.displayStream.getVideoTracks()[0]
@@ -136,18 +140,25 @@ export default {
         const imageBase64 = canvas.toDataURL("image/png")
 
         const now = new Date()
-        const timestamp = now.toISOString().slice(0, 19).replace("T", " ") // "YYYY-MM-DD HH:MM:SS"
+        const timestamp = `${now.getFullYear()}-${(now.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now
+          .getSeconds()
+          .toString()
+          .padStart(2, "0")}`
 
         await uploadSnapshot({
           timestamp,
           transcript,
-          screenshot_base64: imageBase64
+          screenshot_base64: imageBase64,
         })
 
         console.log("✅ 백엔드에 스냅샷 업로드 완료")
-
       } catch (err) {
-        console.error("❌ 스크린샷 업로드 실패:", err)
+        console.error("❌ 스크린샷 업로드 실패:", err.response?.data || err.message || err)
       }
     }
   }
