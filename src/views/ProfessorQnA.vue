@@ -52,15 +52,26 @@
           <strong role="status">불러오는 중...</strong>
           <div class="spinner-border ms-auto" aria-hidden="true"></div>
         </div>
-        <ul v-else class="list-group">
-          <li v-for="(msg, index) in fullChat" :key="index" class="list-group-item">
-            <p><strong>🧑 학생 질문:</strong> {{ msg.question || '❌ 질문 없음' }}</p>
-            <p><strong>🤖 GPT 답변:</strong> {{ msg.answer || '❌ 답변 없음' }}</p>
-            <p class="text-muted small">{{ formatDate(msg.created_at) || '시간 정보 없음' }}</p>
-          </li>
-        </ul>
 
-        <!-- 🧪 디버깅용 전체 출력 -->
+        <div v-else>
+          <ul v-if="fullChat.length > 0" class="list-group">
+            <li
+              v-for="(msg, index) in fullChat"
+              :key="index"
+              class="list-group-item"
+            >
+              <p><strong>🧑 학생 질문:</strong> {{ msg.question || '❌ 질문 없음' }}</p>
+              <p><strong>🤖 GPT 답변:</strong> {{ msg.answer || '❌ 답변 없음' }}</p>
+              <p class="text-muted small">{{ formatDate(msg.created_at) || '시간 정보 없음' }}</p>
+            </li>
+          </ul>
+
+          <div v-else class="text-muted mt-3">
+            📭 전체 대화 데이터가 없습니다.
+          </div>
+        </div>
+
+        <!-- 디버깅용 -->
         <pre class="mt-3 bg-light p-3 rounded small">
 {{ fullChat }}
         </pre>
@@ -119,21 +130,20 @@ const loadFullChat = async () => {
     console.log('📦 전체 대화 응답:', result)
     fullChat.value = Array.isArray(result) ? result : result.data || []
   } catch (err) {
-    fullChat.value = []
     console.error('❌ 전체 대화 데이터 오류:', err)
+    fullChat.value = []
   } finally {
     chatLoading.value = false
   }
 }
 
-// 🔁 탭 클릭 → 화면 전환 후 데이터 로딩
 const switchToFullChat = async () => {
   activeTab.value = 'fullchat'
   await nextTick()
   loadFullChat()
 }
 
-// 최초 로딩 시 요약 탭 먼저 호출
+// 초기 로딩
 loadSummary()
 </script>
 
