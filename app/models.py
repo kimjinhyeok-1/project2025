@@ -24,8 +24,7 @@ class QuestionAnswer(Base):
     id = Column(Integer, primary_key=True, index=True)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
-    created_at = Column(DateTime, server_default=text("(now() - interval '8 hour')"))
-
+    created_at = Column(DateTime, default=func.now())
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", back_populates="questions")
 
