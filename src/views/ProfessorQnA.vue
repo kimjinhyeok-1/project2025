@@ -42,11 +42,16 @@
         </div>
         <ul v-else class="list-group">
           <li v-for="(msg, index) in fullChat" :key="index" class="list-group-item">
-            <p><strong>🧑 학생 질문:</strong> {{ msg.question }}</p>
-            <p><strong>🤖 GPT 답변:</strong> {{ msg.answer }}</p>
-            <p class="text-muted small">{{ formatDate(msg.created_at) }}</p>
+            <p><strong>🧑 학생 질문:</strong> {{ msg.question || '❌ 질문 없음' }}</p>
+            <p><strong>🤖 GPT 답변:</strong> {{ msg.answer || '❌ 답변 없음' }}</p>
+            <p class="text-muted small">{{ formatDate(msg.created_at) || '시간 정보 없음' }}</p>
           </li>
         </ul>
+
+        <!-- 디버깅용 -->
+        <pre class="mt-3 bg-light p-3 rounded small">
+          {{ fullChat }}
+        </pre>
       </div>
 
       <!-- 자료 보기 -->
@@ -71,6 +76,7 @@ const summaryLoading = ref(false)
 const chatLoading = ref(false)
 
 function formatDate(dateStr) {
+  if (!dateStr) return ''
   const d = new Date(dateStr)
   return d.toLocaleString('ko-KR', {
     year: 'numeric',
@@ -99,9 +105,11 @@ const loadFullChat = async () => {
   chatLoading.value = true
   try {
     const result = await getChatLogs()
-    fullChat.value = result
+    console.log('📦 전체 대화 응답:', result) // ✅ 로그 추가!
+    fullChat.value = Array.isArray(result) ? result : result.data || []
   } catch (err) {
     fullChat.value = []
+    console.error('❌ 전체 대화 데이터 오류:', err)
   } finally {
     chatLoading.value = false
   }
@@ -117,5 +125,9 @@ loadSummary()
 }
 .tab-content {
   min-height: 200px;
+}
+pre {
+  font-size: 0.8rem;
+  color: #444;
 }
 </style>
