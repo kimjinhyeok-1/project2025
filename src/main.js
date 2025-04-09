@@ -10,6 +10,17 @@ import './assets/startbootstrap-sb-admin-2-master/css/sb-admin-2.css'
 createApp(App).mount('#app')
 
 
+import axios from 'axios'
+
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('access_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+
 //console.log("환경 변수 체크:", process.env);
 //console.log("VUE_APP_OPENAI_API_KEY:", process.env.VUE_APP_OPENAI_API_KEY);
 

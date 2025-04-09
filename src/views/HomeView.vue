@@ -29,8 +29,8 @@
               required
             />
           </div>
-          <button type="submit" class="btn btn-primary btn-user w-100">
-            로그인
+          <button type="submit" class="btn btn-primary btn-user w-100" :disabled="loading">
+            {{ loading ? "로그인 중..." : "로그인" }}
           </button>
         </form>
 
@@ -46,6 +46,7 @@
 <script>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 export default {
   name: 'HomeView',
@@ -53,31 +54,51 @@ export default {
     const userId = ref('')
     const password = ref('')
     const errorMessage = ref('')
+    const loading = ref(false)
     const router = useRouter()
 
-    const users = [
-      { id: 'prof001', password: '1234', role: 'teacher', name: '설순옥' },
-      { id: 'stu001', password: '5678', role: 'student', name: '김민주' },
-    ]
+    const handleLogin = async () => {
+      errorMessage.value = ''
+      loading.value = true
 
-    const handleLogin = () => {
-      const foundUser = users.find(
-        (user) => user.id === userId.value && user.password === password.value
-      )
+      try {
+        // 백엔드에 로그인 요청
+        const formData = new URLSearchParams()
+        formData.append('username', userId.value)
+        formData.append('password', password.value)
 
-      if (foundUser) {
-        localStorage.setItem('user', JSON.stringify(foundUser))
-        router.push(foundUser.role === 'teacher' ? '/professor' : '/student')
-      } else {
-        errorMessage.value = '아이디 또는 비밀번호가 올바르지 않습니다.'
+        const response = await axios.post('http://192.168.50.24:8000/login', formData, {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        })
+
+        const token = response.data.access_token
+        localStorage.setItem('access_token', token)
+
+        // 토큰 안의 role을 확인해서 페이지 이동
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        const role = payload.role
+
+        if (role === 'professor') {
+          router.push('/professor')
+        } else if (role === 'student') {
+          router.push('/student')
+        } else {
+          errorMessage.value = '권한 정보가 올바르지 않습니다.'
+        }
+      } catch (error) {
+        console.error(error)
+        errorMessage.value = '❌ 로그인 실패: 아이디 또는 비밀번호가 틀렸습니다.'
+      } finally {
+        loading.value = false
       }
     }
 
     return {
       userId,
       password,
-      handleLogin,
-      errorMessage
+      errorMessage,
+      loading,
+      handleLogin
     }
   }
 }
@@ -88,17 +109,14 @@ export default {
   background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
   background-size: cover;
 }
-
 .card {
   border-radius: 1rem;
 }
-
 .form-control-user {
   border-radius: 10rem;
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
 }
-
 .btn-user {
   border-radius: 10rem;
   padding: 0.75rem 1rem;
