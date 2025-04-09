@@ -29,6 +29,7 @@ app.include_router(snapshots.router, prefix="/snapshots")
 app.include_router(auth_router)
 app.include_router(lecture_router)
 app.include_router(assignment.router, prefix="/assignments", tags=["Assignments"])
+app.include_router(question.router)
 app.include_router(ex_question.router, prefix="/questions", tags=["Questions"])
 
 # ✅ 정적 파일 경로 설정
