@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
+from sqlalchemy import text
 
 # ✅ 사용자 (학생 / 교수자)
 class User(Base):
@@ -24,7 +25,7 @@ class QuestionAnswer(Base):
     id = Column(Integer, primary_key=True, index=True)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, server_default=text("(now() - interval '8 hour')"))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", back_populates="questions")
 
