@@ -7,6 +7,7 @@ import HomeView from '../views/HomeView.vue'
 import StudentLayout from '../views/StudentLayout.vue'
 import StudentQnA from '../views/StudentQnA.vue'
 import StudentAssignment from '../views/StudentAssignment.vue'
+import StudentHistory from '../views/StudentHistory.vue'
 
 // 교수 레이아웃 및 서브뷰
 import ProfessorLayout from '../views/ProfessorLayout.vue'
@@ -41,6 +42,10 @@ const routes = [
         name: 'StudentAssignment',
         component: StudentAssignment,
       },
+      { 
+        path: '/student/history',
+        name: 'StudentHistory', 
+        component: StudentHistory }
     ],
   },
   {
@@ -92,6 +97,11 @@ const routes = [
     path: '/student/assignments/:id',
     name: 'AssignmentDetail',
     component: () => import('@/views/AssignmentDetail.vue'),
+  },
+  {
+    path: '/student/history',
+    name: 'StudentHistory',
+    component: () => import('../views/StudentHistory.vue'),
   } 
 
 ]

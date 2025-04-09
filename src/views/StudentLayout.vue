@@ -19,7 +19,7 @@
         </router-link>
       </li>
 
-      <!-- ✅ 새로 추가된 대화 기록 메뉴 -->
+      <!-- ✅ 대화 기록 보기 메뉴 (확실히 추가) -->
       <li class="nav-item">
         <router-link class="nav-link" to="/student/history">
           <i class="fas fa-comments"></i>
@@ -27,7 +27,7 @@
         </router-link>
       </li>
 
-      <!-- 기존 과제 메뉴 -->
+      <!-- 과제 메뉴 -->
       <li class="nav-item">
         <router-link class="nav-link" to="/student/assignment">
           <i class="fas fa-book"></i>
