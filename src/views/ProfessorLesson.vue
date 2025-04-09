@@ -16,7 +16,7 @@
 </template>
 
 <script>
-import { uploadSnapshot } from "@/api/sttService";
+import { uploadSnapshot } from "@/api/snapshotService" // ✅ 새로 만든 파일에서 가져옴
 
 export default {
   name: "ProfessorLesson",
@@ -27,139 +27,131 @@ export default {
       audioRecorder: null,
       audioStream: null,
       audioChunks: [],
-      screenRecorder: null,
-      screenChunks: [],
       recognition: null,
-      triggerKeywords: ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"],
-      lastTranscript: "",
       displayStream: null,
-    };
+      triggerKeywords: ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"],
+    }
   },
   methods: {
     async toggleAudioRecording() {
       if (!this.isAudioRecording) {
         try {
-          this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          this.audioRecorder = new MediaRecorder(this.audioStream);
-          this.audioChunks = [];
+          this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          this.audioRecorder = new MediaRecorder(this.audioStream)
+          this.audioChunks = []
 
           this.audioRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) this.audioChunks.push(e.data);
-          };
+            if (e.data.size > 0) this.audioChunks.push(e.data)
+          }
 
           this.audioRecorder.onstop = () => {
-            const blob = new Blob(this.audioChunks, { type: "audio/webm" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "audio-recording.webm";
-            a.click();
+            const blob = new Blob(this.audioChunks, { type: "audio/webm" })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = "audio-recording.webm"
+            a.click()
 
             if (this.audioStream) {
-              this.audioStream.getTracks().forEach((track) => track.stop());
-              this.audioStream = null;
+              this.audioStream.getTracks().forEach((track) => track.stop())
+              this.audioStream = null
             }
 
             if (this.displayStream) {
-              this.displayStream.getTracks().forEach((track) => track.stop());
-              this.displayStream = null;
+              this.displayStream.getTracks().forEach((track) => track.stop())
+              this.displayStream = null
             }
-          };
+          }
 
-          this.displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-
-          this.audioRecorder.start();
-          this.isAudioRecording = true;
-
-          this.startRecognition();
+          this.displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+          this.audioRecorder.start()
+          this.isAudioRecording = true
+          this.startRecognition()
 
         } catch (err) {
-          console.error("❌ 오디오 녹음 또는 화면 캡처 권한 실패:", err);
+          console.error("❌ 오디오 녹음 또는 화면 캡처 권한 실패:", err)
         }
       } else {
-        this.audioRecorder.stop();
-        this.isAudioRecording = false;
-        this.stopRecognition();
+        this.audioRecorder.stop()
+        this.isAudioRecording = false
+        this.stopRecognition()
       }
     },
 
-    async toggleScreenRecording() {
-      // 선택적: 일반 화면+오디오 녹화 기능 (옵션)
+    toggleScreenRecording() {
+      // 선택적: 화면 녹화 기능 미구현
     },
 
     startRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
       if (!SpeechRecognition) {
-        alert("브라우저가 음성 인식을 지원하지 않아요 🙁");
-        return;
+        alert("브라우저가 음성 인식을 지원하지 않아요 🙁")
+        return
       }
 
-      this.recognition = new SpeechRecognition();
-      this.recognition.lang = "ko-KR";
-      this.recognition.continuous = true;
-      this.recognition.interimResults = false;
+      this.recognition = new SpeechRecognition()
+      this.recognition.lang = "ko-KR"
+      this.recognition.continuous = true
+      this.recognition.interimResults = false
 
       this.recognition.onresult = (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript;
-        this.lastTranscript = transcript;
-        console.log("🎤 음성 인식 결과:", transcript);
+        const transcript = event.results[event.results.length - 1][0].transcript
+        console.log("🎤 음성 인식 결과:", transcript)
 
         const hit = this.triggerKeywords.some((kw) => transcript.includes(kw)) ||
-                    /보.*면|코드|화면|여기|이 부분|이쪽/.test(transcript);
+                    /보.*면|코드|화면|여기|이 부분|이쪽/.test(transcript)
 
         if (hit) {
-          this.takeScreenshotAndUpload(transcript);
+          this.takeScreenshotAndUpload(transcript)
         }
-      };
+      }
 
       this.recognition.onerror = (event) => {
-        console.error("음성 인식 에러:", event.error);
-      };
+        console.error("음성 인식 에러:", event.error)
+      }
 
-      this.recognition.start();
+      this.recognition.start()
     },
 
     stopRecognition() {
       if (this.recognition) {
-        this.recognition.stop();
-        this.recognition = null;
+        this.recognition.stop()
+        this.recognition = null
       }
     },
 
     async takeScreenshotAndUpload(transcript) {
       try {
-        if (!this.displayStream) return;
+        if (!this.displayStream) return
 
-        const track = this.displayStream.getVideoTracks()[0];
-        const imageCapture = new ImageCapture(track);
-        const bitmap = await imageCapture.grabFrame();
+        const track = this.displayStream.getVideoTracks()[0]
+        const imageCapture = new ImageCapture(track)
+        const bitmap = await imageCapture.grabFrame()
 
-        const canvas = document.createElement("canvas");
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(bitmap, 0, 0);
-        const imageBase64 = canvas.toDataURL("image/png");
+        const canvas = document.createElement("canvas")
+        canvas.width = bitmap.width
+        canvas.height = bitmap.height
+        const ctx = canvas.getContext("2d")
+        ctx.drawImage(bitmap, 0, 0)
+        const imageBase64 = canvas.toDataURL("image/png")
 
-        // ✅ 날짜 + 시간 모두 포함된 형식으로 변환
-        const now = new Date();
-        const timestamp = now.toISOString().slice(0, 19).replace("T", " "); // 예: "2025-04-09 14:52:30"
+        const now = new Date()
+        const timestamp = now.toISOString().slice(0, 19).replace("T", " ") // "YYYY-MM-DD HH:MM:SS"
 
-        // ✅ 백엔드로 업로드
         await uploadSnapshot({
           timestamp,
           transcript,
-          screenshot_base64: imageBase64,
-        });
+          screenshot_base64: imageBase64
+        })
 
-        console.log("✅ 백엔드에 스냅샷 업로드 완료");
+        console.log("✅ 백엔드에 스냅샷 업로드 완료")
 
       } catch (err) {
-        console.error("❌ 스크린샷 업로드 실패:", err);
+        console.error("❌ 스크린샷 업로드 실패:", err)
       }
     }
-  },
-};
+  }
+}
 </script>
 
 <style scoped>
