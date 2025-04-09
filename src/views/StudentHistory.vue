@@ -13,8 +13,9 @@
           :key="index"
           class="list-group-item"
         >
-          <strong>{{ msg.role === 'user' ? '나' : msg.role === 'assistant' ? 'GPT' : '시스템' }}:</strong>
-          {{ msg.content }}
+          <p><strong>🧑 질문:</strong> {{ msg.question }}</p>
+          <p><strong>🤖 답변:</strong> {{ msg.answer }}</p>
+          <p class="text-muted small">{{ formatDate(msg.created_at) }}</p>
         </li>
       </ul>
   
@@ -30,6 +31,17 @@
   
   const chatHistory = ref([])
   const loading = ref(true)
+  
+  function formatDate(dateStr) {
+    const d = new Date(dateStr)
+    return d.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
   
   onMounted(async () => {
     loading.value = true
@@ -47,7 +59,7 @@
       chatHistory.value = response.data || []
     } catch (error) {
       console.error('❌ 대화 기록 불러오기 실패:', error)
-      chatHistory.value = [{ role: 'system', content: '⚠️ 대화 기록을 불러올 수 없습니다.' }]
+      chatHistory.value = []
     } finally {
       loading.value = false
     }
