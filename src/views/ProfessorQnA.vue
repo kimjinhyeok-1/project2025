@@ -5,17 +5,29 @@
     <!-- 탭 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start;">
       <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'summary', 'text-primary': true }" @click="loadSummary">
+        <a
+          class="nav-link"
+          :class="{ active: activeTab === 'summary', 'text-primary': true }"
+          @click="loadSummary"
+        >
           요약 보기
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'fullchat', 'text-primary': true }" @click="loadFullChat">
+        <a
+          class="nav-link"
+          :class="{ active: activeTab === 'fullchat', 'text-primary': true }"
+          @click="switchToFullChat"
+        >
           전체 대화 보기
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'resources', 'text-primary': true }" @click="activeTab = 'resources'">
+        <a
+          class="nav-link"
+          :class="{ active: activeTab === 'resources', 'text-primary': true }"
+          @click="activeTab = 'resources'"
+        >
           자료 보기
         </a>
       </li>
@@ -48,9 +60,9 @@
           </li>
         </ul>
 
-        <!-- 디버깅용 -->
+        <!-- 🧪 디버깅용 전체 출력 -->
         <pre class="mt-3 bg-light p-3 rounded small">
-          {{ fullChat }}
+{{ fullChat }}
         </pre>
       </div>
 
@@ -64,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { getChatSummary, getChatLogs } from '@/api/professorService'
 
 const activeTab = ref('summary')
@@ -101,11 +113,10 @@ const loadSummary = async () => {
 }
 
 const loadFullChat = async () => {
-  activeTab.value = 'fullchat'
   chatLoading.value = true
   try {
     const result = await getChatLogs()
-    console.log('📦 전체 대화 응답:', result) // ✅ 로그 추가!
+    console.log('📦 전체 대화 응답:', result)
     fullChat.value = Array.isArray(result) ? result : result.data || []
   } catch (err) {
     fullChat.value = []
@@ -113,6 +124,13 @@ const loadFullChat = async () => {
   } finally {
     chatLoading.value = false
   }
+}
+
+// 🔁 탭 클릭 → 화면 전환 후 데이터 로딩
+const switchToFullChat = async () => {
+  activeTab.value = 'fullchat'
+  await nextTick()
+  loadFullChat()
 }
 
 // 최초 로딩 시 요약 탭 먼저 호출
