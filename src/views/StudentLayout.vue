@@ -11,12 +11,23 @@
 
       <hr class="sidebar-divider my-0" />
 
+      <!-- Q&A 메뉴 -->
       <li class="nav-item">
         <router-link class="nav-link" to="/student/qna">
           <i class="fas fa-question-circle"></i>
           <span> Q & A</span>
         </router-link>
       </li>
+
+      <!-- ✅ 새로 추가된 대화 기록 메뉴 -->
+      <li class="nav-item">
+        <router-link class="nav-link" to="/student/history">
+          <i class="fas fa-comments"></i>
+          <span> 대화 기록 보기</span>
+        </router-link>
+      </li>
+
+      <!-- 기존 과제 메뉴 -->
       <li class="nav-item">
         <router-link class="nav-link" to="/student/assignment">
           <i class="fas fa-book"></i>
@@ -53,7 +64,6 @@ html, body, #app, #wrapper {
   left: 0;
 }
 
-/* ✅ 텍스트 색상을 흰색으로 고정 */
 .sidebar .nav-link,
 .sidebar .sidebar-brand,
 .sidebar .nav-link span {
