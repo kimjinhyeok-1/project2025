@@ -2,7 +2,7 @@
 import axios from "axios";
 
 // ✅ 백엔드2에서 실행 중인 FastAPI 주소 (너의 IP로 바꿔!)
-const STT_API_BASE = "http://172.22.170.43:8000";
+const STT_API_BASE = "https://project2025-backend.onrender.com";
 
 // 📤 스냅샷 업로드 (타임스탬프 + 캡처 이미지 + 문장)
 export async function uploadSnapshot({ timestamp, transcript, screenshot_base64 }) {
