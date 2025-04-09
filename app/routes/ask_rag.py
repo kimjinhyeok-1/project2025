@@ -86,6 +86,7 @@ async def ask_rag(
 
     top_chunks = get_top_chunks(query_embedding, embedding_chunks, top_n=5)
     context = build_context(top_chunks, max_total_tokens=3000)
+    
 
     prompt = f"""
 아래 강의자료 발췌를 참고하여 질문에 정확하고 너무 길지 않게 답변하세요. 줄바꿈은 <br>로 표시하세요.
@@ -94,9 +95,10 @@ async def ask_rag(
 {context}
 --- 자료 끝 ---
 
-질문: {q}
+질문: {"객체지향이 뭐야"}
 답변:
 """
+    print(f"📝 Context 길이 (문자 수): {len(prompt)}")
 
     try:
         response = client.chat.completions.create(
@@ -122,3 +124,4 @@ async def ask_rag(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT 응답 실패: {str(e)}")
+
