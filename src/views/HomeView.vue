@@ -57,24 +57,24 @@ export default {
     const loading = ref(false)
     const router = useRouter()
 
+    const BASE_URL = 'https://project2025-backend.onrender.com'
+
     const handleLogin = async () => {
       errorMessage.value = ''
       loading.value = true
 
       try {
-        // 백엔드에 로그인 요청
         const formData = new URLSearchParams()
         formData.append('username', userId.value)
         formData.append('password', password.value)
 
-        const response = await axios.post('http://192.168.50.24:8000/login', formData, {
+        const response = await axios.post(`${BASE_URL}/login`, formData, {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         })
 
         const token = response.data.access_token
         localStorage.setItem('access_token', token)
 
-        // 토큰 안의 role을 확인해서 페이지 이동
         const payload = JSON.parse(atob(token.split('.')[1]))
         const role = payload.role
 
@@ -87,7 +87,7 @@ export default {
         }
       } catch (error) {
         console.error(error)
-        errorMessage.value = '❌ 로그인 실패: 아이디 또는 비밀번호가 틀렸습니다.'
+        errorMessage.value = '❌ 로그인 실패: 아이디 또는 비밀번호를 확인하세요.'
       } finally {
         loading.value = false
       }
