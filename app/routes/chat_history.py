@@ -35,7 +35,7 @@ async def get_my_chat_history(
 @router.get("/chat_history/all")
 async def get_all_chat_history(
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(verify_professor)  # ✅ 교수자만 접근 가능
+    #_: str = Depends(verify_professor)  # ✅ 교수자만 접근 가능
 ):
     result = await db.execute(
         select(QuestionAnswer).order_by(QuestionAnswer.created_at.desc())

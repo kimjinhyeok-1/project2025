@@ -98,8 +98,6 @@ async def ask_rag(
 질문: {q}
 답변:
 """
-    print(f"📝 Context 길이 (문자 수): {len(prompt)}")
-
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
