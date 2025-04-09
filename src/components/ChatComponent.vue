@@ -8,7 +8,7 @@
         :key="index"
         :class="['chat-bubble', message.role]"
       >
-      v-html="message.content"
+        {{ message.content }}
       </div>
     </div>
 
