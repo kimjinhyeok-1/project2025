@@ -39,7 +39,7 @@ class Lecture(Base):
     description = Column(String, nullable=True)
 
     recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
-    snapshots = relationship("LectureSnapshot", back_populates="lecture", cascade="all, delete-orphan")
+    snapshots = relationship("Snapshot", back_populates="lecture", cascade="all, delete-orphan")
 
 
 # ✅ 녹음 파일 (음성 업로드)
@@ -55,7 +55,7 @@ class Recording(Base):
 
 
 # ✅ 강의 중간 이미지 및 텍스트 캡처
-class LectureSnapshot(Base):
+class Snapshot(Base):
     __tablename__ = "lecture_snapshots"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -66,6 +66,7 @@ class LectureSnapshot(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     lecture = relationship("Lecture", back_populates="snapshots")
+
 
 
 # ✅ 강의자료 텍스트 전체 요약
