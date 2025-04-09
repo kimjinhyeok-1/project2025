@@ -141,10 +141,13 @@ export default {
         ctx.drawImage(bitmap, 0, 0);
         const imageBase64 = canvas.toDataURL("image/png");
 
-        const now = new Date().toLocaleTimeString();
+        // ✅ 날짜 + 시간 모두 포함된 형식으로 변환
+        const now = new Date();
+        const timestamp = now.toISOString().slice(0, 19).replace("T", " "); // 예: "2025-04-09 14:52:30"
 
+        // ✅ 백엔드로 업로드
         await uploadSnapshot({
-          timestamp: now,
+          timestamp,
           transcript,
           screenshot_base64: imageBase64,
         });
@@ -154,7 +157,7 @@ export default {
       } catch (err) {
         console.error("❌ 스크린샷 업로드 실패:", err);
       }
-    },
+    }
   },
 };
 </script>
