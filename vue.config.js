@@ -4,7 +4,7 @@ const fs = require('fs');       // ✅ 파일 복사용
 
 
 module.exports = defineConfig({
-  publicPath: '/',
+  publicPath: './',
   transpileDependencies: true,
   chainWebpack: config => {
     config.plugin('define').tap(definitions => {
