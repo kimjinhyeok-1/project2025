@@ -8,7 +8,7 @@
         <a
           class="nav-link"
           :class="{ active: activeTab === 'summary', 'text-primary': true }"
-          @click="activeTab = 'summary'"
+          @click="loadSummary"
         >
           요약 보기
         </a>
@@ -33,15 +33,31 @@
       </li>
     </ul>
 
-    <!-- 내용 -->
+    <!-- 탭 내용 -->
     <div class="tab-content mt-3 border p-4 rounded bg-white shadow-sm">
-      <!-- 요약 탭 -->
+      <!-- ✅ 요약 탭 -->
       <div v-if="activeTab === 'summary'">
         <h5>📋 질문 요약</h5>
-        <p>요약 기능은 추후 제공될 예정입니다.</p>
+
+        <div v-if="summaryLoading" class="d-flex align-items-center">
+          <strong role="status">불러오는 중...</strong>
+          <div class="spinner-border ms-auto" aria-hidden="true"></div>
+        </div>
+
+        <div v-else>
+          <h6>📝 요약 내용</h6>
+          <p>{{ summary.summary_for_professor }}</p>
+
+          <h6 class="mt-4">💡 자주 묻는 질문</h6>
+          <ul>
+            <li v-for="(q, index) in summary.most_common_questions" :key="index">
+              {{ index + 1 }}. {{ q }}
+            </li>
+          </ul>
+        </div>
       </div>
 
-      <!-- 전체 대화 탭 -->
+      <!-- ✅ 전체 대화 탭 -->
       <div v-if="activeTab === 'fullchat'">
         <h5>💬 전체 대화 내용</h5>
 
@@ -82,7 +98,13 @@ import axios from 'axios'
 
 const activeTab = ref('summary')
 
+const summary = ref({
+  most_common_questions: [],
+  summary_for_professor: '',
+})
 const fullChat = ref([])
+
+const summaryLoading = ref(false)
 const chatLoading = ref(false)
 
 function formatDate(dateStr) {
@@ -96,6 +118,32 @@ function formatDate(dateStr) {
   })
 }
 
+const loadSummary = async () => {
+  activeTab.value = 'summary'
+  summaryLoading.value = true
+
+  try {
+    const token = localStorage.getItem('access_token')
+    if (!token) throw new Error('❌ 토큰 없음')
+
+    const response = await axios.get('https://project2025-backend.onrender.com/chat_history/summary', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    summary.value = response.data
+  } catch (error) {
+    console.error('❌ 요약 데이터 불러오기 실패:', error)
+    summary.value = {
+      summary_for_professor: '⚠️ 요약 데이터를 불러올 수 없습니다.',
+      most_common_questions: []
+    }
+  } finally {
+    summaryLoading.value = false
+  }
+}
+
 const loadFullChat = async () => {
   activeTab.value = 'fullchat'
   chatLoading.value = true
@@ -106,7 +154,7 @@ const loadFullChat = async () => {
 
     const response = await axios.get('https://project2025-backend.onrender.com/chat_history/all', {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`
       }
     })
 
@@ -118,6 +166,9 @@ const loadFullChat = async () => {
     chatLoading.value = false
   }
 }
+
+// ✅ 최초엔 요약 먼저 로딩
+loadSummary()
 </script>
 
 <style scoped>
