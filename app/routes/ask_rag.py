@@ -11,7 +11,6 @@ import numpy as np
 import json
 from sklearn.metrics.pairwise import cosine_similarity
 import tiktoken
-import html
 from app.auth import get_current_user_id, verify_student  # ✅ 추가
 
 # ✅ 환경변수 로드 및 OpenAI 클라이언트 생성
@@ -86,7 +85,6 @@ async def ask_rag(
 
     top_chunks = get_top_chunks(query_embedding, embedding_chunks, top_n=5)
     context = build_context(top_chunks, max_total_tokens=3000)
-    
 
     prompt = f"""
 아래 강의자료 발췌를 참고하여 질문에 정확하고 너무 길지 않게 답변하세요. 줄바꿈은 <br>로 표시하세요.
@@ -106,8 +104,7 @@ async def ask_rag(
             temperature=0.7,
         )
         raw_answer = response.choices[0].message.content.strip()
-        escaped_answer = html.escape(raw_answer)
-        formatted_answer = escaped_answer.replace("\n", "<br>")
+        formatted_answer = raw_answer.replace("\n", "<br>")  # ✅ 줄바꿈만 변환
 
         new_qa = QuestionAnswer(
             question=q,
@@ -122,4 +119,3 @@ async def ask_rag(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT 응답 실패: {str(e)}")
-
