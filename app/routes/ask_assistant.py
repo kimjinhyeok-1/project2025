@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.database import get_db
+from app.database import get_db  # 수정된 부분: get_db로 변경
 from app.models import User, QuestionAnswer
 from app.services.assistant import ask_assistant
 import os
@@ -20,7 +20,7 @@ async def create_thread():
 async def ask_question(
     username: str = Form(...),
     question: str = Form(...),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_db)  # 수정된 부분: get_db로 변경
 ):
     # 1. 사용자 조회
     result = await db.execute(select(User).where(User.name == username))
