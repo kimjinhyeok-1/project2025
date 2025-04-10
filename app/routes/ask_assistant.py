@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.database import get_db
 from app.models import User, QuestionAnswer
-from app.services.ask_assistant import ask_assistant
+from app.services.assistant import ask_assistant
 import os
 import httpx
 
