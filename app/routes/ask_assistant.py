@@ -16,7 +16,7 @@ async def create_thread():
         res = await client.post("https://api.openai.com/v1/threads", headers=headers)
         return res.json()["id"]
 
-@router.post("/ask")
+@router.post("/ask_assistant")
 async def ask_question(
     username: str = Form(...),
     question: str = Form(...),
