@@ -14,7 +14,7 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=False, default="student")  # 'student' 또는 'professor'
     is_admin = Column(Boolean, default=False)
-    assistant_thread_id = Column(String, nullable=True)  # ✅ Assistant Thread ID (학생별 대화 유지용)
+    assistant_thread_id = Column(String, nullable=True) # ✅ Assistant Thread ID (학생별 대화 유지용) 13
     questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
     assignment_questions = relationship("AssignmentQuestion", back_populates="user", cascade="all, delete-orphan")
 
