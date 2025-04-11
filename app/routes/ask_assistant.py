@@ -38,8 +38,8 @@ async def ask_question(
         thread_id = user.assistant_thread_id
 
     # 3. Assistant 응답 받기
-    from app.config import ASSISTANT_ID  # assistant_id는 환경변수에서 불러온다고 가정
-    answer = await ask_assistant(question, thread_id, ASSISTANT_ID)
+    from app.config import OPENAI_ASSISTANT_ID # assistant_id는 환경변수에서 불러온다고 가정
+    answer = await ask_assistant(question, thread_id, OPENAI_ASSISTANT_ID)
 
     # 4. DB 저장
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
