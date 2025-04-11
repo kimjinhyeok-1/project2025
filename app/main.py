@@ -1,15 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import health, upload, quiz, ask_rag, chat_history, recording, snapshots, assignment, question, ask_assistant
+from app.routes import (
+    health, upload, quiz, ask_rag, chat_history,
+    recording, snapshots, assignment, question, ask_assistant, ex_question
+)
 from app.auth import router as auth_router
 from app.database import Base, engine
 from app.routes.lecture import router as lecture_router
-from app.routes import ex_question
+
+# ✅ 환경 변수 로딩
 from dotenv import load_dotenv
+import os
+
+# .env 파일의 정확한 경로 설정
+basedir = os.path.abspath(os.path.dirname(__file__))  # app/ 디렉토리 기준
+env_path = os.path.join(basedir, "..", ".env")
+load_dotenv(dotenv_path=env_path)
+
+# 로딩 확인 (선택)
+print("✅ OPENAI_ASSISTANT_ID:", os.getenv("OPENAI_ASSISTANT_ID"))
 
 app = FastAPI()
-load_dotenv()
+
 # ✅ 비동기 테이블 생성 함수
 async def init_models():
     async with engine.begin() as conn:
@@ -33,12 +46,10 @@ app.include_router(lecture_router)
 app.include_router(assignment.router, prefix="/assignments", tags=["Assignments"])
 app.include_router(question.router)
 app.include_router(ex_question.router, prefix="/questions", tags=["Questions"])
-app.include_router(ask_assistant.router) # assistant 이용
+app.include_router(ask_assistant.router)  # Assistant 기반 질의응답
 
 # ✅ 정적 파일 경로 설정
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# ✅ ✅ 스냅샷 이미지 정적 파일 서빙 경로 추가
 app.mount("/snapshots", StaticFiles(directory="snapshots"), name="snapshots")
 
 # ✅ 기본 응답
@@ -59,7 +70,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ 로컬 실행용 (주의: 이 방식은 reload=True일 땐 무시됨)
+# ✅ 로컬 실행용 (주의: reload=True일 땐 __main__ 무시됨)
 if __name__ == "__main__":
     import uvicorn
     import asyncio
