@@ -6,8 +6,10 @@ from app.auth import router as auth_router
 from app.database import Base, engine
 from app.routes.lecture import router as lecture_router
 from app.routes import ex_question
-app = FastAPI()
+from dotenv import load_dotenv
 
+app = FastAPI()
+load_dotenv()
 # ✅ 비동기 테이블 생성 함수
 async def init_models():
     async with engine.begin() as conn:
