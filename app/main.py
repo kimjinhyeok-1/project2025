@@ -8,6 +8,7 @@ from app.routes import (
 from app.auth import router as auth_router
 from app.database import Base, engine
 from app.routes.lecture import router as lecture_router
+from app.routes import vad
 
 # ✅ 환경 변수 로딩
 from dotenv import load_dotenv
@@ -47,6 +48,7 @@ app.include_router(assignment.router, prefix="/assignments", tags=["Assignments"
 app.include_router(question.router)
 app.include_router(ex_question.router, prefix="/questions", tags=["Questions"])
 app.include_router(ask_assistant.router)  # Assistant 기반 질의응답
+app.include_router(vad.router, prefix="/vad", tags=["VAD"])
 
 # ✅ 정적 파일 경로 설정
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
