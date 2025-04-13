@@ -38,6 +38,9 @@ export default {
 
           try {
             console.log("📤 업로드 시작")
+            console.log("👉 실제 전송 주소:", BASE_URL)
+            console.log("📤 POST 전송 직전");
+            
             const res = await fetch(BASE_URL, {
               method: 'POST', // ✅ 반드시 POST로 명시
               body: formData,
