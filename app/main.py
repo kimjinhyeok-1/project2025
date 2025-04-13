@@ -61,11 +61,12 @@ def root():
 @app.get("/ping")
 def ping():
     return {"message": "Server is running"}
+origins = {"https://project2025-frontend.onrender.com"}
 
 # ✅ CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
