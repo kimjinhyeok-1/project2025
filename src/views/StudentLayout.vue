@@ -80,3 +80,8 @@ html, body, #app, #wrapper {
   width: 100%;
 }
 </style>
+
+<script setup>
+console.log("👀 StudentLayout.vue 진입됨")
+</script>
+

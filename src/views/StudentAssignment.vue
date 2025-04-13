@@ -44,15 +44,19 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
+// ✅ 컴포넌트 진입 확인용 로그
+console.log("🧩 StudentAssignment 컴포넌트 로드됨")
+
 const assignments = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
+  console.log("🚀 StudentAssignment onMounted 진입") // ✅ 마운트 진입 로그
+
   try {
     const res = await axios.get('https://project2025-backend.onrender.com/assignments/')
     console.log('📦 과제 응답 데이터:', res.data)
 
-    // ✅ 데이터 구조 유연하게 처리
     if (Array.isArray(res.data)) {
       assignments.value = res.data
     } else if (res.data && Array.isArray(res.data.assignments)) {

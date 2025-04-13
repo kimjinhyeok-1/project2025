@@ -53,7 +53,8 @@
       const response = await axios.get('https://project2025-backend.onrender.com/chat_history/me', {
         headers: {
           Authorization: `Bearer ${token}`
-        }
+        },
+        withCredentials: true
       })
   
       chatHistory.value = response.data || []
