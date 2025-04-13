@@ -16,4 +16,6 @@ passlib
 python-jose
 numpy
 scikit-learn
+torch==2.6.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 
