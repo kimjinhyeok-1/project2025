@@ -10,9 +10,10 @@
       등록된 과제 공지가 없습니다.
     </div>
 
-    <!-- 디버깅용: 데이터 내용 확인 -->
     <div v-else>
-      <pre>{{ assignments }}</pre> <!-- 👈 이 줄로 데이터 확인 가능 -->
+      <!-- 🔍 디버깅용: 응답 데이터 확인 -->
+      <pre>{{ JSON.stringify(assignments, null, 2) }}</pre>
+
       <div class="row g-4">
         <div
           v-for="assignment in assignments"
@@ -49,10 +50,20 @@ const loading = ref(true)
 onMounted(async () => {
   try {
     const res = await axios.get('https://project2025-backend.onrender.com/assignments/')
-    console.log('📦 과제 응답 데이터:', res.data) // 👈 콘솔 출력 추가!
-    assignments.value = res.data
+    console.log('📦 과제 응답 데이터:', res.data)
+
+    // ✅ 데이터 구조 유연하게 처리
+    if (Array.isArray(res.data)) {
+      assignments.value = res.data
+    } else if (res.data && Array.isArray(res.data.assignments)) {
+      assignments.value = res.data.assignments
+    } else {
+      console.warn('❗ 예상과 다른 데이터 구조:', res.data)
+      assignments.value = []
+    }
   } catch (err) {
     console.error('❌ 과제 공지 로딩 실패:', err)
+    assignments.value = []
   } finally {
     loading.value = false
   }
