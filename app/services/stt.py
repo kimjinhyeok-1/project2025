@@ -4,7 +4,8 @@ import torch
 import torchaudio
 from typing import List, Tuple
 import whisper
-from silero_vad import VoiceActivityDetector
+from app.services.silero_vad.vad import detect_voice
+
 
 # ✅ 1. webm → wav 변환
 def convert_webm_to_wav(webm_path: str) -> str:
