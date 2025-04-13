@@ -18,7 +18,7 @@ import ProfessorAssignments from '../views/ProfessorAssignments.vue'
 import ProfessorReviewView from '../views/ProfessorReviewView.vue'
 import ProfessorSummaryDetailView from '../views/ProfessorSummaryDetailView.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
-import StudentAssignmentDetail from '../views/AssignmentDetail.vue'
+import AssignmentSubmit from '../views/AssignmentSubmit.vue'
 
 import AutoRecorder from '../components/AutoRecorder.vue'
 
@@ -42,11 +42,6 @@ const routes = [
         component: StudentQnA,
       },
       {
-        path: 'assignment',
-        name: 'StudentAssignment',
-        component: StudentAssignment,
-      },
-      {
         path: 'history',
         name: 'StudentHistory',
         component: StudentHistory,
@@ -58,9 +53,9 @@ const routes = [
       },
       {
         path: 'assignments/:id',
-        name: 'AssignmentDetail',
-        component: StudentAssignmentDetail,
-      },
+        name: 'AssignmentSubmit',
+        component: AssignmentSubmit,
+      }
     ],
   },
   {
