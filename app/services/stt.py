@@ -2,10 +2,9 @@ import os
 import subprocess
 import torch
 import torchaudio
-from typing import List, Tuple
 import whisper
-from silero_vad import VoiceActivityDetector, collect_chunks
-
+from typing import List
+from silero_vad import get_speech_timestamps
 
 # ✅ 1. webm → wav 변환
 def convert_webm_to_wav(webm_path: str) -> str:
@@ -14,42 +13,33 @@ def convert_webm_to_wav(webm_path: str) -> str:
     subprocess.run(command, shell=True)
     return wav_path
 
-
-# ✅ 2. Silero로 말한 구간 탐지 → [start, end] (초 단위)
-def get_speech_timestamps(wav_path: str) -> List[Tuple[float, float]]:
-    # 오디오 불러오기
-    wav, sample_rate = torchaudio.load(wav_path)
-    if sample_rate != 16000:
-        wav = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)(wav)
-
-    # 모델 불러오기
-    model = VoiceActivityDetector()
-    speech_chunks = model.detect_voice(wav[0], sample_rate=16000)
-
-    return speech_chunks
-
-
-# ✅ 3. Whisper로 말한 구간들만 STT
+# ✅ 2. Whisper로 말한 구간만 STT
 def transcribe_with_whisper(wav_path: str) -> str:
-    print("📦 Whisper 모델 로딩 중...")
     model = whisper.load_model("base")
+    waveform, sample_rate = torchaudio.load(wav_path)
 
-    print("🔍 말한 구간 추출 중 (Silero)...")
-    speech_timestamps = get_speech_timestamps(wav_path)
+    # Silero VAD 모델 불러오기 (자동 다운로드)
+    vad_model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad', trust_repo=True)
+    get_speech_ts = utils['get_speech_timestamps']
+
+    if sample_rate != 16000:
+        resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
+        waveform = resampler(waveform)
+        sample_rate = 16000
+
+    speech_timestamps = get_speech_ts(waveform[0], vad_model, sampling_rate=sample_rate)
 
     if not speech_timestamps:
         return "⚠️ 음성이 감지되지 않았습니다."
 
-    # 전체 오디오 불러오기
-    wav, _ = torchaudio.load(wav_path)
-
     results = []
-    for idx, (start_sec, end_sec) in enumerate(speech_timestamps):
-        start_sample = int(start_sec * 16000)
-        end_sample = int(end_sec * 16000)
+    for i, ts in enumerate(speech_timestamps):
+        start = ts['start']
+        end = ts['end']
+        chunk = waveform[:, start:end]
 
-        chunk_path = wav_path.replace(".wav", f"_chunk{idx}.wav")
-        torchaudio.save(chunk_path, wav[:, start_sample:end_sample], 16000)
+        chunk_path = wav_path.replace(".wav", f"_chunk{i}.wav")
+        torchaudio.save(chunk_path, chunk, sample_rate)
 
         result = model.transcribe(chunk_path, language="ko")
         results.append(result["text"])
