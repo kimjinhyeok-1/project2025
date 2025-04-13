@@ -19,8 +19,7 @@ module.exports = defineConfig({
         apply: (compiler) => {
           compiler.hooks.done.tap('CopyPublicFilesPlugin', () => {
             const filesToCopy = [
-              { src: 'public/static.json', dest: 'dist/static.json' },
-              { src: 'public/redirects.txt', dest: 'dist/_redirects' },
+              { src: 'public/static.json', dest: 'dist/static.json' }
             ];
 
             filesToCopy.forEach(({ src, dest }) => {
