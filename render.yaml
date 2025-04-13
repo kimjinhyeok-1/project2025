@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: project2025-frontend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: serve dist
+    staticPublishPath: dist
+    buildFilter:
+      paths:
+        - "**/*"
+    staticRoutes:
+      - route: /*
+        serve: /index.html
