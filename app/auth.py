@@ -107,8 +107,6 @@ async def login(
         algorithm="HS256"
     )
     t3 = time.perf_counter()
-
-    print(f"⏱️ 사용자 조회: {t1 - t0:.3f}s, 비번 검증: {t2 - t1:.3f}s, 토큰 발급: {t3 - t2:.3f}s")
     return {"access_token": access_token, "token_type": "bearer"}
 
 
