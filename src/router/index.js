@@ -20,6 +20,8 @@ import ProfessorSummaryDetailView from '../views/ProfessorSummaryDetailView.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import StudentAssignmentDetail from '../views/AssignmentDetail.vue'
 
+import AutoRecorder from '../components/AutoRecorder.vue'
+
 const routes = [
   {
     path: '/',
@@ -102,6 +104,11 @@ const routes = [
       },
     ],
   },
+  {
+    path: '/record',
+    name: 'AutoRecorder',
+    component: AutoRecorder,
+  }
 ]
 
 const router = createRouter({
