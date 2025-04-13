@@ -29,9 +29,9 @@
 
       <!-- 과제 메뉴 -->
       <li class="nav-item">
-        <router-link class="nav-link" to="/student/assignment">
-          <i class="fas fa-book"></i>
-          <span> ASSIGNMENT</span>
+        <router-link class="nav-link" to="/student/assignments">
+           <i class="fas fa-book"></i>
+           <span> ASSIGNMENT</span>
         </router-link>
       </li>
     </ul>
