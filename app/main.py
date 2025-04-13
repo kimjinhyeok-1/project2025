@@ -24,6 +24,15 @@ print("✅ OPENAI_ASSISTANT_ID:", os.getenv("OPENAI_ASSISTANT_ID"))
 
 app = FastAPI()
 
+# ✅ CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # ✅ 비동기 테이블 생성 함수
 async def init_models():
     async with engine.begin() as conn:
@@ -63,14 +72,7 @@ def ping():
     return {"message": "Server is running"}
 origins = {"https://project2025-frontend.onrender.com"}
 
-# ✅ CORS 설정
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
 
 # ✅ 로컬 실행용 (주의: reload=True일 땐 __main__ 무시됨)
 if __name__ == "__main__":
