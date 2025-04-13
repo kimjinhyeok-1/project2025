@@ -10,6 +10,7 @@
 <script>
 import { ref } from 'vue'
 
+// ✅ 백엔드의 POST API 주소 정확히 반영
 const BASE_URL = 'https://project2025-backend.onrender.com/vad/upload_audio_chunk'
 
 export default {
@@ -29,23 +30,25 @@ export default {
         }
 
         mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' })
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }) // ✅ webm 형식으로 설정
           audioChunks = []
 
           const formData = new FormData()
-          formData.append('file', audioBlob, 'chunk.wav')
+          formData.append('file', audioBlob, 'chunk.webm') // ✅ 확장자도 webm으로 통일
 
           try {
-            // ✅ 여기에 백엔드 주소를 너희 팀의 실제 Render 주소로 바꿔줘
+            console.log("📤 업로드 시작")
             const res = await fetch(BASE_URL, {
-              method: 'POST',
+              method: 'POST', // ✅ 반드시 POST로 명시
               body: formData,
             })
 
             const data = await res.json()
-            question.value = data.question
+            console.log("📥 응답 도착:", data)
+
+            question.value = data.question || '❔ 질문 없음'
           } catch (err) {
-            console.warn('⚠️ 백엔드 연결 실패 또는 응답 오류:', err)
+            console.error("❌ 전송 중 에러 발생:", err)
           }
         }
 
@@ -59,7 +62,7 @@ export default {
           }
           mediaRecorder.stop()
           mediaRecorder.start()
-        }, 5000)
+        }, 5000) // ✅ 5초 간격 자동 chunk
 
       } catch (err) {
         console.error('🎤 마이크 접근 실패:', err)
