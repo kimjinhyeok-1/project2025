@@ -10,26 +10,30 @@
       등록된 과제 공지가 없습니다.
     </div>
 
-    <div v-else class="row g-4">
-      <div
-        v-for="assignment in assignments"
-        :key="assignment.id"
-        class="col-md-6"
-      >
-        <router-link
-          :to="`/student/assignments/${assignment.id}`"
-          class="text-decoration-none"
+    <!-- 디버깅용: 데이터 내용 확인 -->
+    <div v-else>
+      <pre>{{ assignments }}</pre> <!-- 👈 이 줄로 데이터 확인 가능 -->
+      <div class="row g-4">
+        <div
+          v-for="assignment in assignments"
+          :key="assignment.id"
+          class="col-md-6"
         >
-          <div class="card shadow-sm h-100">
-            <div class="card-body">
-              <h5 class="card-title text-dark">{{ assignment.title }}</h5>
-              <p class="card-text text-muted">{{ assignment.description }}</p>
-              <p class="card-text">
-                📅 마감일: <strong>{{ assignment.due }}</strong>
-              </p>
+          <router-link
+            :to="`/student/assignments/${assignment.id}`"
+            class="text-decoration-none"
+          >
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <h5 class="card-title text-dark">{{ assignment.title }}</h5>
+                <p class="card-text text-muted">{{ assignment.description }}</p>
+                <p class="card-text">
+                  📅 마감일: <strong>{{ assignment.due }}</strong>
+                </p>
+              </div>
             </div>
-          </div>
-        </router-link>
+          </router-link>
+        </div>
       </div>
     </div>
   </div>
@@ -44,10 +48,11 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/assignments') // 실제 API 주소로 교체
+    const res = await axios.get('https://project2025-backend.onrender.com/assignments/')
+    console.log('📦 과제 응답 데이터:', res.data) // 👈 콘솔 출력 추가!
     assignments.value = res.data
   } catch (err) {
-    console.error('과제 공지 로딩 실패:', err)
+    console.error('❌ 과제 공지 로딩 실패:', err)
   } finally {
     loading.value = false
   }
