@@ -29,12 +29,17 @@ const routes = [
     component: HomeView,
   },
   {
+    path: '/',
+    redirect: '/student/assignment' // ✅ 메인 페이지 → 과제 페이지로 리디렉션
+  },
+  {
     path: '/student',
+    name: 'StudentLayout', // ✅ 이름 추가
     component: StudentLayout,
     children: [
       {
         path: '',
-        redirect: '/student/qna',
+        redirect: '/student/assignment', // ✅ student 하위 기본도 과제 페이지
       },
       {
         path: 'qna',
@@ -103,6 +108,10 @@ const routes = [
     path: '/record',
     name: 'AutoRecorder',
     component: AutoRecorder,
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/' // ✅ fallback 처리
   }
 ]
 
