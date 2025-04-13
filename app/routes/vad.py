@@ -1,5 +1,3 @@
-# app/routes/vad.py
-
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import os
 import time
@@ -9,7 +7,6 @@ from app.services.gpt import generate_expected_questions
 
 router = APIRouter()
 
-# 저장 디렉토리 생성
 UPLOAD_DIR = "temp/audio_chunks"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -36,7 +33,7 @@ async def upload_audio_chunk(file: UploadFile = File(...)):
 
         # 4. GPT 예상 질문 생성
         questions = generate_expected_questions(transcript)
-        print(f"❓ 예상 질문: {questions}")
+        print(f"❓ 예상 질문 리스트: {questions}")
 
         # 5. 결과 반환
         return {
@@ -47,4 +44,5 @@ async def upload_audio_chunk(file: UploadFile = File(...)):
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print("❌ 오류 발생:", str(e))
+        raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")
