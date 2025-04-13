@@ -46,10 +46,17 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/assignments') // ✨ 실제 API 주소로 교체
+    const token = localStorage.getItem('access_token')
+
+    const res = await axios.get('https://project2025-backend.onrender.com/assignments', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
     assignments.value = res.data
   } catch (err) {
-    console.error('과제 공지 불러오기 실패:', err)
+    console.error('❌ 과제 공지 불러오기 실패:', err)
   } finally {
     loading.value = false
   }
