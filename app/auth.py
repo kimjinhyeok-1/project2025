@@ -18,7 +18,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 180
 
 router = APIRouter()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto",bcrypt__rounds=10)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")  # ⚠️ Swagger 인증 정상 작동용
 
 # ✅ 역할 Enum 정의
