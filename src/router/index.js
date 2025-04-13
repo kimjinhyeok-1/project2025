@@ -47,8 +47,8 @@ const routes = [
         component: StudentHistory,
       },
       {
-        path: 'assignments',
-        name: 'StudentAssignments',
+        path: 'assignment',
+        name: 'StudentAssignment',
         component: StudentAssignment,
       },
       {
