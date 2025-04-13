@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import (
-    health, upload, quiz, ask_rag, chat_history,
+from app.routes import ( 
+    upload, quiz, ask_rag, chat_history,
     recording, snapshots, assignment, question, ask_assistant, ex_question
 )
 from app.auth import router as auth_router
@@ -35,7 +35,6 @@ async def on_startup():
     await init_models()
 
 # ✅ 라우터 등록
-app.include_router(health.router)
 app.include_router(upload.router)
 app.include_router(chat_history.router)
 app.include_router(quiz.router)

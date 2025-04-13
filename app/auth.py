@@ -78,29 +78,39 @@ async def register(
     return {"message": f"{'교수자' if role.value == 'professor' else '학생'} 회원가입 완료"}
 
 # ✅ 로그인
+# login 함수 안에 시간 측정 로그 추가
+import time
+
 @router.post("/login")
 async def login(
     form: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
+    t0 = time.perf_counter()
     result = await db.execute(select(User).where(User.name == form.username))
+    t1 = time.perf_counter()
     user = result.scalar_one_or_none()
 
     if not user or not pwd_context.verify(form.password, user.password):
         raise HTTPException(status_code=401, detail="이름 또는 비밀번호가 올바르지 않습니다")
 
+    t2 = time.perf_counter()
     access_token = jwt.encode(
         {
             "sub": user.name,
             "user_id": user.id,
             "role": user.role,
             "admin": user.is_admin,
-            "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            "exp": datetime.utcnow() + timedelta(minutes=180)
         },
         SECRET_KEY,
-        algorithm=ALGORITHM
+        algorithm="HS256"
     )
+    t3 = time.perf_counter()
+
+    print(f"⏱️ 사용자 조회: {t1 - t0:.3f}s, 비번 검증: {t2 - t1:.3f}s, 토큰 발급: {t3 - t2:.3f}s")
     return {"access_token": access_token, "token_type": "bearer"}
+
 
 # ✅ 관리자 권한 부여 (검증 없음)
 @router.post("/set_admin")
