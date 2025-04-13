@@ -22,14 +22,16 @@ async def get_my_chat_history(
         .order_by(QuestionAnswer.created_at.desc())
     )
     records = result.scalars().all()
-   return [
-    {
-        "question": r.question,
-        "answer": r.answer,
-        "created_at": r.created_at.isoformat() if r.created_at else None
-    }
-    for r in records
-]
+
+    return [  # ✅ 들여쓰기 정확히 맞춤
+        {
+            "question": r.question,
+            "answer": r.answer,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        }
+        for r in records
+    ]
+
 
 # ✅ 전체 질문 내역 확인 (교수자 전용, 질문자 정보 없음)
 @router.get("/chat_history/all")
