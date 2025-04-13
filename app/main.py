@@ -23,7 +23,7 @@ load_dotenv(dotenv_path=env_path)
 print("✅ OPENAI_ASSISTANT_ID:", os.getenv("OPENAI_ASSISTANT_ID"))
 
 app = FastAPI()
-
+origins = {"https://project2025-frontend.onrender.com"}
 # ✅ CORS 설정
 app.add_middleware(
     CORSMiddleware,
@@ -70,7 +70,7 @@ def root():
 @app.get("/ping")
 def ping():
     return {"message": "Server is running"}
-origins = {"https://project2025-frontend.onrender.com"}
+
 
 
 
