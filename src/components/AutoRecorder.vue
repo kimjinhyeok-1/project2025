@@ -44,6 +44,7 @@ export default {
             const res = await fetch(BASE_URL, {
               method: 'POST', // ✅ 반드시 POST로 명시
               body: formData,
+              credentials: 'include'
             })
 
             const data = await res.json()
