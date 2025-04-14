@@ -69,9 +69,10 @@ export default {
         formData.append('password', password.value)
 
         const response = await axios.post(`${BASE_URL}/login`, formData, {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        },{
-          withCredentials: true  // ✅ 여기에
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          withCredentials: true   // ✅ 여기로 와야 함!
         })
 
         const token = response.data.access_token
