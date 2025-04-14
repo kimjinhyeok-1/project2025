@@ -71,7 +71,7 @@ async def on_startup():
         index = faiss.IndexFlatL2(dimension)
         index.add(vectors_np)
 
-        faiss_index = index
+        faiss_index["index"] = index  # ✅ 상태 공유 성공
         embedding_id_map.extend([e.id for e in embeddings])
 
         print(f"✅ FAISS 인덱스 초기화 완료: {len(vectors)}개 벡터")

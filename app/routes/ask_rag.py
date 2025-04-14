@@ -13,15 +13,15 @@ import faiss
 import tiktoken
 from app.auth import get_current_user_id, verify_student
 
-# 환경 설정
+# ======================= 환경 설정 =======================
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 router = APIRouter()
 
-# 전역 캐시
+# ======================= 전역 상태 =======================
 cached_embeddings = []
 embedding_id_map = []
-faiss_index = None
+faiss_index = {"index": None}  # ✅ 딕셔너리 형태로 상태 공유
 
 # ======================= GPT 임베딩 + 토크나이저 =======================
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -41,13 +41,11 @@ def generate_query_embedding(query: str) -> list:
 
 # ======================= FAISS 기반 검색 =======================
 def get_top_chunks_faiss(query_vec, top_n=5):
-    global faiss_index, cached_embeddings, embedding_id_map
-
-    if faiss_index is None:
+    if faiss_index["index"] is None:
         raise RuntimeError("FAISS 인덱스가 초기화되지 않았습니다.")
 
     query_np = np.array([query_vec]).astype("float32")
-    _, indices = faiss_index.search(query_np, top_n)
+    _, indices = faiss_index["index"].search(query_np, top_n)
 
     top_chunks = []
     for idx in indices[0]:
@@ -130,7 +128,6 @@ async def ask_rag(
                         "코드 문제는 정답을 주지 말고, 학생이 스스로 생각해볼 수 있도록 단계별로 힌트를 주세요. "
                         "개념 설명은 명확하게 하되, 지나치게 길지 않게 해주세요. "
                         "줄바꿈은 <br>로 표시해주세요."
-
                     )
                 },
                 {"role": "user", "content": prompt}
