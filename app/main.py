@@ -10,6 +10,7 @@ from app.database import Base, engine
 from app.routes.lecture import router as lecture_router
 from app.routes import vad
 from app.routes.ask_rag import cached_embeddings, faiss_index, embedding_id_map
+from app.database import get_db
 
 # ✅ 환경 변수 로딩
 from dotenv import load_dotenv
