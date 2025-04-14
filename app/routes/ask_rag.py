@@ -7,7 +7,6 @@ from openai import OpenAI
 from datetime import datetime
 from dotenv import load_dotenv
 import os
-import json
 import numpy as np
 import faiss
 import tiktoken
@@ -21,7 +20,7 @@ router = APIRouter()
 # ======================= 전역 상태 =======================
 cached_embeddings = []
 embedding_id_map = []
-faiss_index = {"index": None}  # ✅ 딕셔너리 형태로 상태 공유
+faiss_index = {"index": None}
 
 # ======================= GPT 임베딩 + 토크나이저 =======================
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -45,15 +44,20 @@ def get_top_chunks_faiss(query_vec, top_n=5):
         raise RuntimeError("FAISS 인덱스가 초기화되지 않았습니다.")
 
     query_np = np.array([query_vec]).astype("float32")
-    _, indices = faiss_index["index"].search(query_np, top_n)
+    distances, indices = faiss_index["index"].search(query_np, top_n)
 
     top_chunks = []
-    for idx in indices[0]:
+    for idx, dist in zip(indices[0], distances[0]):
         embedding_id = embedding_id_map[idx]
         matched = next((e for e in cached_embeddings if e.id == embedding_id), None)
         if matched:
+            matched.similarity = 1 - dist  # 유사도 계산 (1 - distance)
             top_chunks.append(matched)
     return top_chunks
+
+# ======================= 유사도 필터링 =======================
+def is_query_related(top_chunks, threshold=0.75):
+    return any(chunk.similarity >= threshold for chunk in top_chunks)
 
 # ======================= Context 생성 =======================
 def build_context(chunks, max_total_tokens=3000):
@@ -83,7 +87,7 @@ async def ask_rag(
     user_id: int = Depends(get_current_user_id),
     _: str = Depends(verify_student)
 ):
-    # 캐시된 답변 확인
+    # 1. 캐시된 답변 확인
     existing = await db.execute(
         select(QuestionAnswer).where(
             QuestionAnswer.question == q,
@@ -94,20 +98,28 @@ async def ask_rag(
     if cached_answer:
         return {"answer": cached_answer.answer}
 
+    # 2. 임베딩 생성
     try:
         query_embedding = generate_query_embedding(q)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    # 3. FAISS 유사도 검색
     try:
         top_chunks = get_top_chunks_faiss(query_embedding, top_n=5)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FAISS 검색 실패: {e}")
 
+    # 4. 유사도 기반 질문 연관성 필터링
+    if not is_query_related(top_chunks, threshold=0.75):
+        return {"answer": "해당 질문은 강의자료와 관련된 내용이 아닌 것 같아요. 다른 질문을 해볼까요?"}
+
+    # 5. 컨텍스트 생성
     context = build_context(top_chunks)
     if not context:
         raise HTTPException(status_code=400, detail="관련 강의자료를 찾을 수 없습니다.")
 
+    # 6. GPT 프롬프트 구성
     prompt = f"""
 --- 강의자료 발췌 시작 ---
 {context}
@@ -127,7 +139,8 @@ async def ask_rag(
                         "학생의 질문에 친절하고 따뜻하게 답해주세요. "
                         "코드 문제는 정답을 주지 말고, 학생이 스스로 생각해볼 수 있도록 단계별로 힌트를 주세요. "
                         "개념 설명은 명확하게 하되, 지나치게 길지 않게 해주세요. "
-                        "줄바꿈은 <br>로 표시해주세요."
+                        "줄바꿈은 <br>로 표시해주세요. "
+                        "만약 질문이 강의자료와 관련 없는 내용이라면, 관련이 없다고 정중히 안내해주세요."
                     )
                 },
                 {"role": "user", "content": prompt}
@@ -138,6 +151,7 @@ async def ask_rag(
         raw_answer = response.choices[0].message.content.strip()
         formatted_answer = raw_answer.replace("\n", "<br>")
 
+        # 7. 결과 저장
         new_qa = QuestionAnswer(
             question=q,
             answer=formatted_answer,
