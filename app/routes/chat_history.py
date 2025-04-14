@@ -60,30 +60,40 @@ async def get_question_summary(
     _: str = Depends(verify_professor)
 ):
     try:
+        # 1. 질문 불러오기
         result = await db.execute(select(QuestionAnswer.question))
-        questions = [row[0] for row in result.all()]
+        questions = [row[0].strip() for row in result.all() if row[0] and len(row[0].strip()) > 5]
 
-        if not questions:
+        # 2. 중복 제거 및 최대 50개 제한
+        unique_questions = list(set(questions))[:30]
+
+        if not unique_questions:
             return {"message": "질문 데이터가 부족합니다."}
 
-        prompt = f"""
-        다음은 학생들이 자주 묻는 질문입니다:
-        {questions}
+        # 3. 포맷팅된 프롬프트 생성
+        formatted_questions = "\n".join(f"- {q}" for q in unique_questions)
 
-        교수님을 위한 요약을 한글로 작성하세요. 학생들이 어려워하는 개념을 설명하고, 보충할 내용을 추천하세요.
+        prompt = f"""
+        다음은 학생들이 최근에 많이 한 질문들입니다:
+
+        {formatted_questions}
+
+        이 질문들을 바탕으로, 학생들이 자주 어려워하는 개념을 한글로 요약하고
+        추가 설명이나 보충 강의가 필요한 주제를 교수님께 추천해 주세요.
         """
 
+        # 4. GPT 호출
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=300,
+            max_tokens=400,
             temperature=0.7,
         )
         summary = response.choices[0].message.content.strip()
 
         return {
-            "most_common_questions": questions[:5],
+            "most_common_questions": unique_questions[:5],  # 상위 5개만 프론트로
             "summary_for_professor": summary
         }
 
