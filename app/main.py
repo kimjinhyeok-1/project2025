@@ -11,7 +11,6 @@ from app.routes.lecture import router as lecture_router
 from app.routes import vad
 from app.routes.ask_rag import cached_embeddings, faiss_index, embedding_id_map
 
-# ✅ 필요한 모듈 import
 from sqlalchemy import select
 from app.models import Embedding
 import json
@@ -21,18 +20,18 @@ import faiss
 from dotenv import load_dotenv
 import os
 
-# .env 파일의 경로 지정 및 로드
+# .env 경로 설정 및 로드
 basedir = os.path.abspath(os.path.dirname(__file__))
 env_path = os.path.join(basedir, "..", ".env")
 load_dotenv(dotenv_path=env_path)
 
-# 확인용 출력
+# 환경 변수 확인
 print("✅ OPENAI_ASSISTANT_ID:", os.getenv("OPENAI_ASSISTANT_ID"))
 
 # FastAPI 앱 생성
 app = FastAPI()
 
-# CORS 설정
+# CORS 설정 (프론트엔드 도메인 명시)
 origins = ["https://project2025-frontend.onrender.com"]
 app.add_middleware(
     CORSMiddleware,
@@ -42,18 +41,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 비동기 DB 테이블 생성
+# DB 모델 초기화
 async def init_models():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-
+# 앱 시작 시 실행
 @app.on_event("startup")
 async def on_startup():
     await init_models()
 
     try:
-        # FAISS 인덱스 및 임베딩 초기화
         async with get_db_context() as db:
             result = await db.execute(select(Embedding))
             cached_embeddings.clear()
@@ -61,12 +59,11 @@ async def on_startup():
 
             embeddings = result.scalars().all()
             if not embeddings:
-                print("❗ FAISS 초기화: 임베딩이 없습니다.")
+                print("❗ FAISS 초기화: 임베딩 없음")
                 return
 
             cached_embeddings.extend(embeddings)
 
-            # 예외 발생 가능 부분 보호
             vectors = []
             for e in embeddings:
                 try:
@@ -76,7 +73,7 @@ async def on_startup():
                     print(f"⚠️ 임베딩 파싱 실패 (id={e.id}): {ve}")
 
             if not vectors:
-                print("❗ FAISS 초기화 실패: 벡터가 비어 있음.")
+                print("❗ FAISS 초기화 실패: 벡터 없음")
                 return
 
             vectors_np = np.array(vectors).astype("float32")
@@ -88,9 +85,8 @@ async def on_startup():
             embedding_id_map.extend([e.id for e in embeddings])
 
             print(f"✅ FAISS 인덱스 초기화 완료: {len(vectors)}개 벡터")
-
     except Exception as e:
-        print(f"🔥 [on_startup 예외] FAISS 초기화 실패: {e}")
+        print(f"🔥 FAISS 초기화 중 예외 발생: {e}")
 
 # 라우터 등록
 app.include_router(upload.router)
@@ -119,14 +115,3 @@ def root():
 @app.get("/ping")
 def ping():
     return {"message": "Server is running"}
-
-# 로컬 실행용
-if __name__ == "__main__":
-    import uvicorn
-    import asyncio
-
-    async def run():
-        await init_models()
-        uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
-
-    asyncio.run(run())
