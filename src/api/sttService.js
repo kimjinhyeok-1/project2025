@@ -11,6 +11,8 @@ export async function uploadSnapshot({ timestamp, transcript, screenshot_base64 
       timestamp,
       transcript,
       screenshot_base64,
+    },{
+      withCredentials: true  // ✅ 여기에
     });
     console.log("✅ 스냅샷 업로드 성공:", response.data);
     return response.data;

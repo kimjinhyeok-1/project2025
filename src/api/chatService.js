@@ -9,6 +9,7 @@ export async function sendMessageToChatGPT(message) {
 
     const response = await axios.get(`${BASE_URL}`, {
       params: { q: message },
+      withCredentials: true
     });
 
     console.log("백엔드 응답:", response.data);

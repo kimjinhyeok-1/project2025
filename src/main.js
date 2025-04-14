@@ -18,6 +18,8 @@ axios.interceptors.request.use(config => {
   return config
 })
 
+axios.defaults.withCredentials = true // 👈 이거 추가 필요
+
 // ✅ Vue 앱 생성 → 라우터 적용 → mount
 const app = createApp(App)
 app.use(router)
