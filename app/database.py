@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
 # 환경 변수 로드
 load_dotenv()
@@ -25,6 +26,7 @@ Base = declarative_base()
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 # 의존성 주입용 비동기 세션 생성 함수
+@asynccontextmanager
 async def get_db():
     async with async_session() as session:
         yield session
