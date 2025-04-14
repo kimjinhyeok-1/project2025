@@ -6,47 +6,53 @@ from app.routes import (
     recording, snapshots, assignment, question, ask_assistant, ex_question
 )
 from app.auth import router as auth_router
-from app.database import Base, engine
+from app.database import Base, engine, get_db
 from app.routes.lecture import router as lecture_router
 from app.routes import vad
 from app.routes.ask_rag import cached_embeddings, faiss_index, embedding_id_map
-from app.database import get_db
 
-# ✅ 환경 변수 로딩
+# ✅ 필요한 모듈 import
+from sqlalchemy import select
+from app.models import Embedding
+import json
+import numpy as np
+import faiss
+
 from dotenv import load_dotenv
 import os
 
-# .env 파일의 정확한 경로 설정
-basedir = os.path.abspath(os.path.dirname(__file__))  # app/ 디렉토리 기준
+# .env 파일의 경로 지정 및 로드
+basedir = os.path.abspath(os.path.dirname(__file__))
 env_path = os.path.join(basedir, "..", ".env")
 load_dotenv(dotenv_path=env_path)
 
-# 로딩 확인 (선택)
+# 확인용 출력
 print("✅ OPENAI_ASSISTANT_ID:", os.getenv("OPENAI_ASSISTANT_ID"))
 
+# FastAPI 앱 생성
 app = FastAPI()
 
-origins = ["https://project2025-frontend.onrender.com",]
+# CORS 설정
+origins = ["https://project2025-frontend.onrender.com"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,               # ✅ * 사용 금지
-    allow_credentials=True,              # ✅ 인증을 위해 반드시 필요
+    allow_origins=origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-# ✅ 비동기 테이블 생성 함수
+# 비동기 DB 테이블 생성
 async def init_models():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-# ✅ FastAPI 앱 시작 시 테이블 생성
+# 앱 시작 시 실행되는 초기화 로직
 @app.on_event("startup")
 async def on_startup():
     await init_models()
 
-    # ✅ FAISS 인덱스 및 임베딩 캐싱
+    # FAISS 인덱스 및 임베딩 초기화
     async with get_db() as db:
         result = await db.execute(select(Embedding))
         cached_embeddings.clear()
@@ -70,7 +76,7 @@ async def on_startup():
 
         print(f"✅ FAISS 인덱스 초기화 완료: {len(vectors)}개 벡터")
 
-# ✅ 라우터 등록
+# 라우터 등록
 app.include_router(upload.router)
 app.include_router(chat_history.router)
 app.include_router(quiz.router)
@@ -82,14 +88,14 @@ app.include_router(lecture_router)
 app.include_router(assignment.router, prefix="/assignments", tags=["Assignments"])
 app.include_router(question.router)
 app.include_router(ex_question.router, prefix="/questions", tags=["Questions"])
-app.include_router(ask_assistant.router)  # Assistant 기반 질의응답
+app.include_router(ask_assistant.router)
 app.include_router(vad.router, prefix="/vad", tags=["VAD"])
 
-# ✅ 정적 파일 경로 설정
+# 정적 파일 경로 등록
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.mount("/snapshots", StaticFiles(directory="snapshots"), name="snapshots")
 
-# ✅ 기본 응답
+# 기본 엔드포인트
 @app.get("/")
 def root():
     return {"message": "Hello, FastAPI!"}
@@ -98,10 +104,7 @@ def root():
 def ping():
     return {"message": "Server is running"}
 
-
-
-
-# ✅ 로컬 실행용 (주의: reload=True일 땐 __main__ 무시됨)
+# 로컬 실행용
 if __name__ == "__main__":
     import uvicorn
     import asyncio
