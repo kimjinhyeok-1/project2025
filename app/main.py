@@ -47,34 +47,50 @@ async def init_models():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-# 앱 시작 시 실행되는 초기화 로직
+
 @app.on_event("startup")
 async def on_startup():
     await init_models()
 
-    # FAISS 인덱스 및 임베딩 초기화
-    async with get_db_context() as db:
-        result = await db.execute(select(Embedding))
-        cached_embeddings.clear()
-        embedding_id_map.clear()
+    try:
+        # FAISS 인덱스 및 임베딩 초기화
+        async with get_db_context() as db:
+            result = await db.execute(select(Embedding))
+            cached_embeddings.clear()
+            embedding_id_map.clear()
 
-        embeddings = result.scalars().all()
-        if not embeddings:
-            print("❗FAISS 초기화: 임베딩이 없습니다.")
-            return
+            embeddings = result.scalars().all()
+            if not embeddings:
+                print("❗ FAISS 초기화: 임베딩이 없습니다.")
+                return
 
-        cached_embeddings.extend(embeddings)
+            cached_embeddings.extend(embeddings)
 
-        vectors = [json.loads(e.embedding) for e in embeddings]
-        vectors_np = np.array(vectors).astype("float32")
-        dimension = len(vectors_np[0])
-        index = faiss.IndexFlatL2(dimension)
-        index.add(vectors_np)
+            # 예외 발생 가능 부분 보호
+            vectors = []
+            for e in embeddings:
+                try:
+                    vec = json.loads(e.embedding)
+                    vectors.append(vec)
+                except Exception as ve:
+                    print(f"⚠️ 임베딩 파싱 실패 (id={e.id}): {ve}")
 
-        faiss_index["index"] = index  # ✅ 상태 공유 성공
-        embedding_id_map.extend([e.id for e in embeddings])
+            if not vectors:
+                print("❗ FAISS 초기화 실패: 벡터가 비어 있음.")
+                return
 
-        print(f"✅ FAISS 인덱스 초기화 완료: {len(vectors)}개 벡터")
+            vectors_np = np.array(vectors).astype("float32")
+            dimension = len(vectors_np[0])
+            index = faiss.IndexFlatL2(dimension)
+            index.add(vectors_np)
+
+            faiss_index["index"] = index
+            embedding_id_map.extend([e.id for e in embeddings])
+
+            print(f"✅ FAISS 인덱스 초기화 완료: {len(vectors)}개 벡터")
+
+    except Exception as e:
+        print(f"🔥 [on_startup 예외] FAISS 초기화 실패: {e}")
 
 # 라우터 등록
 app.include_router(upload.router)
