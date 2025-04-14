@@ -70,6 +70,8 @@ export default {
 
         const response = await axios.post(`${BASE_URL}/login`, formData, {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        },{
+          withCredentials: true  // ✅ 여기에
         })
 
         const token = response.data.access_token
