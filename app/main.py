@@ -6,7 +6,7 @@ from app.routes import (
     recording, snapshots, assignment, question, ask_assistant, ex_question
 )
 from app.auth import router as auth_router
-from app.database import Base, engine, get_db
+from app.database import Base, engine, get_db_context
 from app.routes.lecture import router as lecture_router
 from app.routes import vad
 from app.routes.ask_rag import cached_embeddings, faiss_index, embedding_id_map
@@ -53,7 +53,7 @@ async def on_startup():
     await init_models()
 
     # FAISS 인덱스 및 임베딩 초기화
-    async with get_db() as db:
+    async with get_db_context() as db:
         result = await db.execute(select(Embedding))
         cached_embeddings.clear()
         embedding_id_map.clear()

@@ -25,8 +25,16 @@ Base = declarative_base()
 # 세션 팩토리
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-# 의존성 주입용 비동기 세션 생성 함수
-@asynccontextmanager
+
+# FastAPI 라우터용 (Depends용)
 async def get_db():
+    async with async_session() as session:
+        yield session
+        
+# 일반 async with 용 (main.py의 on_startup에서만 사용)
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def get_db_context():
     async with async_session() as session:
         yield session
