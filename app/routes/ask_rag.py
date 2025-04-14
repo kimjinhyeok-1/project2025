@@ -109,11 +109,7 @@ async def ask_rag(
         top_chunks = get_top_chunks_faiss(query_embedding, top_n=5)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FAISS 검색 실패: {e}")
-
-    # 4. 유사도 기반 질문 연관성 필터링
-    if not is_query_related(top_chunks, threshold=0.65):
-        return {"answer": "해당 질문은 강의자료와 관련된 내용이 아닌 것 같아요. 다른 질문을 해볼까요?"}
-
+        
     # 5. 컨텍스트 생성
     context = build_context(top_chunks)
     if not context:
