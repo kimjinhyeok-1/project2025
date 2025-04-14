@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import tiktoken
 import json
+import hashlib
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -22,11 +25,13 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 router = APIRouter()
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
-POPPLER_PATH = r"C:\\poppler-24.08.0\\Library\\bin"  # Windows용
+POPPLER_PATH = r"C:\\poppler-24.08.0\\Library\\bin"
 
-# ✅ 전처리 함수들
+encoding = tiktoken.encoding_for_model("text-embedding-3-small")
+
+# ====== 전처리 및 보조 함수들 ======
 def clean_text(text: str) -> str:
-    unwanted_symbols = r"[■▶▷\xb7▒▓□※☆★●○•◆◇△▽▲▼]"
+    unwanted_symbols = r"[■▶▷\xb7▒▓□※☆★●○•◆◇△▽▲]"
     text = re.sub(unwanted_symbols, "", text)
     text = re.sub(r"\n+", "\n", text)
     text = re.sub(r"[ ]{2,}", " ", text).strip()
@@ -37,10 +42,7 @@ def extract_text_from_image(image_path: Path) -> str:
 
 def extract_images_from_pdf(pdf_path: Path, output_folder: Path) -> list:
     output_folder.mkdir(parents=True, exist_ok=True)
-    try:
-        images = convert_from_path(pdf_path, poppler_path=POPPLER_PATH)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PDF 이미지 변환 오류: {str(e)}")
+    images = convert_from_path(pdf_path, poppler_path=POPPLER_PATH)
     image_paths = []
     for i, image in enumerate(images):
         image_path = output_folder / f"page_{i+1}.jpg"
@@ -48,19 +50,17 @@ def extract_images_from_pdf(pdf_path: Path, output_folder: Path) -> list:
         image_paths.append(image_path)
     return image_paths
 
-# ✅ tokenizer 및 chunk 분할 (최적화된 크기 사용)
-encoding = tiktoken.encoding_for_model("text-embedding-3-small")
 def split_text_into_chunks(text: str, chunk_size=500, overlap=50):
     tokens = encoding.encode(text)
     chunks = []
-
     for i in range(0, len(tokens), chunk_size - overlap):
         chunk = tokens[i:i + chunk_size]
         chunks.append(encoding.decode(chunk))
-
     return chunks
 
-# ✅ 임베딩 생성 함수 (신모델 사용)
+def hash_chunk(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
 def generate_embedding(text: str) -> list:
     if len(text) > 10000:
         text = text[:10000]
@@ -70,53 +70,82 @@ def generate_embedding(text: str) -> list:
     )
     embedding = response.data[0].embedding
     if not embedding:
-        raise ValueError("임베딩 벡터가 비어 있습니다.")
+        raise ValueError("임베딩 벡터가 비어 있음")
     return embedding
 
-# ✅ 업로드 엔드포인트
+def cosine_deduplicate(chunks: list[str], threshold=0.95):
+    embeddings = [generate_embedding(c) for c in chunks]
+    keep = []
+    used = set()
+
+    for i in range(len(embeddings)):
+        if i in used:
+            continue
+        keep.append((chunks[i], embeddings[i]))
+        for j in range(i + 1, len(embeddings)):
+            if j in used:
+                continue
+            sim = cosine_similarity([embeddings[i]], [embeddings[j]])[0][0]
+            if sim >= threshold:
+                used.add(j)
+    return keep
+
+# ========== 메인 업로드 API ==========
 @router.post("/upload/")
 async def upload_file(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     file_location = UPLOAD_DIR / file.filename
     with file_location.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    # 텍스트 추출 (PDF + 이미지)
     extracted_text = ""
     extracted_image_texts = []
 
     if file.filename.endswith(".pdf"):
-        extracted_text = extract_text_from_pdf(file_location)
-        extracted_text = clean_text(extracted_text)
+        extracted_text = clean_text(extract_text_from_pdf(file_location))
         image_folder = UPLOAD_DIR / "images" / file.filename
         image_paths = extract_images_from_pdf(file_location, image_folder)
         for image_path in image_paths:
-            text_from_image = extract_text_from_image(image_path)
-            cleaned_image_text = clean_text(text_from_image)
-            extracted_image_texts.append(cleaned_image_text)
+            img_text = extract_text_from_image(image_path)
+            cleaned = clean_text(img_text)
+            if len(cleaned.strip()) > 30:
+                extracted_image_texts.append(cleaned)
 
     full_text = extracted_text + "\n" + "\n".join(extracted_image_texts)
+    raw_chunks = split_text_into_chunks(full_text)
 
-    # ✅ 텍스트 → chunk → embedding
-    chunks = split_text_into_chunks(full_text)
-    embedding_vectors = [generate_embedding(chunk) for chunk in chunks]
+    # ===== 1차: 완전 중복 제거 (해시 기반) =====
+    seen_hashes = set()
+    unique_chunks = []
+    for c in raw_chunks:
+        if len(c.strip()) < 30:
+            continue
+        h = hash_chunk(c)
+        if h not in seen_hashes:
+            seen_hashes.add(h)
+            unique_chunks.append(c)
 
-    result = await db.execute(select(LectureMaterial).filter(LectureMaterial.filename == file.filename))
+    # ===== 2차: 유사 중복 제거 (cosine) =====
+    final_chunks_with_vecs = cosine_deduplicate(unique_chunks, threshold=0.95)
+
+    # DB 저장 (기존 파일이면 재저장)
+    result = await db.execute(select(LectureMaterial).filter_by(filename=file.filename))
     existing_material = result.scalars().first()
 
     if existing_material:
-        # ✅ 기존 임베딩 삭제 (ORM 방식으로 안전하게)
         old_embeddings = await db.execute(select(Embedding).where(Embedding.material_id == existing_material.id))
         for e in old_embeddings.scalars():
             await db.delete(e)
 
-        for i, chunk in enumerate(chunks):
+        for i, (chunk, vec) in enumerate(final_chunks_with_vecs):
             db.add(Embedding(
                 material_id=existing_material.id,
                 chunk_index=i,
                 content=chunk,
-                embedding=json.dumps(embedding_vectors[i])
+                embedding=json.dumps(vec)
             ))
         await db.commit()
-        return {"message": "기존 파일 갱신 및 임베딩 재저장 완료"}
+        return {"message": "기존 파일 갱신 및 중복 제거 후 임베딩 저장 완료"}
 
     else:
         new_material = LectureMaterial(
@@ -127,13 +156,13 @@ async def upload_file(file: UploadFile = File(...), db: AsyncSession = Depends(g
         db.add(new_material)
         await db.commit()
 
-        for i, chunk in enumerate(chunks):
+        for i, (chunk, vec) in enumerate(final_chunks_with_vecs):
             db.add(Embedding(
                 material_id=new_material.id,
                 chunk_index=i,
                 content=chunk,
-                embedding=json.dumps(embedding_vectors[i])
+                embedding=json.dumps(vec)
             ))
         await db.commit()
 
-        return {"message": "신규 파일 업로드 및 임베딩 저장 완료"}
+        return {"message": "신규 파일 업로드 및 중복 제거 후 임베딩 저장 완료"}

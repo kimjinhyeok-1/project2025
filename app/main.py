@@ -9,6 +9,7 @@ from app.auth import router as auth_router
 from app.database import Base, engine
 from app.routes.lecture import router as lecture_router
 from app.routes import vad
+from app.routes.ask_rag import cached_embeddings, faiss_index, embedding_id_map
 
 # ✅ 환경 변수 로딩
 from dotenv import load_dotenv
@@ -24,14 +25,15 @@ print("✅ OPENAI_ASSISTANT_ID:", os.getenv("OPENAI_ASSISTANT_ID"))
 
 app = FastAPI()
 
-# ✅ CORS 설정
+origins = ["https://project2025-frontend.onrender.com",]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://project2025-frontend.onrender.com"],
-    allow_credentials=True,
+    allow_origins=origins,               # ✅ * 사용 금지
+    allow_credentials=True,              # ✅ 인증을 위해 반드시 필요
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ✅ 비동기 테이블 생성 함수
 async def init_models():
@@ -42,6 +44,30 @@ async def init_models():
 @app.on_event("startup")
 async def on_startup():
     await init_models()
+
+    # ✅ FAISS 인덱스 및 임베딩 캐싱
+    async with get_db() as db:
+        result = await db.execute(select(Embedding))
+        cached_embeddings.clear()
+        embedding_id_map.clear()
+
+        embeddings = result.scalars().all()
+        if not embeddings:
+            print("❗FAISS 초기화: 임베딩이 없습니다.")
+            return
+
+        cached_embeddings.extend(embeddings)
+
+        vectors = [json.loads(e.embedding) for e in embeddings]
+        vectors_np = np.array(vectors).astype("float32")
+        dimension = len(vectors_np[0])
+        index = faiss.IndexFlatL2(dimension)
+        index.add(vectors_np)
+
+        faiss_index = index
+        embedding_id_map.extend([e.id for e in embeddings])
+
+        print(f"✅ FAISS 인덱스 초기화 완료: {len(vectors)}개 벡터")
 
 # ✅ 라우터 등록
 app.include_router(upload.router)
