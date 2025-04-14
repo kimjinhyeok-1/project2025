@@ -10,6 +10,7 @@ import os
 import numpy as np
 import faiss
 import tiktoken
+import pickle
 from app.auth import get_current_user_id, verify_student
 
 # ======================= 환경 설정 =======================
@@ -21,6 +22,16 @@ router = APIRouter()
 cached_embeddings = []
 embedding_id_map = []
 faiss_index = {"index": None}
+query_cache = {}
+
+# ======================= FAISS 저장/불러오기 =======================
+def save_faiss_index(path="faiss_index.bin"):
+    if faiss_index["index"] is not None:
+        faiss.write_index(faiss_index["index"], path)
+
+def load_faiss_index(path="faiss_index.bin"):
+    if os.path.exists(path):
+        faiss_index["index"] = faiss.read_index(path)
 
 # ======================= GPT 임베딩 + 토크나이저 =======================
 encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -29,14 +40,40 @@ def count_tokens(text: str) -> int:
     return len(encoding.encode(text))
 
 def generate_query_embedding(query: str) -> list:
+    if query in query_cache:
+        return query_cache[query]
     try:
         response = client.embeddings.create(
             model="text-embedding-3-small",
             input=query
         )
-        return response.data[0].embedding
+        embedding = response.data[0].embedding
+        query_cache[query] = embedding
+        return embedding
     except Exception as e:
         raise RuntimeError(f"임베딩 생성 실패: {e}")
+
+# ======================= 질문 기반 요약 =======================
+def summarize_chunk_with_question(chunk_text: str, question: str) -> str:
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "아래 강의자료 내용 중 질문에 직접적으로 관련된 핵심 내용을 1~2문장으로 요약해주세요."
+                },
+                {
+                    "role": "user",
+                    "content": f"질문: {question}\n내용: {chunk_text}"
+                }
+            ],
+            max_tokens=150,
+            temperature=0.3,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return "[요약 실패: 원문 사용] " + chunk_text[:200]
 
 # ======================= FAISS 기반 검색 =======================
 def get_top_chunks_faiss(query_vec, top_n=5):
@@ -51,16 +88,12 @@ def get_top_chunks_faiss(query_vec, top_n=5):
         embedding_id = embedding_id_map[idx]
         matched = next((e for e in cached_embeddings if e.id == embedding_id), None)
         if matched:
-            matched.similarity = 1 - dist  # 유사도 계산 (1 - distance)
+            matched.similarity = 1 - dist
             top_chunks.append(matched)
     return top_chunks
 
-# ======================= 유사도 필터링 =======================
-def is_query_related(top_chunks, threshold=0.75):
-    return any(chunk.similarity >= threshold for chunk in top_chunks)
-
 # ======================= Context 생성 =======================
-def build_context(chunks, max_total_tokens=3000):
+def build_context(chunks, question: str, max_total_tokens=3000):
     context = ""
     total_tokens = 0
     used_ids = set()
@@ -68,8 +101,14 @@ def build_context(chunks, max_total_tokens=3000):
     for chunk in chunks:
         if chunk.id in used_ids:
             continue
+
         chunk_text = chunk.content.strip()
         chunk_tokens = count_tokens(chunk_text)
+
+        # 긴 chunk는 질문 기반 요약
+        if chunk_tokens > 300:
+            chunk_text = summarize_chunk_with_question(chunk_text, question)
+            chunk_tokens = count_tokens(chunk_text)
 
         if total_tokens + chunk_tokens <= max_total_tokens:
             context += chunk_text + "\n"
@@ -109,13 +148,13 @@ async def ask_rag(
         top_chunks = get_top_chunks_faiss(query_embedding, top_n=5)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FAISS 검색 실패: {e}")
-        
-    # 5. 컨텍스트 생성
-    context = build_context(top_chunks)
+
+    # 4. 컨텍스트 생성 (질문 기반 요약 포함)
+    context = build_context(top_chunks, question=q)
     if not context:
         raise HTTPException(status_code=400, detail="관련 강의자료를 찾을 수 없습니다.")
 
-    # 6. GPT 프롬프트 구성
+    # 5. GPT 프롬프트 구성
     prompt = f"""
 --- 강의자료 발췌 시작 ---
 {context}
@@ -125,6 +164,7 @@ async def ask_rag(
 답변:
 """
 
+    # 6. GPT 응답 생성
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
