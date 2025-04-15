@@ -43,8 +43,6 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
-console.log("🧩 StudentAssignment 컴포넌트 로드됨")
-
 const assignments = ref([])
 const loading = ref(true)
 
@@ -64,17 +62,13 @@ const truncateText = (text, length) => {
 }
 
 onMounted(async () => {
-  console.log("🚀 StudentAssignment onMounted 진입")
   try {
     const res = await axios.get('https://project2025-backend.onrender.com/assignments/')
-    console.log('📦 과제 응답 데이터:', res.data)
-
     if (Array.isArray(res.data)) {
       assignments.value = res.data
     } else if (res.data && Array.isArray(res.data.assignments)) {
       assignments.value = res.data.assignments
     } else {
-      console.warn('❗ 예상과 다른 데이터 구조:', res.data)
       assignments.value = []
     }
   } catch (err) {
