@@ -5,7 +5,6 @@ from app.database import Base
 from sqlalchemy import text
 
 # ✅ 사용자 (학생 / 교수자)
-# ✅ 사용자 (학생 / 교수자)
 class User(Base):
     __tablename__ = "users"
 
@@ -14,9 +13,10 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=False, default="student")  # 'student' 또는 'professor'
     is_admin = Column(Boolean, default=False)
-    assistant_thread_id = Column(String, nullable=True) # ✅ Assistant Thread ID (학생별 대화 유지용) 13
+    assistant_thread_id = Column(String, nullable=True)  # 일반 대화용 Thread
     questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
     assignment_questions = relationship("AssignmentQuestion", back_populates="user", cascade="all, delete-orphan")
+
 
 # ✅ 질문-응답 기록 (일반 대화형)
 class QuestionAnswer(Base):
@@ -68,7 +68,6 @@ class Snapshot(Base):
     lecture = relationship("Lecture", back_populates="snapshots")
 
 
-
 # ✅ 강의자료 텍스트 전체 요약
 class LectureMaterial(Base):
     __tablename__ = "pdf_summary"
@@ -113,11 +112,13 @@ class Assignment(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
-    sample_answer = Column(Text)  # 정답/예시코드 (GPT 참고용)
-
+    sample_answer = Column(Text,nullable=True)  # 정답/예시코드 (GPT 참고용)
+    deadline = Column(DateTime, nullable=True)
+    attached_file_path = Column(String, nullable=True)  # 교수자 첨부 PDF 경로
     created_at = Column(DateTime, default=func.now())
 
     questions = relationship("AssignmentQuestion", back_populates="assignment", cascade="all, delete-orphan")
+    submissions = relationship("AssignmentSubmission", back_populates="assignment", cascade="all, delete-orphan")
 
 
 # ✅ 과제 질문 + GPT 응답 저장
@@ -128,10 +129,29 @@ class AssignmentQuestion(Base):
     assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    question_text = Column(Text, nullable=True)     # 학생 질문
-    code_snippet = Column(Text, nullable=True)      # 코드 질문
-    gpt_answer = Column(Text, nullable=True)        # GPT 응답
+    question_text = Column(Text, nullable=True)
+    code_snippet = Column(Text, nullable=True)
+    gpt_answer = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
     assignment = relationship("Assignment", back_populates="questions")
     user = relationship("User", back_populates="assignment_questions")
+
+
+# ✅ 과제 제출 + GPT 피드백 결과
+class AssignmentSubmission(Base):
+    __tablename__ = "assignment_submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    submitted_file_path = Column(String, nullable=False)
+    submitted_at = Column(DateTime, default=func.now())
+
+    gpt_feedback = Column(Text, nullable=True)
+    gpt_feedback_created_at = Column(DateTime, nullable=True)
+    assistant_thread_id = Column(String, nullable=True)  # 과제별 Thread
+
+    assignment = relationship("Assignment", back_populates="submissions")
+    student = relationship("User")

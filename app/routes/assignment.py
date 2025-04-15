@@ -5,66 +5,49 @@ from app.models import Assignment, AssignmentQuestion
 from app.schemas import AssignmentCreate, AssignmentOut, AssignmentUpdate, AssignmentQuestionListOut
 from app.database import get_db
 from app.auth import verify_professor
-import fitz  # PyMuPDF
+from datetime import datetime
+import os
+import shutil
+import uuid
 
 router = APIRouter()
 
 
-# ✅ PDF 텍스트 추출 함수
-def extract_pdf_text(contents: bytes) -> str:
-    try:
-        with fitz.open(stream=contents, filetype="pdf") as doc:
-            text = "\n".join(page.get_text("text") for page in doc)
-        return text.strip()
-    except Exception:
-        raise HTTPException(status_code=500, detail="PDF 파일 처리 중 오류가 발생했습니다.")
-
-
-# ✅ PDF 업로드 기반 과제 등록 (중복 방지 포함)
-@router.post("/upload", response_model=AssignmentOut, tags=["Assignments"], dependencies=[Depends(verify_professor)])
-async def upload_assignment_with_pdf(
-    title: str = Form(..., description="과제 제목"),
-    sample_answer: str = Form("", description="예시 코드 (선택)"),
-    file: UploadFile = File(..., description="PDF 파일"),
-    db: AsyncSession = Depends(get_db)
-):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="PDF 파일만 업로드 가능합니다.")
-
-    contents = await file.read()
-    description = extract_pdf_text(contents)
-
-    result = await db.execute(
-        select(Assignment).where(
-            Assignment.title == title.strip(),
-            Assignment.description == description
-        )
-    )
-    existing = result.scalar_one_or_none()
-    if existing:
-        return existing
-
-    new_assignment = Assignment(
-        title=title.strip(),
-        description=description,
-        sample_answer=sample_answer.strip() if sample_answer else None,
-    )
-    db.add(new_assignment)
-    await db.commit()
-    await db.refresh(new_assignment)
-    return new_assignment
-
-
-# ✅ 과제 직접 입력 생성
+# ✅ 과제 등록 (첨부파일 + 마감일 포함)
 @router.post("/create", response_model=AssignmentOut, tags=["Assignments"], dependencies=[Depends(verify_professor)])
 async def create_assignment(
-    assignment: AssignmentCreate,
+    title: str = Form(..., description="과제 제목"),
+    description: str = Form(..., description="과제 설명"),
+    deadline: str = Form(None, description="마감일 (예: 2025-05-01T23:59:00)"),
+    sample_answer: str = Form("", description="예시 코드 (선택)"),
+    file: UploadFile = File(None, description="부가설명 PDF 파일 (선택)"),
     db: AsyncSession = Depends(get_db)
 ):
+    # 🔹 마감일 파싱
+    try:
+        parsed_deadline = datetime.fromisoformat(deadline) if deadline else None
+    except ValueError:
+        raise HTTPException(status_code=400, detail="마감일 형식이 올바르지 않습니다. 예: 2025-05-01T23:59:00")
+
+    # 🔹 PDF 파일 저장
+    file_path = None
+    if file:
+        if not file.filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="PDF 파일만 업로드 가능합니다.")
+        save_dir = "uploads/assignments"
+        os.makedirs(save_dir, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}_{file.filename}"
+        file_path = os.path.join(save_dir, filename)
+        with open(file_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+    # 🔹 과제 저장
     new_assignment = Assignment(
-        title=assignment.title.strip(),
-        description=assignment.description.strip(),
-        sample_answer=assignment.sample_answer.strip() if assignment.sample_answer else None,
+        title=title.strip(),
+        description=description.strip(),
+        deadline=parsed_deadline,
+        sample_answer=sample_answer.strip() if sample_answer else None,
+        attached_file_path=file_path
     )
     db.add(new_assignment)
     await db.commit()
@@ -89,13 +72,14 @@ async def get_assignment(assignment_id: int, db: AsyncSession = Depends(get_db))
     return assignment
 
 
-# ✅ 과제 수정 (Form 기반 - 필드 선택 수정 가능)
+# ✅ 과제 수정
 @router.put("/{assignment_id}", response_model=AssignmentOut, tags=["Assignments"], dependencies=[Depends(verify_professor)])
 async def update_assignment_form(
     assignment_id: int,
     title: str = Form(None),
     description: str = Form(None),
     sample_answer: str = Form(None),
+    deadline: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
@@ -103,27 +87,28 @@ async def update_assignment_form(
     if assignment is None:
         raise HTTPException(status_code=404, detail="해당 과제를 찾을 수 없습니다.")
 
-    if title is not None:
+    if title:
         assignment.title = title.strip()
-    if description is not None:
+    if description:
         assignment.description = description.strip()
     if sample_answer is not None:
         assignment.sample_answer = sample_answer.strip()
+    if deadline:
+        try:
+            assignment.deadline = datetime.fromisoformat(deadline)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="마감일 형식이 올바르지 않습니다.")
 
     await db.commit()
     await db.refresh(assignment)
     return assignment
 
 
-# ✅ 과제 삭제 (교수자만 가능)
+# ✅ 과제 삭제
 @router.delete("/{assignment_id}", tags=["Assignments"], dependencies=[Depends(verify_professor)])
-async def delete_assignment(
-    assignment_id: int,
-    db: AsyncSession = Depends(get_db)
-):
+async def delete_assignment(assignment_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     assignment = result.scalar_one_or_none()
-
     if assignment is None:
         raise HTTPException(status_code=404, detail="삭제할 과제를 찾을 수 없습니다.")
 
@@ -132,12 +117,9 @@ async def delete_assignment(
     return {"message": f"과제(ID={assignment_id})가 성공적으로 삭제되었습니다."}
 
 
-# ✅ 과제별 질문 전체 조회 (교수자만 가능)
+# ✅ 과제별 질문 조회 (교수자만)
 @router.get("/{assignment_id}/questions", response_model=AssignmentQuestionListOut, tags=["Assignments"], dependencies=[Depends(verify_professor)])
-async def get_questions_for_assignment(
-    assignment_id: int,
-    db: AsyncSession = Depends(get_db)
-):
+async def get_questions_for_assignment(assignment_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     assignment = result.scalar_one_or_none()
     if assignment is None:
