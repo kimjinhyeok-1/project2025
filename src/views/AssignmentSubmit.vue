@@ -15,8 +15,14 @@
 
       <form @submit.prevent="handleSubmit">
         <div class="mb-3">
-          <label for="file" class="form-label">파일 업로드</label>
-          <input type="file" id="file" class="form-control" @change="handleFileChange" />
+          <label for="file" class="form-label">파일 업로드 (PDF만 가능)</label>
+          <input
+            type="file"
+            id="file"
+            class="form-control"
+            accept=".pdf"
+            @change="handleFileChange"
+          />
         </div>
 
         <button type="submit" class="btn btn-primary">제출하기</button>
@@ -38,7 +44,14 @@ const loading = ref(true)
 const selectedFile = ref(null)
 
 const handleFileChange = (e) => {
-  selectedFile.value = e.target.files[0]
+  const file = e.target.files[0]
+  if (file && file.type !== 'application/pdf') {
+    alert('📄 PDF 파일만 업로드할 수 있습니다!')
+    e.target.value = ''
+    selectedFile.value = null
+    return
+  }
+  selectedFile.value = file
 }
 
 const handleSubmit = async () => {
