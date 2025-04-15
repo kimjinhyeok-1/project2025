@@ -1,7 +1,7 @@
 
 <template>
   <div>
-    <h2>🎤 실시간 음성 감지 + 전송 테스트 (프론트 VAD)</h2>
+    <h2>🎤 프론트 VAD + MediaRecorder 하이브리드 방식</h2>
     <button @click="startRecording" :disabled="isRecording">녹음 시작</button>
     <button @click="stopRecording" :disabled="!isRecording">녹음 종료</button>
     <p v-if="question">🧠 AI 질문: {{ question }}</p>
@@ -20,11 +20,11 @@ export default {
     const question = ref('')
     let audioContext = null
     let mediaStream = null
+    let mediaRecorder = null
+    let audioChunks = []
+    let vadController = null
 
-    const onSpeech = (audioBuffer) => {
-      console.log("🗣️ 음성 감지됨. 백엔드로 전송 중...")
-
-      const blob = new Blob([audioBuffer], { type: 'audio/webm' })
+    const sendAudio = (blob) => {
       const formData = new FormData()
       formData.append('file', blob, 'chunk.webm')
 
@@ -41,30 +41,53 @@ export default {
         .catch(err => console.error('❌ 전송 실패:', err))
     }
 
+    const setupVAD = (audioContext, source) => {
+      vadController = vad(audioContext, source, {
+        onVoiceStart: () => {
+          console.log('🎙️ 음성 시작')
+          if (mediaRecorder && mediaRecorder.state === 'inactive') {
+            audioChunks = []
+            mediaRecorder.start()
+            console.log('▶️ MediaRecorder 시작')
+          }
+        },
+        onVoiceStop: () => {
+          console.log('🔇 음성 종료')
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop()
+            console.log('⏹️ MediaRecorder 정지')
+          }
+        },
+        interval: 300,
+        voice_stop: 800,
+      })
+    }
+
     const startRecording = async () => {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        console.log("🎤 mediaStream 확인:", mediaStream)
-
         if (!(mediaStream instanceof MediaStream)) {
-          throw new Error("⛔ mediaStream이 MediaStream 타입이 아닙니다.")
+          throw new Error("⛔ mediaStream이 MediaStream 타입이 아님")
         }
 
         audioContext = new AudioContext()
         const source = audioContext.createMediaStreamSource(mediaStream)
 
-        vad(audioContext, source, {
-          onVoiceStart: () => console.log('🎙️ 음성 시작'),
-          onVoiceStop: () => console.log('🔇 음성 중지'),
-          onUpdate: (val) => {
-            if (val.voiceDetected) {
-              console.log("🔍 음성 감지됨 (update)")
-            }
-          },
-          onSpeech: onSpeech,
-          interval: 500,
-          voice_stop: 1000,
-        })
+        // VAD 세팅
+        setupVAD(audioContext, source)
+
+        // MediaRecorder 세팅
+        mediaRecorder = new MediaRecorder(mediaStream)
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            audioChunks.push(e.data)
+          }
+        }
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: 'audio/webm' })
+          sendAudio(blob)
+        }
 
         isRecording.value = true
       } catch (err) {
@@ -73,12 +96,11 @@ export default {
     }
 
     const stopRecording = () => {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop())
-      }
-      if (audioContext) {
-        audioContext.close()
-      }
+      if (vadController && vadController.stop) vadController.stop()
+      if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop()
+      if (mediaStream) mediaStream.getTracks().forEach(track => track.stop())
+      if (audioContext) audioContext.close()
+
       isRecording.value = false
     }
 
