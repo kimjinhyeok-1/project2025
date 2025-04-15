@@ -2,10 +2,7 @@ import os
 import subprocess
 import whisper
 
-# ✅ Whisper 모델을 글로벌 캐싱
-_model = whisper.load_model("base")
-
-# ✅ ffmpeg 설치 확인 (한 번만 실행)
+# ✅ ffmpeg 설치 확인 (서버가 실행될 때만 1회 체크)
 if subprocess.run("which ffmpeg", shell=True, capture_output=True).returncode != 0:
     raise EnvironmentError("❌ ffmpeg가 설치되어 있지 않습니다. 서버에 ffmpeg를 설치해주세요.")
 
@@ -20,11 +17,12 @@ def convert_webm_to_wav(webm_path: str) -> str:
         raise
     return wav_path
 
-# ✅ Whisper로 전체 음성 STT
+# ✅ Whisper로 전체 음성 STT (Lazy Load 방식)
 def transcribe_with_whisper(wav_path: str) -> str:
-    print("📦 Whisper 모델 로딩 완료 (캐시 사용)")
+    print("📦 Whisper 모델 로딩 중...")
     try:
-        result = _model.transcribe(wav_path, language="ko")
+        model = whisper.load_model("base")  # ❗ 필요할 때만 로딩하여 메모리 절약
+        result = model.transcribe(wav_path, language="ko")
         full_text = result["text"]
         print("📝 전체 변환 결과:", full_text)
         return full_text
