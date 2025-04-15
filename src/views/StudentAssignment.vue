@@ -11,9 +11,6 @@
     </div>
 
     <div v-else>
-      <!-- 🔍 디버깅용: 응답 데이터 확인 -->
-      <pre>{{ JSON.stringify(assignments, null, 2) }}</pre>
-
       <div class="row g-4">
         <div
           v-for="assignment in assignments"
