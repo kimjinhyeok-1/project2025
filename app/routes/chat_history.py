@@ -87,7 +87,7 @@ async def get_question_summary(
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=400,
+            max_tokens=1000,
             temperature=0.7,
         )
         summary = response.choices[0].message.content.strip()
