@@ -1,7 +1,7 @@
 
 <template>
   <div>
-    <h2>🎤 프론트 VAD + MediaRecorder 하이브리드 방식 (안정화 패치)</h2>
+    <h2>🎤 프론트 VAD + MediaRecorder (디버깅 강화 버전)</h2>
     <button @click="startRecording" :disabled="isRecording">녹음 시작</button>
     <button @click="stopRecording" :disabled="!isRecording">녹음 종료</button>
     <p v-if="question">🧠 AI 질문: {{ question }}</p>
@@ -67,18 +67,29 @@ export default {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-        console.log("✅ mediaStream 타입:", mediaStream && mediaStream.constructor.name)
+        console.log("🎤 getUserMedia 반환값:", mediaStream)
+        console.log("📌 typeof mediaStream:", typeof mediaStream)
+        console.log("📌 instanceof MediaStream:", mediaStream instanceof MediaStream)
+        console.dir(mediaStream)
+
         if (!(mediaStream instanceof MediaStream)) {
           throw new Error("⛔ getUserMedia 결과가 MediaStream 타입이 아님")
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 100))  // 안정화 대기
+        await new Promise((resolve) => setTimeout(resolve, 200)) // 안정화 대기
 
         audioContext = new AudioContext()
-        const source = audioContext.createMediaStreamSource(mediaStream)
 
-        // VAD 세팅
-        setupVAD(audioContext, source)
+        if (typeof mediaStream === 'object' &&
+            mediaStream.constructor &&
+            mediaStream.constructor.name === 'MediaStream') {
+
+          const source = audioContext.createMediaStreamSource(mediaStream)
+          setupVAD(audioContext, source)
+
+        } else {
+          throw new Error("❗ mediaStream은 객체지만 MediaStream이 아님")
+        }
 
         // MediaRecorder 세팅
         mediaRecorder = new MediaRecorder(mediaStream)
