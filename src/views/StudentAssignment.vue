@@ -24,9 +24,11 @@
             <div class="card shadow-sm h-100">
               <div class="card-body">
                 <h5 class="card-title text-dark">{{ assignment.title }}</h5>
-                <p class="card-text text-muted">{{ assignment.description }}</p>
+                <p class="card-text text-muted">
+                  {{ truncateText(assignment.description, 100) }}
+                </p>
                 <p class="card-text">
-                  📅 마감일: <strong>{{ assignment.due }}</strong>
+                  📅 작성일: <strong>{{ formatDate(assignment.created_at) }}</strong>
                 </p>
               </div>
             </div>
@@ -41,15 +43,28 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
-// ✅ 컴포넌트 진입 확인용 로그
 console.log("🧩 StudentAssignment 컴포넌트 로드됨")
 
 const assignments = ref([])
 const loading = ref(true)
 
-onMounted(async () => {
-  console.log("🚀 StudentAssignment onMounted 진입") // ✅ 마운트 진입 로그
+// 날짜 포맷 함수
+const formatDate = (datetime) => {
+  return new Date(datetime).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
 
+// 텍스트 요약 함수
+const truncateText = (text, length) => {
+  if (!text) return ''
+  return text.length > length ? text.slice(0, length) + '...' : text
+}
+
+onMounted(async () => {
+  console.log("🚀 StudentAssignment onMounted 진입")
   try {
     const res = await axios.get('https://project2025-backend.onrender.com/assignments/')
     console.log('📦 과제 응답 데이터:', res.data)
