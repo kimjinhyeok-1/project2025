@@ -44,6 +44,12 @@ export default {
     const startRecording = async () => {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        console.log("🎤 mediaStream 확인:", mediaStream)
+
+        if (!(mediaStream instanceof MediaStream)) {
+          throw new Error("⛔ mediaStream이 MediaStream 타입이 아닙니다.")
+        }
+
         audioContext = new AudioContext()
         const source = audioContext.createMediaStreamSource(mediaStream)
 
