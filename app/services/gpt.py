@@ -1,11 +1,12 @@
 import os
-import traceback
 from openai import OpenAI
 from dotenv import load_dotenv
 
+# ✅ 환경 변수 로딩
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# ✅ 예상 질문 생성 함수
 def generate_expected_questions(summary_text: str, num_questions: int = 3) -> list:
     if not summary_text.strip() or "음성이 감지되지 않았습니다" in summary_text:
         return ["음성이 인식되지 않았거나 내용이 비었습니다."]
@@ -26,9 +27,6 @@ def generate_expected_questions(summary_text: str, num_questions: int = 3) -> li
             max_tokens=500
         )
 
-        if not response.choices or not response.choices[0].message.content:
-            return ["GPT 응답이 비어 있습니다."]
-
         content = response.choices[0].message.content
         questions = [
             q.strip("-•0123456789. ").strip()
@@ -37,6 +35,5 @@ def generate_expected_questions(summary_text: str, num_questions: int = 3) -> li
         return questions
 
     except Exception as e:
-        print("❌ GPT 예상 질문 생성 실패:", e)
-        traceback.print_exc()
+        print("❌ GPT 질문 생성 실패:", e)
         return ["질문 생성을 실패했습니다."]
