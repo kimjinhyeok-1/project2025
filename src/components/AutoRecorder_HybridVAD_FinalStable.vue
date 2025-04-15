@@ -1,7 +1,7 @@
 
 <template>
   <div>
-    <h2>🎤 프론트 VAD + MediaRecorder (ForceFixed 버전)</h2>
+    <h2>🎤 프론트 VAD + MediaRecorder (최종 안정화 버전)</h2>
     <button @click="startRecording" :disabled="isRecording">녹음 시작</button>
     <button @click="stopRecording" :disabled="!isRecording">녹음 종료</button>
     <p v-if="question">🧠 AI 질문: {{ question }}</p>
@@ -23,6 +23,7 @@ export default {
     let mediaRecorder = null
     let audioChunks = []
     let vadController = null
+    let audioSource = null
 
     const sendAudio = (blob) => {
       const formData = new FormData()
@@ -66,26 +67,26 @@ export default {
     const startRecording = async () => {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
         console.log("✅ mediaStream 타입 확인:", mediaStream && mediaStream.constructor.name)
 
         await new Promise((resolve) => setTimeout(resolve, 200)) // 안정화 대기
 
         audioContext = new AudioContext()
 
-        let source
-        try {
-          // 1차 시도
-          source = audioContext.createMediaStreamSource(mediaStream)
-          console.log("🎉 기본 방식으로 createMediaStreamSource 성공")
-        } catch (err) {
-          console.warn("⚠️ 기본 방식 실패, fallback 시도 중:", err)
-          const fallbackStream = new MediaStream(mediaStream.getAudioTracks())
-          source = audioContext.createMediaStreamSource(fallbackStream)
-          console.log("✅ fallback 방식으로 createMediaStreamSource 성공")
+        // ✅ AudioNode는 한 번만 생성하고 재사용
+        if (!audioSource) {
+          try {
+            audioSource = audioContext.createMediaStreamSource(mediaStream)
+            console.log("🎉 AudioSource 최초 생성 성공")
+          } catch (err) {
+            console.warn("⚠️ 기본 방식 실패, fallback 시도:", err)
+            const fallbackStream = new MediaStream(mediaStream.getAudioTracks())
+            audioSource = audioContext.createMediaStreamSource(fallbackStream)
+            console.log("✅ fallback AudioSource 생성 성공")
+          }
         }
 
-        setupVAD(audioContext, source)
+        setupVAD(audioContext, audioSource)
 
         // MediaRecorder 세팅
         mediaRecorder = new MediaRecorder(mediaStream)
@@ -111,7 +112,7 @@ export default {
       if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop()
       if (mediaStream) mediaStream.getTracks().forEach(track => track.stop())
       if (audioContext) audioContext.close()
-
+      audioSource = null // 반드시 해제
       isRecording.value = false
     }
 
