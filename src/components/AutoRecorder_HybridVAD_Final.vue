@@ -1,7 +1,7 @@
 
 <template>
   <div>
-    <h2>🎤 프론트 VAD + MediaRecorder 하이브리드 방식</h2>
+    <h2>🎤 프론트 VAD + MediaRecorder 하이브리드 방식 (안정화 패치)</h2>
     <button @click="startRecording" :disabled="isRecording">녹음 시작</button>
     <button @click="stopRecording" :disabled="!isRecording">녹음 종료</button>
     <p v-if="question">🧠 AI 질문: {{ question }}</p>
@@ -66,9 +66,13 @@ export default {
     const startRecording = async () => {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+        console.log("✅ mediaStream 타입:", mediaStream && mediaStream.constructor.name)
         if (!(mediaStream instanceof MediaStream)) {
-          throw new Error("⛔ mediaStream이 MediaStream 타입이 아님")
+          throw new Error("⛔ getUserMedia 결과가 MediaStream 타입이 아님")
         }
+
+        await new Promise((resolve) => setTimeout(resolve, 100))  // 안정화 대기
 
         audioContext = new AudioContext()
         const source = audioContext.createMediaStreamSource(mediaStream)
