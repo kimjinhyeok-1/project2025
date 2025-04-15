@@ -15,7 +15,7 @@ httpx
 python-multipart
 passlib
 python-jose
-numpy
+numpy==1.24.4
 scikit-learn
 torch==2.6.0+cpu
 torchaudio==2.6.0+cpu
