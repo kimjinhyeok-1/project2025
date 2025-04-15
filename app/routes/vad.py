@@ -1,25 +1,26 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Request
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import os, time
 from app.services.stt import convert_webm_to_wav, transcribe_with_whisper
 from app.services.gpt import generate_expected_questions
 
 router = APIRouter()
-
 UPLOAD_DIR = "temp/audio_chunks"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# 👉 OPTIONS 및 GET 허용 (CORS나 테스트 방지 목적)
+# 👉 OPTIONS 및 GET 허용 (CORS 프리플라이트 요청 대응)
 @router.options("/upload_audio_chunk")
 @router.get("/upload_audio_chunk")
 async def dummy_chunk_route():
     return JSONResponse(content={"message": "This endpoint only accepts POST requests."})
 
+# 👉 실제 업로드 처리
 @router.post("/upload_audio_chunk")
 async def upload_audio_chunk(file: UploadFile = File(...)):
     try:
         filename = f"chunk_{int(time.time())}.webm"
         save_path = os.path.join(UPLOAD_DIR, filename)
+
         with open(save_path, "wb") as f:
             f.write(await file.read())
 

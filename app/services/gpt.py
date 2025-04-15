@@ -1,4 +1,5 @@
 import os
+import traceback
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -25,6 +26,9 @@ def generate_expected_questions(summary_text: str, num_questions: int = 3) -> li
             max_tokens=500
         )
 
+        if not response.choices or not response.choices[0].message.content:
+            return ["GPT 응답이 비어 있습니다."]
+
         content = response.choices[0].message.content
         questions = [
             q.strip("-•0123456789. ").strip()
@@ -34,4 +38,5 @@ def generate_expected_questions(summary_text: str, num_questions: int = 3) -> li
 
     except Exception as e:
         print("❌ GPT 예상 질문 생성 실패:", e)
+        traceback.print_exc()
         return ["질문 생성을 실패했습니다."]
