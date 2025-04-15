@@ -20,7 +20,7 @@ import ProfessorSummaryDetailView from '../views/ProfessorSummaryDetailView.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
 
-import AutoRecorder from '../components/AutoRecorder_HybridVAD_Diagnostic.vue'
+import AutoRecorder from '../components/AutoRecorder_HybridVAD_ForceFixed.vue'
 
 const routes = [
   {
