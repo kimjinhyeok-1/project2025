@@ -63,7 +63,7 @@ export default {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ transcript: this.transcript }),
+          body: JSON.stringify({ text: this.transcript }), // 수정: text 키로 전송
         });
 
         if (!response.ok) {
@@ -71,7 +71,7 @@ export default {
         }
 
         const data = await response.json();
-        this.generatedQuestion = data.question;
+        this.generatedQuestion = data.questions.join(' / '); // 예상 질문 리스트를 문자열로 표시
       } catch (error) {
         console.error(error);
         this.generatedQuestion = '질문 생성에 실패했습니다.';
