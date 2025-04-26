@@ -1,38 +1,5 @@
-<template>
-  <div class="p-6">
-    <h1 class="text-3xl font-bold mb-6">실시간 질문 시연</h1>
-    
-    <div class="mb-4">
-      <button @click="startRecognition" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2">
-        음성 인식 시작
-      </button>
-      <button @click="stopRecognition" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-        음성 인식 중지
-      </button>
-    </div>
-
-    <div class="mt-4">
-      <p>현재 상태: <strong>{{ recognitionStatus }}</strong></p>
-      <p>🎤 인식된 텍스트:</p>
-      <div class="bg-gray-100 p-4 rounded mt-2">
-        {{ transcript }}
-      </div>
-    </div>
-
-    <div class="mt-6">
-      <button @click="generateQuestion" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-        AI 질문 생성하기
-      </button>
-    </div>
-
-    <div v-if="generatedQuestion" class="mt-6 p-4 bg-yellow-100 rounded">
-      <p>🧠 생성된 질문:</p>
-      <p class="font-semibold">{{ generatedQuestion }}</p>
-    </div>
-  </div>
-</template>
-
 <script>
+/* global webkitSpeechRecognition */
 export default {
   name: 'ProfessorRealtimeQuestion',
   data() {
@@ -60,13 +27,10 @@ export default {
       };
 
       this.recognition.onresult = (event) => {
-        let interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcriptPiece = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
             this.transcript += transcriptPiece + ' ';
-          } else {
-            interimTranscript += transcriptPiece;
           }
         }
       };
@@ -116,6 +80,40 @@ export default {
   }
 };
 </script>
+
+<template>
+  <div class="p-6">
+    <h1 class="text-3xl font-bold mb-6">실시간 질문 시연</h1>
+    
+    <div class="mb-4">
+      <button @click="startRecognition" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2">
+        음성 인식 시작
+      </button>
+      <button @click="stopRecognition" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+        음성 인식 중지
+      </button>
+    </div>
+
+    <div class="mt-4">
+      <p>현재 상태: <strong>{{ recognitionStatus }}</strong></p>
+      <p>🎤 인식된 텍스트:</p>
+      <div class="bg-gray-100 p-4 rounded mt-2">
+        {{ transcript }}
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <button @click="generateQuestion" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+        AI 질문 생성하기
+      </button>
+    </div>
+
+    <div v-if="generatedQuestion" class="mt-6 p-4 bg-yellow-100 rounded">
+      <p>🧠 생성된 질문:</p>
+      <p class="font-semibold">{{ generatedQuestion }}</p>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 button {
