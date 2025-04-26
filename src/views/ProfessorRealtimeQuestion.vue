@@ -58,7 +58,7 @@ export default {
       }
 
       try {
-        const response = await fetch('https://project2025-backend.onrender.com/generate-question', {
+        const response = await fetch('https://project2025-backend.onrender.com/vad/upload_text_chunk', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
