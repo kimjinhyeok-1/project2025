@@ -22,6 +22,8 @@
   </template>
   
   <script>
+  /* global webkitSpeechRecognition */  <!-- ✅ 추가: 글로벌 선언 -->
+  
   export default {
     name: 'ProfessorRealtimeQuestion',
     data() {
@@ -39,16 +41,18 @@
         }
   
         this.recognition = new webkitSpeechRecognition();
-        this.recognition.lang = 'ko-KR'; // 한국어로 설정
-        this.recognition.interimResults = true; // 중간 결과 표시
-        this.recognition.continuous = true; // 연속 듣기
+        this.recognition.lang = 'ko-KR'; // ✅ 한국어 인식 설정
+        this.recognition.interimResults = true; // ✅ 중간 결과 표시
+        this.recognition.continuous = true; // ✅ 연속 듣기
   
         this.recognition.onstart = () => {
           this.recognitionStatus = '음성 인식 중 🎙️';
         };
   
         this.recognition.onresult = (event) => {
-          let interimTranscript = '';
+          // eslint-disable-next-line no-unused-vars
+          let interimTranscript = ''; // ✅ 사용하지 않는 변수는 경고 무시
+  
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcriptPiece = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
