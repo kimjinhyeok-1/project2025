@@ -20,7 +20,11 @@ import ProfessorSummaryDetailView from '../views/ProfessorSummaryDetailView.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
 
-import AutoRecorder from '@/components/specific/AutoRecorder_HybridVAD_StreamOnly.vue'
+// ✅ 추가: 새로 만든 뷰
+import ProfessorRealtimeQuestion from '../views/ProfessorRealtimeQuestion.vue'
+
+// ✅ 추가: 기존 AutoRecorder 파일을 사용 중이라면 필요
+// import AutoRecorder from '../views/AutoRecorder_HybridVAD_StreamOnly.vue'
 
 const routes = [
   {
@@ -30,16 +34,16 @@ const routes = [
   },
   {
     path: '/',
-    redirect: '/student/assignment' // ✅ 메인 페이지 → 과제 페이지로 리디렉션
+    redirect: '/student/assignment' // 메인 페이지 → 과제 페이지로 리디렉션
   },
   {
     path: '/student',
-    name: 'StudentLayout', // ✅ 이름 추가
+    name: 'StudentLayout',
     component: StudentLayout,
     children: [
       {
         path: '',
-        redirect: '/student/assignment', // ✅ student 하위 기본도 과제 페이지
+        redirect: '/student/assignment',
       },
       {
         path: 'qna',
@@ -83,6 +87,16 @@ const routes = [
         component: ProfessorQnA,
       },
       {
+        path: 'review',
+        name: 'ProfessorReviewView',
+        component: ProfessorReviewView,
+      },
+      {
+        path: 'review/:id',
+        name: 'ProfessorSummaryDetailView',
+        component: ProfessorSummaryDetailView,
+      },
+      {
         path: 'assignments',
         name: 'ProfessorAssignments',
         component: ProfessorAssignments,
@@ -93,25 +107,20 @@ const routes = [
         component: AssignmentPostForm,
       },
       {
-        path: 'review',
-        name: 'ProfessorReviewView',
-        component: ProfessorReviewView,
-      },
-      {
-        path: 'review/:id',
-        name: 'ProfessorSummaryDetailView',
-        component: ProfessorSummaryDetailView,
+        path: 'realtime-question', // ✅ 새로 추가된 경로
+        name: 'ProfessorRealtimeQuestion',
+        component: ProfessorRealtimeQuestion,
       },
     ],
   },
-  {
-    path: '/record',
-    name: 'AutoRecorder',
-    component: AutoRecorder,
-  },
+  // {
+  //   path: '/record',
+  //   name: 'AutoRecorder',
+  //   component: AutoRecorder,
+  // },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/' // ✅ fallback 처리
+    redirect: '/' // fallback 처리
   }
 ]
 

@@ -35,6 +35,13 @@
           <span> ASSIGNMENT</span>
         </router-link>
       </li>
+      <!-- ✅ 새 메뉴 추가 -->
+      <li class="nav-item">
+        <router-link class="nav-link" to="/professor/realtime-question">
+          <i class="fas fa-microphone"></i>
+          <span> REALTIME QUESTION</span>
+        </router-link>
+      </li>
     </ul>
 
     <!-- Main Content -->
@@ -45,33 +52,3 @@
     </div>
   </div>
 </template>
-
-<style scoped>
-html, body, #app, #wrapper {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
-
-#wrapper {
-  display: flex;
-}
-
-.sidebar {
-  min-height: 100vh;
-  position: sticky;
-  top: 0;
-  left: 0;
-}
-
-#content-wrapper {
-  flex-grow: 1;
-  width: 100%;
-  background-color: #f8f9fc;
-}
-
-#content {
-  width: 100%;
-}
-</style>
