@@ -10,7 +10,6 @@ from app.database import Base, engine, get_db_context
 from app.routes.lecture import router as lecture_router
 from app.routes import vad
 from app.routes.ask_rag import cached_embeddings, faiss_index, embedding_id_map
-from app.services.stt import transcribe_with_whisper  # ✅ 추가: Whisper 미리 로딩용
 
 from sqlalchemy import select
 from app.models import Embedding
@@ -32,7 +31,7 @@ print("✅ OPENAI_ASSISTANT_ID:", os.getenv("OPENAI_ASSISTANT_ID"))
 # FastAPI 앱 생성
 app = FastAPI()
 
-# CORS 설정 (프론트엔드 도메인 명시)
+# CORS 설정
 origins = ["https://project2025-frontend.onrender.com"]
 app.add_middleware(
     CORSMiddleware,
@@ -89,14 +88,6 @@ async def on_startup():
 
     except Exception as e:
         print(f"🔥 FAISS 초기화 중 예외 발생: {e}")
-
-    # ✅ 서버 부팅 시 Whisper 모델 미리 로딩
-    try:
-        print("📦 서버 부팅 시 Whisper 모델 미리 로딩...")
-        transcribe_with_whisper("app/static/empty.wav")  # 무음 파일 이용해서 모델 초기화
-        print("✅ Whisper 모델 미리 로딩 완료!")
-    except Exception as e:
-        print(f"🔥 Whisper 미리 로딩 실패: {e}")
 
 # 라우터 등록
 app.include_router(upload.router)
