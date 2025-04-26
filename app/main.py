@@ -10,6 +10,7 @@ from app.database import Base, engine, get_db_context
 from app.routes.lecture import router as lecture_router
 from app.routes import vad
 from app.routes.ask_rag import cached_embeddings, faiss_index, embedding_id_map
+from app.services.stt import transcribe_with_whisper  # ✅ 추가: Whisper 미리 로딩용
 
 from sqlalchemy import select
 from app.models import Embedding
@@ -85,8 +86,17 @@ async def on_startup():
             embedding_id_map.extend([e.id for e in embeddings])
 
             print(f"✅ FAISS 인덱스 초기화 완료: {len(vectors)}개 벡터")
+
     except Exception as e:
         print(f"🔥 FAISS 초기화 중 예외 발생: {e}")
+
+    # ✅ 서버 부팅 시 Whisper 모델 미리 로딩
+    try:
+        print("📦 서버 부팅 시 Whisper 모델 미리 로딩...")
+        transcribe_with_whisper("app/static/empty.wav")  # 무음 파일 이용해서 모델 초기화
+        print("✅ Whisper 모델 미리 로딩 완료!")
+    except Exception as e:
+        print(f"🔥 Whisper 미리 로딩 실패: {e}")
 
 # 라우터 등록
 app.include_router(upload.router)
