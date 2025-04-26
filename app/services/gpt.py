@@ -4,7 +4,12 @@ from dotenv import load_dotenv
 
 # ✅ 환경 변수 로딩
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not OPENAI_API_KEY:
+    raise EnvironmentError("❌ OPENAI_API_KEY가 .env에 설정되어 있지 않습니다.")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ✅ 예상 질문 생성 함수
 def generate_expected_questions(summary_text: str, num_questions: int = 3) -> list:
@@ -27,13 +32,27 @@ def generate_expected_questions(summary_text: str, num_questions: int = 3) -> li
             max_tokens=500
         )
 
-        content = response.choices[0].message.content
+        # 응답 유효성 체크
+        if not response or not response.choices:
+            print("⚠️ OpenAI 응답이 비어 있습니다.")
+            return ["질문 생성을 실패했습니다."]
+
+        content = response.choices[0].message.content.strip()
+        if not content:
+            print("⚠️ OpenAI 응답 내용이 없습니다.")
+            return ["질문 생성을 실패했습니다."]
+
         questions = [
             q.strip("-•0123456789. ").strip()
-            for q in content.strip().split("\n") if q.strip()
+            for q in content.split("\n") if q.strip()
         ]
+
+        # 질문이 아예 없다면 기본 메시지 반환
+        if not questions:
+            return ["질문 생성을 실패했습니다."]
+
         return questions
 
     except Exception as e:
-        print("❌ GPT 질문 생성 실패:", e)
+        print("❌ GPT 예상 질문 생성 실패:", e)
         return ["질문 생성을 실패했습니다."]
