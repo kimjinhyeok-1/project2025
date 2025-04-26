@@ -8,11 +8,8 @@
       <div class="d-flex align-items-center ms-auto gap-3">
         <router-link to="/student" class="btn btn-link text-primary">🎓 학생 페이지</router-link>
         <router-link to="/professor" class="btn btn-link text-primary">👨‍🏫 교수자 페이지</router-link>
-
-        <!-- ✅ 추가된 버튼: 실시간 질문 페이지 -->
-        <router-link to="/record" class="btn btn-link text-success">🤖 실시간 질문 시연</router-link>
-
         <router-link to="/" class="btn btn-danger">로그아웃</router-link>
+        <router-link to="/record" class="btn btn-link text-success">🤖 실시간 질문 시연</router-link>
       </div>
     </div>
   </nav>

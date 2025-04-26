@@ -19,12 +19,7 @@ import ProfessorReviewView from '../views/ProfessorReviewView.vue'
 import ProfessorSummaryDetailView from '../views/ProfessorSummaryDetailView.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
-
-// ✅ 추가: 새로 만든 뷰
 import ProfessorRealtimeQuestion from '../views/ProfessorRealtimeQuestion.vue'
-
-// ✅ 추가: 기존 AutoRecorder 파일을 사용 중이라면 필요
-// import AutoRecorder from '../views/AutoRecorder_HybridVAD_StreamOnly.vue'
 
 const routes = [
   {
@@ -113,11 +108,6 @@ const routes = [
       },
     ],
   },
-  // {
-  //   path: '/record',
-  //   name: 'AutoRecorder',
-  //   component: AutoRecorder,
-  // },
   {
     path: '/:pathMatch(.*)*',
     redirect: '/' // fallback 처리
