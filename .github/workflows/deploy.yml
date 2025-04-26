@@ -1,0 +1,33 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches:
+      - main  # main 브랜치에 푸시될 때마다 자동 배포
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Ubuntu 환경에서 배포
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2  # GitHub 리포지토리의 코드를 가져오기
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'  # Node.js 버전 설정
+
+    - name: Install dependencies
+      run: |
+        npm install  # 의존성 설치
+
+    - name: Build the project
+      run: |
+        npm run build  # 빌드 실행
+
+    - name: Deploy to Render
+      run: |
+        curl -X POST https://api.render.com/deploy/some-deploy-key  # Render 배포 API 호출
+      env:
+        RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}  # GitHub Secrets에 저장된 Render API Key
