@@ -23,7 +23,7 @@
   
   <script>
   /* global webkitSpeechRecognition */
-  // ✅ 추가: 글로벌 선언 (주석 수정 완료)
+  // ✅ 글로벌 선언
   
   export default {
     name: 'ProfessorRealtimeQuestion',
@@ -42,24 +42,19 @@
         }
   
         this.recognition = new webkitSpeechRecognition();
-        this.recognition.lang = 'ko-KR';
-        this.recognition.interimResults = true;
-        this.recognition.continuous = true;
+        this.recognition.lang = 'ko-KR'; // 한국어
+        this.recognition.interimResults = true; // 중간 결과 허용
+        this.recognition.continuous = true; // 계속 듣기 모드
   
         this.recognition.onstart = () => {
           this.recognitionStatus = '음성 인식 중 🎙️';
         };
   
         this.recognition.onresult = (event) => {
-          // eslint-disable-next-line no-unused-vars
-          let interimTranscript = '';
-  
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcriptPiece = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
               this.transcript += transcriptPiece + ' ';
-            } else {
-              interimTranscript += transcriptPiece;
             }
           }
         };
