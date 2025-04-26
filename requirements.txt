@@ -22,3 +22,4 @@ torchaudio==2.6.0+cpu
 torchvision==0.21.0+cpu
 git+https://github.com/openai/whisper.git
 faiss-cpu==1.7.4
+aiohttp
