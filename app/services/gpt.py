@@ -2,18 +2,13 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# ✅ 환경 변수 로딩
+# ✅ 환경변수 로드 및 클라이언트 준비
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-if not OPENAI_API_KEY:
-    raise EnvironmentError("❌ OPENAI_API_KEY가 .env에 설정되어 있지 않습니다.")
-
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ✅ 예상 질문 생성 함수
 def generate_expected_questions(summary_text: str, num_questions: int = 3) -> list:
-    if not summary_text.strip() or "음성이 감지되지 않았습니다" in summary_text:
+    if not summary_text.strip() or "음성을 변환하지 못했습니다" in summary_text:
         return ["음성이 인식되지 않았거나 내용이 비었습니다."]
 
     prompt = (
@@ -29,30 +24,12 @@ def generate_expected_questions(summary_text: str, num_questions: int = 3) -> li
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
-            max_tokens=500
+            max_tokens=500,
         )
 
-        # 응답 유효성 체크
-        if not response or not response.choices:
-            print("⚠️ OpenAI 응답이 비어 있습니다.")
-            return ["질문 생성을 실패했습니다."]
-
-        content = response.choices[0].message.content.strip()
-        if not content:
-            print("⚠️ OpenAI 응답 내용이 없습니다.")
-            return ["질문 생성을 실패했습니다."]
-
-        questions = [
-            q.strip("-•0123456789. ").strip()
-            for q in content.split("\n") if q.strip()
-        ]
-
-        # 질문이 아예 없다면 기본 메시지 반환
-        if not questions:
-            return ["질문 생성을 실패했습니다."]
-
-        return questions
+        content = response.choices[0].message.content
+        return [q.strip("-•0123456789. ").strip() for q in content.strip().split("\n") if q.strip()]
 
     except Exception as e:
-        print("❌ GPT 예상 질문 생성 실패:", e)
+        print("❌ GPT 질문 생성 실패:", e)
         return ["질문 생성을 실패했습니다."]
