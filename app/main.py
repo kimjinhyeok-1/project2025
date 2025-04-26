@@ -88,6 +88,12 @@ async def on_startup():
 
     except Exception as e:
         print(f"🔥 FAISS 초기화 중 예외 발생: {e}")
+# ✅ 여기 추가!
+@app.middleware("http")
+async def add_permissions_policy_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Permissions-Policy"] = "microphone=(self)"
+    return response
 
 # 라우터 등록
 app.include_router(upload.router)
