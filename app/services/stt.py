@@ -50,7 +50,7 @@ def transcribe_with_whisper(wav_path: str) -> str:
     try:
         if _model is None:
             print("📦 Whisper 모델 로딩 중 (지연 로딩)...")
-            _model = whisper.load_model("small")  # 필요시 tiny 로 변경 가능
+            _model = whisper.load_model("tiny")
             print("✅ Whisper 모델 로딩 완료")
 
         result = _model.transcribe(wav_path, language="ko")
