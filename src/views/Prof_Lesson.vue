@@ -21,14 +21,14 @@ import { testOptionsRequest } from "@/api/snapshotService";
 
 export default {
   name: "ProfessorLesson",
-  computed: {
-    isRecording() {
-      return recordingManager.getState().isRecording;
-    }
+  data() {
+    return {
+      isRecording: false,
+    };
   },
   methods: {
     async toggleAudioRecording() {
-      if (!recordingManager.getState().isRecording) {
+      if (!this.isRecording) {
         await recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
@@ -39,6 +39,13 @@ export default {
     }
   },
   mounted() {
+    const state = recordingManager.getState();
+    this.isRecording = state.isRecording;
+
+    recordingManager.subscribe((newState) => {
+      this.isRecording = newState;
+    });
+
     recordingManager.reconnectRecognition();
   }
 };

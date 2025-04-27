@@ -1,4 +1,3 @@
-// src/managers/RecordingManager.js
 import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 
 class RecordingManager {
@@ -9,6 +8,16 @@ class RecordingManager {
     this.displayStream = null;
     this.recognition = null;
     this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
+    
+    this.listeners = []; // 🔥 추가 (구독자들)
+  }
+
+  subscribe(callback) {
+    this.listeners.push(callback);
+  }
+
+  notify() {
+    this.listeners.forEach((cb) => cb(this.isRecording));
   }
 
   async startRecording() {
@@ -23,6 +32,7 @@ class RecordingManager {
 
       this.startRecognition();
       this.isRecording = true;
+      this.notify(); // 🔥 상태 변경 알림
 
       console.log('🎙️ Recording Started.');
     } catch (error) {
@@ -39,6 +49,7 @@ class RecordingManager {
     this.stopRecognition();
 
     this.isRecording = false;
+    this.notify(); // 🔥 상태 변경 알림
 
     console.log('🔚 Recording Stopped.');
   }
@@ -71,7 +82,6 @@ class RecordingManager {
 
     this.recognition.onerror = (event) => {
       console.error('🎙️ 음성 인식 에러:', event.error);
-      // 에러 발생해도 끊기지 않게 복구
       if (event.error === "no-speech" || event.error === "network") {
         console.log('🎙️ 음성 인식 재시작');
         this.recognition.stop();
