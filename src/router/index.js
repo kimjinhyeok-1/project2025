@@ -20,6 +20,7 @@ import ProfessorSummaryDetailView from '../views/Prof_SummaryDetail.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
 import ProfessorRealtimeQuestion from '../views/Prof_AIQnAStu.vue'
+import DaesungTest from '../views/DaesungTest.vue'
 
 const routes = [
   {
@@ -44,6 +45,11 @@ const routes = [
         path: 'qna',
         name: 'StudentQnA',
         component: StudentQnA,
+      },
+      {
+        path: 'test',
+        name: 'Daesungtest',
+        component: DaesungTest,
       },
       {
         path: 'history',
