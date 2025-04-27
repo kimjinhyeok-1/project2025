@@ -53,62 +53,65 @@ async def get_all_chat_history(
         for r in records
     ]
 
+# ✅ minimal 전처리 함수
+def minimal_preprocess(text: str) -> str:
+    # 특수문자 정리 (.,!? 만 허용)
+    text = re.sub(r"[^\w\s.,!?]", "", text)
+    text = text.replace("\n", " ").replace("\t", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    # 길이 제한
+    return text if len(text) <= 250 else text[:247] + "..."
+
 @router.get("/chat_history/summary")
 async def get_question_summary(
     db: AsyncSession = Depends(get_db),
     _: str = Depends(verify_professor)
 ):
     try:
-        # 1. 질문 불러오기
-        result = await db.execute(select(QuestionAnswer.question))
+        # 1. 최근 질문 10개 가져오기
+        result = await db.execute(
+            select(QuestionAnswer.question).order_by(QuestionAnswer.created_at.desc()).limit(10)
+        )
         questions = [row[0].strip() for row in result.all() if row[0] and len(row[0].strip()) > 5]
 
         if not questions:
-            return {"message": "질문 데이터가 없습니다."}
+            return {"message": "질문 데이터가 부족합니다."}
 
-        # 2. 강의 주제 키워드 설정
-        lecture_keywords = ["다형성", "오버라이딩", "오버로딩", "상속", "객체지향", "OOP", "Java"]
+        # 2. 전처리 적용
+        processed_questions = [minimal_preprocess(q) for q in questions]
 
-        # 3. 강의 관련 질문 + 길이 짧은 질문만 필터링
-        filtered_questions = [
-            q for q in set(questions)  # 중복 제거
-            if any(keyword.lower() in q.lower() for keyword in lecture_keywords) and len(q) <= 100
-        ]
+        # 3. 포맷팅
+        formatted_questions = "\n".join(f"{idx+1}. {q}" fogir idx, q in enumerate(processed_questions))
 
-        if not filtered_questions:
-            return {"message": "강의 주제와 관련된 질문이 없습니다."}
-
-        # 4. 최종 10개까지만 사용
-        final_questions = filtered_questions[:10]
-
-        # 5. 포맷팅된 프롬프트 생성
-        formatted_questions = "\n".join(f"- {q}" for q in final_questions)
-
+        # 4. 프롬프트 작성 (Markdown 지시 추가)
         prompt = f"""
-        다음은 학생들이 최근에 남긴 질문입니다:
+아래는 학생들이 최근에 한 질문 목록입니다.
 
-        {formatted_questions}
+{formatted_questions}
 
-        ✅ 강의 주제(객체지향 프로그래밍, 다형성, 상속, 오버라이딩, 오버로딩 등)과 관련된 질문만 요약해 주세요.
-        ✅ 강의와 무관한 잡담, 수업 범위 외 질문은 무시하세요.
-        ✅ 학생들이 헷갈려하는 부분과 추가 설명이 필요한 부분 중심으로 요약해 주세요.
+이 질문들을 참고하여:
 
-        답변은 한글로 작성해 주세요.
-        """
+1. 강의 주제와 관련된 주요 개념만 요약해 주세요.
+2. Markdown 형식으로 작성해 주세요. (예: # 제목, ## 소제목, - 목록, **강조** 등)
+3. 요약은 명확하고 간결하게 작성해 주세요.
+4. 필요 시 보충 강의가 필요한 주제도 추천해 주세요.
 
-        # 6. GPT 호출
+**[응답은 반드시 Markdown 형식으로만 작성하세요.]**
+"""
+
+        # 5. GPT 호출
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(
-            model="gpt-4o",  # 필요시 gpt-4o로 변경 가능
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000,
-            temperature=0.7,
+            max_tokens=800,
+            temperature=0.5
         )
         summary = response.choices[0].message.content.strip()
 
         return {
-            "most_common_questions": final_questions,  # 상위 질문들도 같이 반환
-            "summary_for_professor": summary
+            "most_common_questions": processed_questions[:5],  # 프론트용 상위 5개
+            "summary_for_professor": summary  # Markdown 포맷 적용된 요약
         }
 
     except Exception as e:
