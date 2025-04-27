@@ -11,15 +11,24 @@ from datetime import datetime
 router = APIRouter()
 
 # ✅ 저장 경로 설정
-IMAGE_DIR = "tmp/snapshots"
-os.makedirs(IMAGE_DIR, exist_ok=True)
+IMAGE_DIR = "tmp/snapshots"  # 렌더 서버에서도 접근 가능한 tmp 아래
+FULL_IMAGE_DIR = os.path.join("static", IMAGE_DIR)  # /static/tmp/snapshots 경로로 정적 제공
+os.makedirs(FULL_IMAGE_DIR, exist_ok=True)  # 폴더 없으면 생성
 
-# ✅ 요청 바디 스키마
+# ✅ 요청 바디 스키마 (lecture_id 제거)
 class SnapshotRequest(BaseModel):
-    lecture_id: int
     timestamp: str
     transcript: str
     screenshot_base64: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "timestamp": "2025-04-28 15:30:00",
+                "transcript": "광합성은 빛을 이용해 포도당을 만드는 과정입니다. 이 과정에서 산소가 부산물로 발생합니다.",
+                "screenshot_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA..."
+            }
+        }
 
 # ✅ /snapshots: 스크린샷 + STT 텍스트 저장
 @router.post("/snapshots")
@@ -31,7 +40,7 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
     timestamp = data.timestamp
     text = data.transcript
     image_data = data.screenshot_base64
-    lecture_id = data.lecture_id
+    lecture_id = 1  # ✅ 프론트에서 안 보내고, 백엔드에서 고정
 
     if not timestamp or not text or not image_data:
         raise HTTPException(status_code=400, detail="timestamp, transcript, screenshot_base64가 필요합니다.")
@@ -49,9 +58,10 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="이미지 디코딩 실패")
 
     filename = f"{uuid.uuid4().hex}.png"
-    file_path = os.path.join(IMAGE_DIR, filename)
+    save_path = os.path.join(FULL_IMAGE_DIR, filename)  # 실제 저장 경로
+    relative_url = f"/static/{IMAGE_DIR}/{filename}"    # 웹에서 접근할 경로
 
-    with open(file_path, "wb") as f:
+    with open(save_path, "wb") as f:
         f.write(image_bytes)
 
     snapshot = Snapshot(
@@ -59,7 +69,7 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
         date=date_group,
         time=dt.strftime("%H:%M:%S"),
         text=text,
-        image_path=f"/static/{file_path}"  # ⬅️ URL 경로 수정 (정적파일로 제공할 것이기 때문에)
+        image_path=relative_url  # 저장은 상대경로로
     )
     db.add(snapshot)
     db.commit()
@@ -70,7 +80,7 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
         "date": date_group,
         "time": snapshot.time,
         "text": text,
-        "image_url": snapshot.image_path
+        "image_url": relative_url
     }
 
 # ✅ /summaries: 날짜 목록 조회
