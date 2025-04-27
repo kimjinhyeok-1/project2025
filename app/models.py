@@ -160,3 +160,15 @@ class AssignmentThread(Base):
 
     assignment = relationship("Assignment", back_populates="threads")
     user = relationship("User", back_populates="assignment_threads")
+
+# ✅ 새로운 "질문 피드백" 테이블 추가
+class QuestionFeedback(Base):
+    __tablename__ = "question_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # 학생 ID
+    question_text = Column(Text, nullable=False)  # 질문 내용
+    knows = Column(Boolean, nullable=False)  # True: 안다, False: 모른다
+    created_at = Column(DateTime, default=func.now())
+
+    user = relationship("User")  # 사용자 관계
