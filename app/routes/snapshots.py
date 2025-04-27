@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Snapshot  # Snapshot 모델을 사용 중
+from app.models import Snapshot
 import os
 import base64
 import uuid
@@ -10,32 +10,32 @@ from datetime import datetime
 router = APIRouter()
 
 IMAGE_DIR = "snapshots"
-if not os.path.exists(IMAGE_DIR):
-    os.makedirs(IMAGE_DIR)
+os.makedirs(IMAGE_DIR, exist_ok=True)  # 폴더 없으면 생성
 
 # ✅ /snapshots: 스크린샷 + STT 텍스트 저장
 @router.post("/snapshots")
 def upload_snapshot(data: dict, db: Session = Depends(get_db)):
-    print("📥 /snapshots 요청 도착!")
-    print("📄 데이터 내용:", data)
-
-    timestamp = data.get("timestamp")  # "2024-03-30 15:02:18" 형식
+    """
+    수업 중 프론트가 스크린샷 + 텍스트 + 타임스탬프를 전송
+    """
+    print("📥 /snapshots 요청 도착")
+    timestamp = data.get("timestamp")
     text = data.get("transcript")
     image_data = data.get("screenshot_base64")
 
     if not timestamp or not text or not image_data:
-        raise HTTPException(status_code=400, detail="필드 누락")
+        raise HTTPException(status_code=400, detail="timestamp, transcript, screenshot_base64가 필요합니다.")
 
     try:
         dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
         date_group = dt.strftime("%Y-%m-%d")
-    except:
-        raise HTTPException(status_code=400, detail="timestamp 형식 오류")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="timestamp 형식 오류 (yyyy-MM-dd HH:mm:ss)")
 
     try:
         header, encoded = image_data.split(",", 1)
         image_bytes = base64.b64decode(encoded)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="이미지 디코딩 실패")
 
     filename = f"{uuid.uuid4().hex}.png"
@@ -47,8 +47,8 @@ def upload_snapshot(data: dict, db: Session = Depends(get_db)):
     snapshot = Snapshot(
         date=date_group,
         time=dt.strftime("%H:%M:%S"),
-        text=text,
-        image_path=file_path
+        transcript=text,
+        image_url=f"/{file_path}"
     )
     db.add(snapshot)
     db.commit()
@@ -58,48 +58,47 @@ def upload_snapshot(data: dict, db: Session = Depends(get_db)):
         "date": date_group,
         "time": snapshot.time,
         "text": text,
-        "image_path": file_path
+        "image_url": f"/{file_path}"
     }
 
 # ✅ /summaries: 날짜 목록 조회
 @router.get("/summaries")
 def get_all_summary_dates(db: Session = Depends(get_db)):
-    results = db.query(Snapshot.date).distinct().all()
+    results = db.query(Snapshot.date).distinct().order_by(Snapshot.date.desc()).all()
     return {"dates": [r.date for r in results]}
 
-# ✅ /summaries/{date}: 해당 날짜의 스냅샷 요약 목록
+# ✅ /summaries/{date}: 특정 날짜 요약 목록
 @router.get("/summaries/{date}")
 def get_summary_by_date(date: str, db: Session = Depends(get_db)):
-    snapshots = db.query(Snapshot).filter(Snapshot.date == date).all()
+    snapshots = db.query(Snapshot).filter(Snapshot.date == date).order_by(Snapshot.time.asc()).all()
     result = []
     for snap in snapshots:
         result.append({
             "time": snap.time,
-            "text": snap.text,
-            "image_url": f"/{snap.image_path}"
+            "text": snap.transcript,
+            "image_url": snap.image_url
         })
     return {
         "summary": f"{date} 강의 요약",
         "highlights": result
     }
 
-# ✅ /snapshots/nearest: 요약문 클릭 시 가장 가까운 스냅샷 반환
+# ✅ /snapshots/nearest: 가장 가까운 스냅샷 찾기
 @router.get("/snapshots/nearest")
 def get_nearest_snapshot(
-    date: str = Query(..., description="예: 2024-03-30"),
-    time: str = Query(..., description="예: 15:02:18"),
+    date: str = Query(..., description="yyyy-MM-dd"),
+    time: str = Query(..., description="HH:mm:ss"),
     db: Session = Depends(get_db)
 ):
     try:
         target_time = datetime.strptime(time, "%H:%M:%S").time()
-    except:
-        raise HTTPException(status_code=400, detail="time 형식 오류")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="time 형식 오류 (HH:mm:ss)")
 
     snapshots = db.query(Snapshot).filter(Snapshot.date == date).all()
     if not snapshots:
-        raise HTTPException(status_code=404, detail="해당 날짜에 저장된 스냅샷이 없습니다.")
+        raise HTTPException(status_code=404, detail="해당 날짜에 스냅샷 없음")
 
-    # 가장 가까운 스냅샷 찾기
     def time_diff(snap):
         snap_time = datetime.strptime(snap.time, "%H:%M:%S").time()
         return abs(datetime.combine(datetime.today(), snap_time) - datetime.combine(datetime.today(), target_time))
@@ -108,6 +107,6 @@ def get_nearest_snapshot(
 
     return {
         "time": closest.time,
-        "text": closest.text,
-        "image_url": f"/{closest.image_path}"
+        "text": closest.transcript,
+        "image_url": closest.image_url
     }
