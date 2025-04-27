@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Snapshot
@@ -12,16 +13,24 @@ router = APIRouter()
 IMAGE_DIR = "snapshots"
 os.makedirs(IMAGE_DIR, exist_ok=True)  # 폴더 없으면 생성
 
+# ✅ 요청 바디 스키마
+class SnapshotRequest(BaseModel):
+    lecture_id: int
+    timestamp: str
+    transcript: str
+    screenshot_base64: str
+
 # ✅ /snapshots: 스크린샷 + STT 텍스트 저장
 @router.post("/snapshots")
-def upload_snapshot(data: dict, db: Session = Depends(get_db)):
+def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
     """
     수업 중 프론트가 스크린샷 + 텍스트 + 타임스탬프를 전송
     """
-    print("📥 /snapshots 요청 도착")
-    timestamp = data.get("timestamp")
-    text = data.get("transcript")
-    image_data = data.get("screenshot_base64")
+    print("\ud83d\udce5 /snapshots 요청 도착")
+    timestamp = data.timestamp
+    text = data.transcript
+    image_data = data.screenshot_base64
+    lecture_id = data.lecture_id
 
     if not timestamp or not text or not image_data:
         raise HTTPException(status_code=400, detail="timestamp, transcript, screenshot_base64가 필요합니다.")
@@ -45,16 +54,18 @@ def upload_snapshot(data: dict, db: Session = Depends(get_db)):
         f.write(image_bytes)
 
     snapshot = Snapshot(
+        lecture_id=lecture_id,
         date=date_group,
         time=dt.strftime("%H:%M:%S"),
-        transcript=text,
-        image_url=f"/{file_path}"
+        text=text,
+        image_path=f"/{file_path}"
     )
     db.add(snapshot)
     db.commit()
 
     return {
         "message": "스냅샷 저장 완료",
+        "lecture_id": lecture_id,
         "date": date_group,
         "time": snapshot.time,
         "text": text,
@@ -74,9 +85,10 @@ def get_summary_by_date(date: str, db: Session = Depends(get_db)):
     result = []
     for snap in snapshots:
         result.append({
+            "lecture_id": snap.lecture_id,
             "time": snap.time,
-            "text": snap.transcript,
-            "image_url": snap.image_url
+            "text": snap.text,
+            "image_url": snap.image_path
         })
     return {
         "summary": f"{date} 강의 요약",
@@ -106,7 +118,8 @@ def get_nearest_snapshot(
     closest = min(snapshots, key=time_diff)
 
     return {
+        "lecture_id": closest.lecture_id,
         "time": closest.time,
-        "text": closest.transcript,
-        "image_url": closest.image_url
+        "text": closest.text,
+        "image_url": closest.image_path
     }
