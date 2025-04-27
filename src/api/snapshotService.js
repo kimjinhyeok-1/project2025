@@ -3,13 +3,15 @@ import axios from 'axios'
 
 const BASE_URL = 'https://project2025-backend.onrender.com'
 
-// 🖼️ 스냅샷 업로드 (timestamp, transcript, screenshot_base64)
 export async function uploadSnapshot({ timestamp, transcript, screenshot_base64 }) {
   try {
+    const [date, time] = timestamp.split(' ')  // timestamp를 "2025-04-28 15:30:00" → ["2025-04-28", "15:30:00"]로 나눔
+
     const response = await axios.post(`${BASE_URL}/snapshots/snapshots`, {
-      timestamp,            // (예: "2025-04-27 16:02:11")
-      transcript,           // (학생이 말한 텍스트)
-      screenshot_base64,    // (Base64 인코딩된 이미지 데이터)
+      date,                  // YYYY-MM-DD
+      time,                  // HH:MM:SS
+      text: transcript,      // 필드명 변경
+      screenshot_base64,     // 그대로
     }, {
       withCredentials: true
     })
