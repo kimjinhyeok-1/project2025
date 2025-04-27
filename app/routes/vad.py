@@ -1,5 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request
+# vad.py
+
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from app.services.gpt import generate_expected_questions
 from app.services.embedding import get_sentence_embeddings
 import numpy as np
@@ -7,6 +10,10 @@ import numpy as np
 router = APIRouter()
 
 SIMILARITY_THRESHOLD = 0.8  # 문단 구분 임계값
+
+# ✅ Request Body 받을 모델 정의
+class TextChunk(BaseModel):
+    text: str
 
 # 👉 OPTIONS 및 GET 허용 (CORS 프리플라이트 요청 대응)
 @router.options("/upload_text_chunk")
@@ -16,10 +23,9 @@ async def dummy_text_route():
 
 # 👉 텍스트 업로드 처리
 @router.post("/upload_text_chunk")
-async def upload_text_chunk(request: Request):
+async def upload_text_chunk(data: TextChunk):
     try:
-        body = await request.json()
-        text = body.get("text", "").strip()
+        text = data.text.strip()
 
         # 🔥 텍스트 비었는지 체크
         if not text:
