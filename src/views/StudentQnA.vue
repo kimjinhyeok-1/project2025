@@ -23,8 +23,8 @@
       <div class="loading-text">답변을 가져오는 중...</div>
     </div>
 
-    <div v-else-if="answerMarkdown" ref="answerSection">
-      <MarkdownViewer :markdown="answerMarkdown" />
+    <div v-else-if="answerMarkdown" ref="answerSection" class="markdown-body">
+      <div v-html="answerMarkdown"></div>
     </div>
   </div>
 </template>
@@ -32,7 +32,6 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import axios from 'axios'
-import MarkdownViewer from '@/components/common/MarkdownViewer.vue'
 
 const backendBaseURL = process.env.NODE_ENV === 'production'
   ? 'https://project2025-backend.onrender.com/api'
@@ -155,5 +154,57 @@ const fetchAnswer = async () => {
   margin-top: 1rem;
   font-size: 1rem;
   color: #666;
+}
+
+.markdown-body {
+  max-width: 800px;
+  padding: 2rem;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #333;
+  word-break: break-word;
+  margin: 2rem auto;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  font-weight: bold;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-body p {
+  margin: 1rem 0;
+}
+
+.markdown-body ul {
+  list-style: none;
+  padding-left: 1rem;
+}
+
+.markdown-body ul li::before {
+  content: "✅ ";
+}
+
+.markdown-body pre {
+  background: #f6f8fa;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.markdown-body code {
+  background: #f6f8fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+.markdown-body a {
+  color: #007bff;
+  text-decoration: underline;
 }
 </style>
