@@ -1,92 +1,84 @@
 <template>
-  <div class="container mt-5">
-    <h2 class="text-center">❓ 질문 & 답변 확인하기</h2>
+  <div class="container mx-auto p-6 bg-gray-50 min-h-screen">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-10">❓ 질문 & 답변 확인하기</h2>
 
     <!-- 탭 -->
-    <ul class="nav nav-tabs mt-4" style="justify-content: flex-start;">
-      <li class="nav-item">
-        <a
-          class="nav-link"
-          :class="{ active: activeTab === 'summary', 'text-primary': true }"
-          @click="loadSummary"
-        >
-          요약 보기
-        </a>
-      </li>
-      <li class="nav-item">
-        <a
-          class="nav-link"
-          :class="{ active: activeTab === 'fullchat', 'text-primary': true }"
-          @click="loadFullChat"
-        >
-          전체 대화 보기
-        </a>
-      </li>
-      <li class="nav-item">
-        <a
-          class="nav-link"
-          :class="{ active: activeTab === 'resources', 'text-primary': true }"
-          @click="activeTab = 'resources'"
-        >
-          자료 보기
-        </a>
-      </li>
-    </ul>
+    <div class="flex space-x-4 mb-8">
+      <button
+        class="px-6 py-2 rounded-full font-semibold"
+        :class="activeTab === 'summary' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-600'"
+        @click="loadSummary"
+      >
+        요약 보기
+      </button>
+      <button
+        class="px-6 py-2 rounded-full font-semibold"
+        :class="activeTab === 'fullchat' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-600'"
+        @click="loadFullChat"
+      >
+        전체 대화 보기
+      </button>
+      <button
+        class="px-6 py-2 rounded-full font-semibold"
+        :class="activeTab === 'resources' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-600'"
+        @click="() => activeTab = 'resources'"
+      >
+        자료 보기
+      </button>
+    </div>
 
     <!-- 탭 내용 -->
-    <div class="tab-content mt-3 border p-4 rounded bg-white shadow-sm">
+    <div class="bg-white rounded-2xl shadow-md p-8">
       <!-- 요약 탭 -->
       <div v-if="activeTab === 'summary'">
-        <h5>📋 질문 요약</h5>
+        <h3 class="text-2xl font-bold text-gray-800 mb-6">📋 질문 요약</h3>
 
-        <div v-if="summaryLoading" class="d-flex align-items-center">
-          <strong role="status">불러오는 중...</strong>
-          <div class="spinner-border ms-auto" aria-hidden="true"></div>
+        <div v-if="summaryLoading" class="flex items-center space-x-2">
+          <div class="w-6 h-6 border-4 border-blue-400 border-t-transparent border-solid rounded-full animate-spin"></div>
+          <span class="font-semibold text-gray-600">불러오는 중...</span>
         </div>
 
         <div v-else>
-          <h6>📝 요약 내용</h6>
-          <div v-html="parsedMarkdown" class="mt-3"></div>
+          <div v-html="parsedMarkdown" class="prose max-w-none"></div>
 
-          <h6 class="mt-4">💡 자주 묻는 질문</h6>
-          <ul>
+          <h4 class="text-xl font-semibold text-gray-700 mt-8 mb-4">💡 자주 묻는 질문</h4>
+          <ol class="list-decimal ml-6 text-gray-700 text-base">
             <li v-for="(q, index) in summary.most_common_questions" :key="index">
               {{ index + 1 }}. {{ q }}
             </li>
-          </ul>
+          </ol>
         </div>
       </div>
 
       <!-- 전체 대화 탭 -->
       <div v-if="activeTab === 'fullchat'">
-        <h5>💬 전체 대화 내용</h5>
+        <h3 class="text-2xl font-bold text-gray-800 mb-6">💬 전체 대화 내용</h3>
 
-        <div v-if="chatLoading" class="d-flex align-items-center">
-          <strong role="status">불러오는 중...</strong>
-          <div class="spinner-border ms-auto" aria-hidden="true"></div>
+        <div v-if="chatLoading" class="flex items-center space-x-2">
+          <div class="w-6 h-6 border-4 border-blue-400 border-t-transparent border-solid rounded-full animate-spin"></div>
+          <span class="font-semibold text-gray-600">불러오는 중...</span>
         </div>
 
-        <ul v-else class="list-group">
-          <li
-            v-for="(msg, index) in fullChat"
-            :key="index"
-            class="list-group-item"
-          >
-            <p><strong>🧑 질문:</strong> {{ msg.question }}</p>
-            <p><strong>🤖 답변:</strong> {{ msg.answer }}</p>
-            <p class="text-muted small">{{ formatDate(msg.created_at) }}</p>
-          </li>
-        </ul>
-
-        <div v-if="fullChat.length === 0 && !chatLoading" class="text-muted mt-3">
-          📭 아직 대화 기록이 없습니다.
+        <div v-else>
+          <div v-if="fullChat.length > 0" class="space-y-6">
+            <div v-for="(msg, index) in fullChat" :key="index" class="bg-gray-100 p-4 rounded-lg">
+              <p class="font-semibold text-gray-800">🧑 질문:</p>
+              <p class="text-gray-700 mb-2">{{ msg.question }}</p>
+              <p class="font-semibold text-gray-800">🤖 답변:</p>
+              <p class="text-gray-700">{{ msg.answer }}</p>
+              <p class="text-sm text-gray-500 mt-2">{{ formatDate(msg.created_at) }}</p>
+            </div>
+          </div>
+          <div v-else class="text-center text-gray-400">
+            📭 아직 대화 기록이 없습니다.
+          </div>
         </div>
       </div>
 
       <!-- 자료 보기 탭 -->
       <div v-if="activeTab === 'resources'">
-        <h5>📂 자료 보기</h5>
-        <p>자료 기능은 추후 추가될 예정입니다.</p>
+        <h3 class="text-2xl font-bold text-gray-800 mb-6">📂 자료 보기</h3>
+        <p class="text-gray-600">자료 기능은 추후 추가될 예정입니다.</p>
       </div>
     </div>
   </div>
@@ -175,10 +167,7 @@ loadSummary()
 </script>
 
 <style scoped>
-.nav-link {
-  cursor: pointer;
-}
-.tab-content {
-  min-height: 200px;
+.prose {
+  max-width: 100%;
 }
 </style>
