@@ -3,13 +3,14 @@ import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 class RecordingManager {
   constructor() {
     this.isRecording = false;
+    this.isRecognizing = false;
     this.audioRecorder = null;
     this.audioStream = null;
     this.displayStream = null;
     this.recognition = null;
+    this.listeners = [];
+
     this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
-    
-    this.listeners = []; // 🔥 추가 (구독자들)
   }
 
   subscribe(callback) {
@@ -32,7 +33,7 @@ class RecordingManager {
 
       this.startRecognition();
       this.isRecording = true;
-      this.notify(); // 🔥 상태 변경 알림
+      this.notify();
 
       console.log('🎙️ Recording Started.');
     } catch (error) {
@@ -49,12 +50,14 @@ class RecordingManager {
     this.stopRecognition();
 
     this.isRecording = false;
-    this.notify(); // 🔥 상태 변경 알림
+    this.notify();
 
     console.log('🔚 Recording Stopped.');
   }
 
   startRecognition() {
+    if (this.isRecognizing) return;
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("이 브라우저는 음성 인식을 지원하지 않습니다.");
@@ -90,17 +93,19 @@ class RecordingManager {
     };
 
     this.recognition.start();
+    this.isRecognizing = true;
   }
 
   stopRecognition() {
     if (this.recognition) {
       this.recognition.stop();
       this.recognition = null;
+      this.isRecognizing = false;
     }
   }
 
   reconnectRecognition() {
-    if (this.isRecording && !this.recognition) {
+    if (this.isRecording && !this.isRecognizing) {
       console.log('🎙️ 음성 인식 재연결 시도');
       this.startRecognition();
     }

@@ -39,13 +39,13 @@ export default {
     }
   },
   mounted() {
-    const state = recordingManager.getState();
-    this.isRecording = state.isRecording;
+    this.isRecording = recordingManager.getState().isRecording;
 
     recordingManager.subscribe((newState) => {
       this.isRecording = newState;
     });
 
+    // ✅ 진짜 중요: 돌아올 때 음성 인식이 끊겼으면 복구
     recordingManager.reconnectRecognition();
   }
 };
