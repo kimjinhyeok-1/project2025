@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from app.services.gpt import generate_expected_questions
 from app.services.embedding import get_sentence_embeddings
 from app.database import get_db_context
@@ -11,6 +12,15 @@ router = APIRouter()
 
 SIMILARITY_THRESHOLD = 0.8  # 문단 구분 임계값
 
+# ✨ 요청 바디 스키마
+class TextChunkRequest(BaseModel):
+    text: str
+
+class FeedbackRequest(BaseModel):
+    user_id: int
+    question_text: str
+    knows: bool
+
 # 👉 OPTIONS 및 GET 허용 (프리플라이트 대응)
 @router.options("/upload_text_chunk")
 @router.get("/upload_text_chunk")
@@ -19,10 +29,9 @@ async def dummy_text_route():
 
 # 👉 텍스트 업로드 처리 (문단 묶기 + 질문 생성)
 @router.post("/upload_text_chunk")
-async def upload_text_chunk(request: Request):
+async def upload_text_chunk(body: TextChunkRequest):
     try:
-        body = await request.json()
-        text = body.get("text", "").strip()
+        text = body.text.strip()
 
         if not text:
             raise HTTPException(status_code=400, detail="텍스트가 비어있습니다.")
@@ -85,21 +94,13 @@ def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
 
 # 👉 학생 "모른다" 피드백 제출
 @router.post("/feedback")
-async def submit_feedback(request: Request):
+async def submit_feedback(body: FeedbackRequest):
     try:
-        body = await request.json()
-        user_id = body.get("user_id")
-        question_text = body.get("question_text")
-        knows = body.get("knows")
-
-        if not user_id or not question_text or knows is None:
-            raise HTTPException(status_code=400, detail="필수 입력값 누락")
-
         async with get_db_context() as db:
             feedback = QuestionFeedback(
-                user_id=user_id,
-                question_text=question_text,
-                knows=knows
+                user_id=body.user_id,
+                question_text=body.question_text,
+                knows=body.knows
             )
             db.add(feedback)
             await db.commit()
