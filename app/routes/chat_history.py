@@ -53,7 +53,6 @@ async def get_all_chat_history(
         for r in records
     ]
 
-# ✅ 질문 요약 기능 (교수자 전용)
 @router.get("/chat_history/summary")
 async def get_question_summary(
     db: AsyncSession = Depends(get_db),
@@ -64,28 +63,43 @@ async def get_question_summary(
         result = await db.execute(select(QuestionAnswer.question))
         questions = [row[0].strip() for row in result.all() if row[0] and len(row[0].strip()) > 5]
 
-        # 2. 중복 제거 및 최대 50개 제한
-        unique_questions = list(set(questions))[:30]
+        if not questions:
+            return {"message": "질문 데이터가 없습니다."}
 
-        if not unique_questions:
-            return {"message": "질문 데이터가 부족합니다."}
+        # 2. 강의 주제 키워드 설정
+        lecture_keywords = ["다형성", "오버라이딩", "오버로딩", "상속", "객체지향", "OOP", "Java"]
 
-        # 3. 포맷팅된 프롬프트 생성
-        formatted_questions = "\n".join(f"- {q}" for q in unique_questions)
+        # 3. 강의 관련 질문 + 길이 짧은 질문만 필터링
+        filtered_questions = [
+            q for q in set(questions)  # 중복 제거
+            if any(keyword.lower() in q.lower() for keyword in lecture_keywords) and len(q) <= 100
+        ]
+
+        if not filtered_questions:
+            return {"message": "강의 주제와 관련된 질문이 없습니다."}
+
+        # 4. 최종 10개까지만 사용
+        final_questions = filtered_questions[:10]
+
+        # 5. 포맷팅된 프롬프트 생성
+        formatted_questions = "\n".join(f"- {q}" for q in final_questions)
 
         prompt = f"""
-        다음은 학생들이 최근에 많이 한 질문들입니다:
+        다음은 학생들이 최근에 남긴 질문입니다:
 
         {formatted_questions}
 
-        이 질문들을 바탕으로, 학생들이 자주 어려워하는 개념을 한글로 요약하고
-        추가 설명이나 보충 강의가 필요한 주제를 교수님께 추천해 주세요.
+        ✅ 강의 주제(객체지향 프로그래밍, 다형성, 상속, 오버라이딩, 오버로딩 등)과 관련된 질문만 요약해 주세요.
+        ✅ 강의와 무관한 잡담, 수업 범위 외 질문은 무시하세요.
+        ✅ 학생들이 헷갈려하는 부분과 추가 설명이 필요한 부분 중심으로 요약해 주세요.
+
+        답변은 한글로 작성해 주세요.
         """
 
-        # 4. GPT 호출
+        # 6. GPT 호출
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",  # 필요시 gpt-4o로 변경 가능
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000,
             temperature=0.7,
@@ -93,7 +107,7 @@ async def get_question_summary(
         summary = response.choices[0].message.content.strip()
 
         return {
-            "most_common_questions": unique_questions[:5],  # 상위 5개만 프론트로
+            "most_common_questions": final_questions,  # 상위 질문들도 같이 반환
             "summary_for_professor": summary
         }
 
