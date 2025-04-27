@@ -12,9 +12,6 @@
       />
       <div class="icon-group">
         <button class="icon-button" @click="fetchAnswer">🌐 검색</button>
-        <button class="icon-button" disabled>🔍 심층 리서치</button>
-        <button class="icon-button" disabled>🎨 이미지 그리기</button>
-        <button class="icon-button" disabled>⋯</button>
       </div>
     </div>
 
