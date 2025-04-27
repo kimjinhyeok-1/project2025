@@ -18,13 +18,23 @@
       </div>
     </div>
 
-    <div v-if="loading" class="loading-container">
-      <div class="spinner"></div>
-      <div class="loading-text">답변을 가져오는 중...</div>
+    <!-- 스켈레톤 로딩 -->
+    <div v-if="loading" class="skeleton-container">
+      <div class="skeleton-text"></div>
+      <div class="skeleton-text short"></div>
+      <div class="skeleton-text"></div>
     </div>
 
-    <div v-else-if="answerHtml" ref="answerSection" class="markdown-body">
-      <div v-html="answerHtml"></div>
+    <!-- 답변 -->
+    <div v-else-if="answerHtml" ref="answerSection" class="answer-wrapper">
+      <transition name="fade">
+        <div v-html="showMore ? answerHtml : shortHtml" class="markdown-body"></div>
+      </transition>
+      <div v-if="isLongAnswer" class="more-button-wrapper">
+        <button @click="toggleMore" class="more-button">
+          {{ showMore ? "▲ 접기" : "▼ 더보기" }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -40,17 +50,21 @@ const backendBaseURL = process.env.NODE_ENV === 'production'
 
 const question = ref('')
 const answerHtml = ref('')
+const shortHtml = ref('')
 const loading = ref(false)
+const showMore = ref(false)
+const isLongAnswer = ref(false)
 const answerSection = ref(null)
 
 const md = new MarkdownIt({
-  breaks: true,         // 줄바꿈 자동 처리
-  linkify: true         // 링크 자동 인식
+  breaks: true,
+  linkify: true
 })
 
 const fetchAnswer = async () => {
   if (!question.value.trim()) return
   loading.value = true
+  showMore.value = false
   try {
     const response = await axios.get(`${backendBaseURL}/ask_rag`, {
       params: {
@@ -59,25 +73,44 @@ const fetchAnswer = async () => {
       }
     })
     if (response.data && response.data.answer) {
-      // ✅ Markdown -> HTML 변환
-      answerHtml.value = md.render(response.data.answer)
+      const fullHtml = md.render(response.data.answer)
+      answerHtml.value = fullHtml
+
+      if (response.data.answer.length > 700) {
+        isLongAnswer.value = true
+        const shortText = response.data.answer.slice(0, 600) + "..."
+        shortHtml.value = md.render(shortText)
+      } else {
+        isLongAnswer.value = false
+        shortHtml.value = fullHtml
+      }
+
       await nextTick()
       if (answerSection.value) {
         answerSection.value.scrollIntoView({ behavior: 'smooth' })
       }
     } else {
-      answerHtml.value = '❗ 답변을 가져오는 데 실패했습니다. 다시 질문해 주세요.'
+      answerHtml.value = '<p>❗ 답변을 가져오는 데 실패했습니다. 다시 질문해 주세요.</p>'
     }
   } catch (error) {
     console.error('답변 가져오기 실패:', error)
-    answerHtml.value = '❗ 답변을 가져오는 데 실패했습니다.'
+    answerHtml.value = '<p>❗ 답변을 가져오는 데 실패했습니다.</p>'
   } finally {
     loading.value = false
   }
 }
+
+const toggleMore = () => {
+  showMore.value = !showMore.value
+}
 </script>
 
 <style scoped>
+/* ===== 페이지 기본 ===== */
+body {
+  background-color: #f5f7fa;
+}
+
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -86,12 +119,14 @@ const fetchAnswer = async () => {
 }
 
 .title {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: bold;
   margin-bottom: 2rem;
   text-align: center;
+  color: #2c3e50;
 }
 
+/* ===== 입력창 ===== */
 .input-area {
   display: flex;
   align-items: center;
@@ -117,17 +152,18 @@ const fetchAnswer = async () => {
 }
 
 .icon-button {
-  background: none;
+  background: #3498db;
+  color: white;
   border: none;
   cursor: pointer;
   font-size: 0.9rem;
-  padding: 0.2rem 0.5rem;
+  padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   transition: background 0.2s;
 }
 
 .icon-button:hover:enabled {
-  background: #f0f0f0;
+  background: #2980b9;
 }
 
 .icon-button:disabled {
@@ -135,54 +171,58 @@ const fetchAnswer = async () => {
   cursor: not-allowed;
 }
 
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* ===== 스켈레톤 로딩 ===== */
+.skeleton-container {
+  width: 600px;
   margin-top: 2rem;
 }
 
-.spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  border-left-color: #000;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
+.skeleton-text {
+  height: 20px;
+  background: #e0e0e0;
+  margin-bottom: 1rem;
+  border-radius: 5px;
+  animation: pulse 1.5s infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.skeleton-text.short {
+  width: 70%;
 }
 
-.loading-text {
-  margin-top: 1rem;
-  font-size: 1rem;
-  color: #666;
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
-/* ✨ Markdown 스타일 적용 */
-.markdown-body {
+/* ===== 답변 카드 ===== */
+.answer-wrapper {
   max-width: 800px;
-  padding: 2rem;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  background: linear-gradient(145deg, #f8f9fa, #ffffff);
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+/* ===== 마크다운 스타일 ===== */
+.markdown-body {
   font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
-  font-size: 1rem;
-  line-height: 1.8;
+  font-size: 1.05rem;
+  line-height: 2;
   color: #333;
   word-break: break-word;
-  margin: 2rem auto;
 }
 
 .markdown-body h1, .markdown-body h2, .markdown-body h3 {
   font-weight: bold;
   margin-top: 1.5rem;
   margin-bottom: 1rem;
-  color: #222;
+  color: #1f2d3d;
+  font-size: 1.6rem;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.3rem;
 }
 
 .markdown-body p {
@@ -192,32 +232,19 @@ const fetchAnswer = async () => {
 .markdown-body ul {
   list-style: disc;
   padding-left: 1.5rem;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  margin: 1rem 0;
 }
 
 .markdown-body ul li {
   margin-bottom: 0.5rem;
 }
 
-/* 이모지가 있는 문단 강조 */
-.markdown-body p:has(✅),
-.markdown-body p:has(📌),
-.markdown-body p:has(👉),
-.markdown-body p:has(🚀) {
-  background-color: #f3f9f4;
-  padding: 0.8rem;
-  border-radius: 8px;
-}
-
-/* 코드 블럭 스타일 */
 .markdown-body pre {
   background: #2d2d2d;
   color: #f8f8f2;
   padding: 1rem;
   border-radius: 8px;
   overflow-x: auto;
-  font-size: 0.9rem;
   margin: 1.5rem 0;
 }
 
@@ -227,9 +254,45 @@ const fetchAnswer = async () => {
   border-radius: 4px;
 }
 
-/* 링크 스타일 */
-.markdown-body a {
-  color: #007bff;
-  text-decoration: underline;
+/* 이모지 강조 */
+.markdown-body p:has(✅),
+.markdown-body p:has(📌),
+.markdown-body p:has(👉),
+.markdown-body p:has(🚀) {
+  background-color: #e9f7ef;
+  padding: 1rem;
+  border-radius: 12px;
+  margin: 1rem 0;
+  font-weight: 500;
+}
+
+/* ===== 더보기 버튼 ===== */
+.more-button-wrapper {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.more-button {
+  background: none;
+  border: 1px solid #3498db;
+  color: #3498db;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+}
+
+.more-button:hover {
+  background: #3498db;
+  color: white;
+}
+
+/* ===== 트랜지션 효과 ===== */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>
