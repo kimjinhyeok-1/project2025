@@ -26,10 +26,20 @@
     </div>
 
     <!-- 답변 -->
-    <div v-else-if="answerHtml" ref="answerSection" class="answer-wrapper">
+    <div v-else-if="answerHtml" ref="answerSection" class="answer-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
       <transition name="fade">
         <div v-html="showMore ? answerHtml : shortHtml" class="markdown-body"></div>
       </transition>
+
+      <!-- 복사 버튼 (호버 시만 표시) -->
+      <button
+        v-if="hovering"
+        class="copy-button"
+        @click="copyAnswer"
+      >
+        📋 복사
+      </button>
+
       <div v-if="isLongAnswer" class="more-button-wrapper">
         <button @click="toggleMore" class="more-button">
           {{ showMore ? "▲ 접기" : "▼ 더보기" }}
@@ -55,6 +65,7 @@ const loading = ref(false)
 const showMore = ref(false)
 const isLongAnswer = ref(false)
 const answerSection = ref(null)
+const hovering = ref(false)
 
 const md = new MarkdownIt({
   breaks: true,
@@ -102,6 +113,18 @@ const fetchAnswer = async () => {
 
 const toggleMore = () => {
   showMore.value = !showMore.value
+}
+
+const copyAnswer = async () => {
+  try {
+    const tempElement = document.createElement('div')
+    tempElement.innerHTML = showMore.value ? answerHtml.value : shortHtml.value
+    const text = tempElement.innerText
+    await navigator.clipboard.writeText(text)
+    alert('✅ 답변이 복사되었습니다!')
+  } catch (error) {
+    alert('❗ 복사에 실패했습니다.')
+  }
 }
 </script>
 
@@ -197,6 +220,7 @@ body {
 
 /* ===== 답변 카드 ===== */
 .answer-wrapper {
+  position: relative;
   max-width: 800px;
   margin: 2rem auto;
   background: linear-gradient(145deg, #f8f9fa, #ffffff);
@@ -204,6 +228,32 @@ body {
   border-radius: 20px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.3s ease;
+}
+
+/* ===== 복사 버튼 ===== */
+.copy-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.answer-wrapper:hover .copy-button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.copy-button:hover {
+  background: #2980b9;
 }
 
 /* ===== 마크다운 스타일 ===== */
@@ -252,18 +302,6 @@ body {
   background: #f6f8fa;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
-}
-
-/* 이모지 강조 */
-.markdown-body p:has(✅),
-.markdown-body p:has(📌),
-.markdown-body p:has(👉),
-.markdown-body p:has(🚀) {
-  background-color: #e9f7ef;
-  padding: 1rem;
-  border-radius: 12px;
-  margin: 1rem 0;
-  font-weight: 500;
 }
 
 /* ===== 더보기 버튼 ===== */
