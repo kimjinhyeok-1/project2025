@@ -35,7 +35,7 @@
 
     <!-- 탭 내용 -->
     <div class="tab-content mt-3 border p-4 rounded bg-white shadow-sm">
-      <!-- ✅ 요약 탭 -->
+      <!-- 요약 탭 -->
       <div v-if="activeTab === 'summary'">
         <h5>📋 질문 요약</h5>
 
@@ -46,7 +46,7 @@
 
         <div v-else>
           <h6>📝 요약 내용</h6>
-          <p>{{ summary.summary_for_professor }}</p>
+          <div v-html="parsedMarkdown" class="mt-3"></div>
 
           <h6 class="mt-4">💡 자주 묻는 질문</h6>
           <ul>
@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <!-- ✅ 전체 대화 탭 -->
+      <!-- 전체 대화 탭 -->
       <div v-if="activeTab === 'fullchat'">
         <h5>💬 전체 대화 내용</h5>
 
@@ -93,19 +93,22 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import axios from 'axios'
+import { marked } from 'marked'
 
 const activeTab = ref('summary')
-
 const summary = ref({
   most_common_questions: [],
   summary_for_professor: '',
 })
 const fullChat = ref([])
-
 const summaryLoading = ref(false)
 const chatLoading = ref(false)
+
+const parsedMarkdown = computed(() => {
+  return marked.parse(summary.value.summary_for_professor || '')
+})
 
 function formatDate(dateStr) {
   const d = new Date(dateStr)
@@ -167,7 +170,7 @@ const loadFullChat = async () => {
   }
 }
 
-// ✅ 최초엔 요약 먼저 로딩
+// 최초 로딩 시 요약 불러오기
 loadSummary()
 </script>
 
