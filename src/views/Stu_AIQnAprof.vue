@@ -26,7 +26,13 @@
     </div>
 
     <!-- 답변 -->
-    <div v-else-if="answerHtml" ref="answerSection" class="answer-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
+    <div
+      v-else-if="answerHtml"
+      ref="answerSection"
+      class="answer-wrapper"
+      @mouseenter="hovering = true"
+      @mouseleave="hovering = false"
+    >
       <transition name="fade">
         <div v-html="showMore ? answerHtml : shortHtml" class="markdown-body"></div>
       </transition>
@@ -67,6 +73,7 @@ const isLongAnswer = ref(false)
 const answerSection = ref(null)
 const hovering = ref(false)
 
+// ✅ 줄바꿈 breaks 확실히 true로 설정
 const md = new MarkdownIt({
   breaks: true,
   linkify: true
@@ -129,11 +136,7 @@ const copyAnswer = async () => {
 </script>
 
 <style scoped>
-/* ===== 페이지 기본 ===== */
-body {
-  background-color: #f5f7fa;
-}
-
+/* ===== 기본 레이아웃 ===== */
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -149,7 +152,7 @@ body {
   color: #2c3e50;
 }
 
-/* ===== 입력창 ===== */
+/* ===== 입력창 스타일 ===== */
 .input-area {
   display: flex;
   align-items: center;
@@ -160,6 +163,7 @@ body {
   width: 600px;
 }
 
+/* input */
 .input-box {
   flex: 1;
   border: none;
@@ -168,6 +172,7 @@ body {
   outline: none;
 }
 
+/* 버튼 */
 .icon-group {
   display: flex;
   gap: 0.5rem;
@@ -194,43 +199,19 @@ body {
   cursor: not-allowed;
 }
 
-/* ===== 스켈레톤 로딩 ===== */
-.skeleton-container {
-  width: 600px;
-  margin-top: 2rem;
-}
-
-.skeleton-text {
-  height: 20px;
-  background: #e0e0e0;
-  margin-bottom: 1rem;
-  border-radius: 5px;
-  animation: pulse 1.5s infinite;
-}
-
-.skeleton-text.short {
-  width: 70%;
-}
-
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
-}
-
 /* ===== 답변 카드 ===== */
 .answer-wrapper {
   position: relative;
-  max-width: 800px;
+  max-width: 950px; /* ✅ 카드 폭 넓힘 */
   margin: 2rem auto;
-  background: linear-gradient(145deg, #f8f9fa, #ffffff);
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 2.5rem;
   border-radius: 20px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.3s ease;
 }
 
-/* ===== 복사 버튼 ===== */
+/* 복사 버튼 */
 .copy-button {
   position: absolute;
   top: 20px;
@@ -259,8 +240,8 @@ body {
 /* ===== 마크다운 스타일 ===== */
 .markdown-body {
   font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
-  font-size: 1.05rem;
-  line-height: 2;
+  font-size: 1.1rem;
+  line-height: 2.0; /* ✅ 줄간격 늘림 */
   color: #333;
   word-break: break-word;
 }
@@ -270,13 +251,13 @@ body {
   margin-top: 1.5rem;
   margin-bottom: 1rem;
   color: #1f2d3d;
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   border-bottom: 2px solid #eee;
   padding-bottom: 0.3rem;
 }
 
 .markdown-body p {
-  margin: 1rem 0;
+  margin: 1.2rem 0; /* ✅ 문단 간격 키움 */
 }
 
 .markdown-body ul {
@@ -286,9 +267,10 @@ body {
 }
 
 .markdown-body ul li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.7rem;
 }
 
+/* 코드블럭 */
 .markdown-body pre {
   background: #2d2d2d;
   color: #f8f8f2;
@@ -302,28 +284,6 @@ body {
   background: #f6f8fa;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
-}
-
-/* ===== 더보기 버튼 ===== */
-.more-button-wrapper {
-  text-align: center;
-  margin-top: 1.5rem;
-}
-
-.more-button {
-  background: none;
-  border: 1px solid #3498db;
-  color: #3498db;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.3s;
-}
-
-.more-button:hover {
-  background: #3498db;
-  color: white;
 }
 
 /* ===== 트랜지션 효과 ===== */
