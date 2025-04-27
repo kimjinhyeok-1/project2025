@@ -3,13 +3,41 @@ import axios from 'axios'
 
 const BASE_URL = 'https://project2025-backend.onrender.com'
 
-// 🖼️ 스냅샷 업로드 (timestamp, transcript, screenshot_base64 포맷)
-export async function uploadSnapshot({ timestamp, transcript, screenshot_base64 }) {
+function getFormattedTimestamp() {
+  const now = new Date();
+  return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+}
+
+// 🖼️ 스크린샷 Base64 캡처
+async function captureScreenshot(displayStream) {
+  if (!displayStream) return "";
+
+  const track = displayStream.getVideoTracks()[0];
+  const imageCapture = new ImageCapture(track);
+  const bitmap = await imageCapture.grabFrame();
+
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bitmap, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+// 📤 스냅샷 업로드
+async function uploadSnapshot({ transcript, screenshot_base64 = "" }) {
+  if (!transcript || transcript.trim() === "") {
+    console.error("❌ transcript가 비어있어서 업로드 중단");
+    return;
+  }
+
+  const timestamp = getFormattedTimestamp();
+
   try {
     const response = await axios.post(`${BASE_URL}/snapshots/snapshots`, {
-      timestamp,          // ✅ timestamp 하나만 보냄
-      transcript,         // ✅ transcript
-      screenshot_base64,  // ✅ 스크린샷 (Base64 or "")
+      timestamp,
+      transcript,
+      screenshot_base64,
     }, {
       withCredentials: true
     });
@@ -22,31 +50,4 @@ export async function uploadSnapshot({ timestamp, transcript, screenshot_base64 
   }
 }
 
-// 🧪 OPTIONS 요청 테스트 (에러 디버깅용)
-export async function testOptionsRequest() {
-  const url = `${BASE_URL}/snapshots/snapshots`;
-
-  try {
-    console.log(`🌐 [OPTIONS 테스트 시작] URL: ${url}`);
-
-    const response = await fetch(url, {
-      method: 'OPTIONS',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    console.log('✅ 서버가 OPTIONS 요청을 정상적으로 받았습니다.');
-    console.log('🔎 응답 상태 코드:', response.status);
-    console.log('🔎 응답 헤더:', [...response.headers.entries()]);
-
-    if (response.status >= 200 && response.status < 300) {
-      console.log('🎯 서버에서 OPTIONS 요청이 허용되었습니다. (정상)');
-    } else {
-      console.warn('⚠️ 서버에서 응답은 왔지만 상태 코드가 2xx가 아닙니다.');
-    }
-  } catch (err) {
-    console.error('❌ 서버가 OPTIONS 요청을 처리하지 못했습니다.');
-    console.error('🧹 에러 상세:', err);
-  }
-}
+export { uploadSnapshot, captureScreenshot }
