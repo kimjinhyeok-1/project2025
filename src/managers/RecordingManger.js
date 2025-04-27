@@ -15,6 +15,7 @@ class RecordingManager {
 
   subscribe(callback) {
     this.listeners.push(callback);
+    callback(this.isRecording);
   }
 
   notify() {
