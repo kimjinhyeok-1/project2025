@@ -13,6 +13,7 @@
       <div class="icon-group">
         <button class="icon-button">🌐 검색</button>
         <button class="icon-button">⋯</button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-text">답변을 가져오는 중...</div>
