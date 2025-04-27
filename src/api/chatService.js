@@ -1,7 +1,7 @@
 // src/api/chatService.js
 import axios from "axios";
 
-const BASE_URL = "https://project2025-backend.onrender.com/api/ask_rag"; // 친구 FastAPI 서버 주소
+const BASE_URL = "https://project2025-backend.onrender.com/api/ask_assistant"; // 친구 FastAPI 서버 주소
 
 export async function sendMessageToChatGPT(message) {
   try {
