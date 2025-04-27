@@ -16,7 +16,7 @@ async def generate_assignment_feedback(description: str, content: str) -> str:
 이 제출물에 대해 평가하고, 잘한 점과 개선할 점을 포함한 구체적인 피드백을 작성해주세요."""
     
     response = await client.chat.completions.create(
-        model="gpt-4-turbo",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.5
     )
