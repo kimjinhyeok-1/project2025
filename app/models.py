@@ -56,13 +56,11 @@ class Snapshot(Base):
     __tablename__ = "lecture_snapshots"
 
     id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
-    timestamp = Column(String)
-    transcript = Column(Text)
-    image_url = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    lecture = relationship("Lecture", back_populates="snapshots")
+    date = Column(String, nullable=False)  # 날짜 (예: 2025-04-28)
+    time = Column(String, nullable=False)  # 시간 (예: 15:30:00)
+    text = Column(Text, nullable=False)  # STT로 변환된 문장
+    image_path = Column(String, nullable=False)  # 저장된 이미지 경로
+    created_at = Column(DateTime, default=datetime.utcnow)  # 업로드 시간 (자동)
 
 # ✅ 강의자료 텍스트 전체 요약
 class LectureMaterial(Base):
