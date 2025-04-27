@@ -35,7 +35,7 @@ import axios from 'axios'
 import MarkdownViewer from '@/components/common/MarkdownViewer.vue'
 
 const backendBaseURL = process.env.NODE_ENV === 'production'
-  ? 'https://project2025-backend.onrender.com'
+  ? 'https://project2025-backend.onrender.com/api'
   : '/api';
 
 const question = ref('')
