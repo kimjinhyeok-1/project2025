@@ -1,28 +1,3 @@
-<template>
-  <div class="professor-aiqna-stu">
-    <h2 class="text-center my-4">학생의 실시간 질문 사이언스 + 강의 노치</h2>
-
-    <div class="btn-group d-flex justify-content-center mb-4">
-      <button class="btn btn-primary m-2" @click="toggleRecognition">
-        {{ recognitionStatus === '시작' ? '음성 중지' : '음성 시작' }} 🎙️
-      </button>
-
-      <button class="btn btn-danger m-2" @click="toggleScreenRecording">
-        {{ isScreenRecording ? '화면 녹화 중지' : '화면 녹화 시작' }} 📹
-      </button>
-    </div>
-
-    <div class="output-area text-center">
-      <h4>✨ 생성된 질문</h4>
-      <p>{{ generatedQuestion || '아직 생성된 질문이 없습니다.' }}</p>
-    </div>
-
-    <div v-if="uploadMessage" class="alert alert-info text-center mt-3">
-      {{ uploadMessage }}
-    </div>
-  </div>
-</template>
-
 <script>
 /* global webkitSpeechRecognition */
 export default {
@@ -30,169 +5,118 @@ export default {
   data() {
     return {
       recognition: null,
+      transcript: '',
       recognitionStatus: '정지됨',
-      generatedQuestion: '',
-      isScreenRecording: false,
-      mediaRecorder: null,
-      screenStream: null,
-      keywords: ['중요', '퀴즈', '요약'],
-      uploadMessage: ''
+      generatedQuestion: ''
     };
   },
   methods: {
-    toggleRecognition() {
-      if (!this.recognition) {
-        if (!('webkitSpeechRecognition' in window)) {
-          alert('이 브라우저는 음성 인식을 지원하지 않습니다.');
-          return;
+    startRecognition() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert('이 브라우저는 음성 인식을 지원하지 않습니다.');
+        return;
+      }
+
+      this.recognition = new webkitSpeechRecognition();
+      this.recognition.lang = 'ko-KR';
+      this.recognition.interimResults = true;
+      this.recognition.continuous = true;
+
+      this.recognition.onstart = () => {
+        this.recognitionStatus = '음성 인식 중 🎙️';
+      };
+
+      this.recognition.onresult = (event) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcriptPiece = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            this.transcript += transcriptPiece + ' ';
+          }
         }
-        this.recognition = new webkitSpeechRecognition();
-        this.recognition.lang = 'ko-KR';
-        this.recognition.continuous = true;
+      };
 
-        this.recognition.onresult = (event) => {
-          const transcript = event.results[event.results.length - 1][0].transcript.trim();
-          console.log('인식된 텍스트:', transcript);
-          this.sendToBackend(transcript);
+      this.recognition.onerror = (event) => {
+        console.error('음성 인식 오류:', event.error);
+      };
 
-          this.keywords.forEach(keyword => {
-            if (transcript.includes(keyword)) {
-              console.log(`키워드 '${keyword}' 감지됨! 화면 캡처 시작.`);
-              this.captureScreen();
-            }
-          });
-        };
-
-        this.recognition.onerror = (event) => {
-          console.error('음성 인식 오류:', event.error);
-        };
-      }
-
-      if (this.recognitionStatus === '정지됨') {
-        this.recognition.start();
-        this.recognitionStatus = '시작';
-      } else {
-        this.recognition.stop();
+      this.recognition.onend = () => {
         this.recognitionStatus = '정지됨';
-      }
-    },
+      };
 
-    async sendToBackend(transcript) {
+      this.recognition.start();
+    },
+    stopRecognition() {
+      if (this.recognition) {
+        this.recognition.stop();
+      }
+      this.recognitionStatus = '정지됨';
+    },
+    async generateQuestion() {
+      if (!this.transcript) {
+        alert('먼저 음성을 인식해서 텍스트를 받아야 합니다!');
+        return;
+      }
+
       try {
-        const response = await fetch('/api/ask-assistant', {
+        const response = await fetch('https://project2025-backend.onrender.com/vad/upload_text_chunk', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: transcript })
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: this.transcript }), // 수정: text 키로 전송
         });
+
+        if (!response.ok) {
+          throw new Error('질문 생성 실패');
+        }
 
         const data = await response.json();
-        this.generatedQuestion = data.generated_question || transcript;
+        this.generatedQuestion = data.questions.join(' / '); // 예상 질문 리스트를 문자열로 표시
       } catch (error) {
-        console.error('서버 전송 실패:', error);
-        this.generatedQuestion = transcript;
-      }
-    },
-
-    async toggleScreenRecording() {
-      if (!this.isScreenRecording) {
-        try {
-          this.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-          this.mediaRecorder = new MediaRecorder(this.screenStream);
-
-          this.mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-              this.uploadRecording(event.data);
-            }
-          };
-
-          this.mediaRecorder.start();
-          this.isScreenRecording = true;
-        } catch (error) {
-          console.error('화면 녹화 오류:', error);
-        }
-      } else {
-        if (this.mediaRecorder) {
-          this.mediaRecorder.stop();
-        }
-        if (this.screenStream) {
-          this.screenStream.getTracks().forEach(track => track.stop());
-        }
-        this.isScreenRecording = false;
-      }
-    },
-
-    uploadRecording(blob) {
-      console.log('녹화 업로드 준비 중...', blob);
-      // TODO: 서버로 녹화 파일 업로드하는 로직 추가 가능
-    },
-
-    async captureScreen() {
-      try {
-        const canvas = document.createElement('canvas');
-        const videoTrack = this.screenStream.getVideoTracks()[0];
-        const imageCapture = new ImageCapture(videoTrack);
-        const bitmap = await imageCapture.grabFrame();
-
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(bitmap, 0, 0);
-
-        canvas.toBlob(blob => {
-          console.log('화면 캡처 완료', blob);
-          this.uploadScreenshot(blob);
-        }, 'image/jpeg');
-      } catch (error) {
-        console.error('화면 캡처 오류:', error);
-      }
-    },
-
-    async uploadScreenshot(blob) {
-      const formData = new FormData();
-      formData.append('file', blob, 'screenshot.jpg');
-
-      try {
-        const response = await fetch('/upload/screenshot', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (response.ok) {
-          this.uploadMessage = '✅ 스크린샷 업로드 성공!';
-          console.log('스크린샷 업로드 성공');
-        } else {
-          this.uploadMessage = '❌ 스크린샷 업로드 실패!';
-          console.error('스크린샷 업로드 실패');
-        }
-
-        setTimeout(() => {
-          this.uploadMessage = '';
-        }, 5000);
-
-      } catch (error) {
-        this.uploadMessage = '❌ 스크린샷 업로드 중 오류 발생!';
-        console.error('스크린샷 업로드 중 오류 발생:', error);
-
-        setTimeout(() => {
-          this.uploadMessage = '';
-        }, 5000);
+        console.error(error);
+        this.generatedQuestion = '질문 생성에 실패했습니다.';
       }
     }
   }
 };
 </script>
 
+<template>
+  <div class="p-6">
+    <h1 class="text-3xl font-bold mb-6">실시간 질문 시연</h1>
+    
+    <div class="mb-4">
+      <button @click="startRecognition" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2">
+        음성 인식 시작
+      </button>
+      <button @click="stopRecognition" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+        음성 인식 중지
+      </button>
+    </div>
+
+    <div class="mt-4">
+      <p>현재 상태: <strong>{{ recognitionStatus }}</strong></p>
+      <p>🎤 인식된 텍스트:</p>
+      <div class="bg-gray-100 p-4 rounded mt-2">
+        {{ transcript }}
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <button @click="generateQuestion" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+        AI 질문 생성하기
+      </button>
+    </div>
+
+    <div v-if="generatedQuestion" class="mt-6 p-4 bg-yellow-100 rounded">
+      <p>🧠 생성된 질문:</p>
+      <p class="font-semibold">{{ generatedQuestion }}</p>
+    </div>
+  </div>
+</template>
+
 <style scoped>
-.professor-aiqna-stu {
-  padding: 20px;
-}
-.output-area {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-}
-.alert {
-  margin-top: 20px;
-  font-weight: bold;
+button {
+  transition: background-color 0.3s;
 }
 </style>
