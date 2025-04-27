@@ -11,7 +11,7 @@ from datetime import datetime
 router = APIRouter()
 
 # ✅ 저장 경로 설정
-IMAGE_DIR = "snapshots"
+IMAGE_DIR = "tmp/snapshots"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # ✅ 요청 바디 스키마
