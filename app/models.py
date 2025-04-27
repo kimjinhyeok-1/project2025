@@ -16,7 +16,7 @@ class User(Base):
     assistant_thread_id = Column(String, nullable=True)  # 일반 대화용 Thread
     questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
     assignment_questions = relationship("AssignmentQuestion", back_populates="user", cascade="all, delete-orphan")
-
+    assignment_threads = relationship("AssignmentThread", back_populates="user", cascade="all, delete-orphan")
 
 # ✅ 질문-응답 기록 (일반 대화형)
 class QuestionAnswer(Base):
@@ -29,7 +29,6 @@ class QuestionAnswer(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", back_populates="questions")
 
-
 # ✅ 강의
 class Lecture(Base):
     __tablename__ = "lectures"
@@ -41,7 +40,6 @@ class Lecture(Base):
     recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
     snapshots = relationship("Snapshot", back_populates="lecture", cascade="all, delete-orphan")
 
-
 # ✅ 녹음 파일 (음성 업로드)
 class Recording(Base):
     __tablename__ = "recordings"
@@ -52,7 +50,6 @@ class Recording(Base):
     uploaded_at = Column(DateTime, default=func.now())
 
     lecture = relationship("Lecture", back_populates="recordings")
-
 
 # ✅ 강의 중간 이미지 및 텍스트 캡처
 class Snapshot(Base):
@@ -67,7 +64,6 @@ class Snapshot(Base):
 
     lecture = relationship("Lecture", back_populates="snapshots")
 
-
 # ✅ 강의자료 텍스트 전체 요약
 class LectureMaterial(Base):
     __tablename__ = "pdf_summary"
@@ -79,7 +75,6 @@ class LectureMaterial(Base):
     embedding = Column(Text)
 
     embeddings = relationship("Embedding", back_populates="material", cascade="all, delete-orphan")
-
 
 # ✅ chunk 임베딩 저장
 class Embedding(Base):
@@ -93,7 +88,6 @@ class Embedding(Base):
 
     material = relationship("LectureMaterial", back_populates="embeddings")
 
-
 # ✅ 퀴즈
 class Quiz(Base):
     __tablename__ = "quiz"
@@ -103,7 +97,6 @@ class Quiz(Base):
     options = Column(Text)
     answer = Column(String)
     material_id = Column(Integer, ForeignKey("pdf_summary.id"))
-
 
 # ✅ 과제 정보
 class Assignment(Base):
@@ -119,7 +112,7 @@ class Assignment(Base):
 
     questions = relationship("AssignmentQuestion", back_populates="assignment", cascade="all, delete-orphan")
     submissions = relationship("AssignmentSubmission", back_populates="assignment", cascade="all, delete-orphan")
-
+    threads = relationship("AssignmentThread", back_populates="assignment", cascade="all, delete-orphan")
 
 # ✅ 과제 질문 + GPT 응답 저장
 class AssignmentQuestion(Base):
@@ -136,7 +129,6 @@ class AssignmentQuestion(Base):
 
     assignment = relationship("Assignment", back_populates="questions")
     user = relationship("User", back_populates="assignment_questions")
-
 
 # ✅ 과제 제출 + GPT 피드백 결과
 class AssignmentSubmission(Base):
@@ -155,3 +147,16 @@ class AssignmentSubmission(Base):
 
     assignment = relationship("Assignment", back_populates="submissions")
     student = relationship("User")
+
+# ✅ 과제별 Q&A 전용 Assistant Thread 관리
+class AssignmentThread(Base):
+    __tablename__ = "assignment_threads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    thread_id = Column(String, nullable=False)  # OpenAI Thread ID
+    created_at = Column(DateTime, default=func.now())
+
+    assignment = relationship("Assignment", back_populates="threads")
+    user = relationship("User", back_populates="assignment_threads")

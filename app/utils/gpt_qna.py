@@ -2,6 +2,7 @@ import os
 from openai import AsyncOpenAI
 
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+assignment_qna_assistant_id = os.getenv("ASSIGNMENT_QNA_ASSISTANT_ID")
 
 # ✅ Q&A용 Thread 가져오기 또는 생성
 async def create_or_get_qna_thread(db_session, assignment_id: int, student_id: int):
@@ -36,7 +37,7 @@ async def create_or_get_qna_thread(db_session, assignment_id: int, student_id: i
 
 # ✅ 학생 질문에 대해 Assistant 답변 받기
 async def ask_question_to_gpt(thread_id: str, question: str) -> str:
-    assistant_id = "your-assistant-id"  # 실제 Assistant ID로 교체
+    assistant_id = assignment_qna_assistant_id  
 
     # 학생 질문 추가
     await client.beta.threads.messages.create(
