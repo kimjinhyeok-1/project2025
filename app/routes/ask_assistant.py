@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import User, QuestionAnswer
 from app.services.assistant import ask_assistant
-from app.auth import get_current_user_id  # 현재 로그인한 사용자 가져오기
+from app.auth import get_current_user # 현재 로그인한 사용자 가져오기
 import os
 import httpx
 

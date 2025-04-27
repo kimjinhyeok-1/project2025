@@ -125,3 +125,25 @@ async def set_admin(
     user.is_admin = True
     await db.commit()
     return {"message": f"{user_name}에게 관리자 권한을 부여했습니다."}
+
+# ✅ 현재 User 객체(User 모델) 반환 (추가)
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="유효하지 않은 토큰")
+        
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+
+        return user
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="토큰 오류")
