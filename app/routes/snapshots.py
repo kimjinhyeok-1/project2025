@@ -10,8 +10,9 @@ from datetime import datetime
 
 router = APIRouter()
 
+# ✅ 저장 경로 설정
 IMAGE_DIR = "snapshots"
-os.makedirs(IMAGE_DIR, exist_ok=True)  # 폴더 없으면 생성
+os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # ✅ 요청 바디 스키마
 class SnapshotRequest(BaseModel):
@@ -26,7 +27,7 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
     """
     수업 중 프론트가 스크린샷 + 텍스트 + 타임스탬프를 전송
     """
-    print("\ud83d\udce5 /snapshots 요청 도착")
+    print("📥 /snapshots 요청 도착")
     timestamp = data.timestamp
     text = data.transcript
     image_data = data.screenshot_base64
@@ -58,7 +59,7 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
         date=date_group,
         time=dt.strftime("%H:%M:%S"),
         text=text,
-        image_path=f"/{file_path}"
+        image_path=f"/static/{file_path}"  # ⬅️ URL 경로 수정 (정적파일로 제공할 것이기 때문에)
     )
     db.add(snapshot)
     db.commit()
@@ -69,7 +70,7 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
         "date": date_group,
         "time": snapshot.time,
         "text": text,
-        "image_url": f"/{file_path}"
+        "image_url": snapshot.image_path
     }
 
 # ✅ /summaries: 날짜 목록 조회
