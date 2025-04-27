@@ -11,12 +11,17 @@
       <button class="btn btn-primary m-2" @click="toggleAudioRecording">
         {{ isAudioRecording ? "🔝 음성 인식 종료" : "🎙️ 음성 인식 시작" }}
       </button>
+
+      <!-- 🧪 개발용: OPTIONS 테스트 버튼 -->
+      <button class="btn btn-warning m-2" @click="testOptions">
+        🧪 OPTIONS 테스트
+      </button>
     </div>
   </div>
 </template>
 
 <script>
-import { uploadSnapshot } from "@/api/snapshotService"
+import { uploadSnapshot, testOptionsRequest } from "@/api/snapshotService"
 
 export default {
   name: "ProfessorLesson",
@@ -159,6 +164,11 @@ export default {
       } catch (err) {
         console.error("❌ 스크린샷 전송 실패:", err.response?.data || err.message || err)
       }
+    },
+
+    // 🧪 개발용: OPTIONS 테스트 함수
+    async testOptions() {
+      await testOptionsRequest();
     }
   }
 }
