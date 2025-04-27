@@ -45,6 +45,25 @@ async def upload_text_chunk(request: Request):
 
     return {"message": "Chunk 저장 완료"}
 
+@router.get("/lecture_text/{lecture_id}")
+async def get_lecture_text(lecture_id: str):
+    """현재까지 저장된 수업 텍스트 확인"""
+    if lecture_id not in lecture_texts:
+        raise HTTPException(status_code=404, detail="해당 수업이 존재하지 않습니다.")
+
+    return {
+        "lecture_id": lecture_id,
+        "texts": lecture_texts[lecture_id],
+        "full_text": "\n".join(lecture_texts[lecture_id])
+    }
+
+@router.post("/reset_lecture/{lecture_id}")
+async def reset_lecture(lecture_id: str):
+    """특정 수업 텍스트 초기화"""
+    if lecture_id in lecture_texts:
+        del lecture_texts[lecture_id]
+    return {"message": f"{lecture_id} 수업 데이터 초기화 완료"}
+
 @router.post("/summarize_lecture")
 async def summarize_lecture(request: Request):
     """수업 종료 시 전체 텍스트 요약"""
@@ -93,7 +112,6 @@ async def summarize_lecture(request: Request):
 
 # 🔥 Assistant로 텍스트 클린업하는 함수
 async def ai_clean_text(text: str) -> str:
-    """AI를 사용해 텍스트 클린업 (불필요한 문장 제거)"""
     thread = await openai_client.beta.threads.create()
 
     await openai_client.beta.threads.messages.create(
@@ -136,7 +154,6 @@ async def ai_clean_text(text: str) -> str:
 
 # 🔥 Assistant로 텍스트 요약하는 함수
 async def summarize_with_assistant(text: str) -> str:
-    """Assistant API를 사용해 텍스트 요약"""
     thread = await openai_client.beta.threads.create()
 
     await openai_client.beta.threads.messages.create(
