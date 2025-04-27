@@ -1,3 +1,42 @@
+<template>
+  <div class="p-6">
+    <h1 class="text-3xl font-bold mb-6">실시간 질문 시연</h1>
+
+    <div class="mb-4">
+      <button @click="startRecognition" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2">
+        음성 인식 시작
+      </button>
+      <button @click="stopRecognition" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+        음성 인식 중지
+      </button>
+    </div>
+
+    <div class="mt-4">
+      <p>현재 상태: <strong>{{ recognitionStatus }}</strong></p>
+      <p>🎤 인식된 텍스트:</p>
+      <div class="bg-gray-100 p-4 rounded mt-2">
+        {{ transcript }}
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <button @click="generateQuestion" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+        AI 질문 생성하기
+      </button>
+    </div>
+
+    <div v-if="results.length" class="mt-6">
+      <h2 class="text-2xl font-semibold mb-4">생성된 문단 및 예상 질문</h2>
+      <div v-for="(item, index) in results" :key="index" class="mb-6 p-4 border rounded bg-yellow-100">
+        <p class="font-medium mb-2">{{ item.paragraph }}</p>
+        <ul class="list-disc ml-6">
+          <li v-for="(question, qIndex) in item.questions" :key="qIndex">{{ question }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script>
 /* global webkitSpeechRecognition */
 export default {
@@ -7,7 +46,7 @@ export default {
       recognition: null,
       transcript: '',
       recognitionStatus: '정지됨',
-      generatedQuestion: ''
+      results: []
     };
   },
   methods: {
@@ -63,7 +102,7 @@ export default {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ text: this.transcript }), // 수정: text 키로 전송
+          body: JSON.stringify({ text: this.transcript }),
         });
 
         if (!response.ok) {
@@ -71,49 +110,15 @@ export default {
         }
 
         const data = await response.json();
-        this.generatedQuestion = data.questions.join(' / '); // 예상 질문 리스트를 문자열로 표시
+        this.results = data.results; // 수정: results 배열로 저장
       } catch (error) {
         console.error(error);
-        this.generatedQuestion = '질문 생성에 실패했습니다.';
+        alert('질문 생성에 실패했습니다.');
       }
     }
   }
 };
 </script>
-
-<template>
-  <div class="p-6">
-    <h1 class="text-3xl font-bold mb-6">실시간 질문 시연</h1>
-    
-    <div class="mb-4">
-      <button @click="startRecognition" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2">
-        음성 인식 시작
-      </button>
-      <button @click="stopRecognition" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-        음성 인식 중지
-      </button>
-    </div>
-
-    <div class="mt-4">
-      <p>현재 상태: <strong>{{ recognitionStatus }}</strong></p>
-      <p>🎤 인식된 텍스트:</p>
-      <div class="bg-gray-100 p-4 rounded mt-2">
-        {{ transcript }}
-      </div>
-    </div>
-
-    <div class="mt-6">
-      <button @click="generateQuestion" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-        AI 질문 생성하기
-      </button>
-    </div>
-
-    <div v-if="generatedQuestion" class="mt-6 p-4 bg-yellow-100 rounded">
-      <p>🧠 생성된 질문:</p>
-      <p class="font-semibold">{{ generatedQuestion }}</p>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 button {
