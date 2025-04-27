@@ -1,27 +1,42 @@
 <template>
-  <div class="p-6">
-    <h1 class="text-3xl font-bold mb-6">실시간 질문 시연 (VAD 단위)</h1>
+  <div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">실시간 질문 시연 (VAD 단위)</h1>
 
-    <div class="mb-4">
-      <button @click="startRecognition" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2">
-        음성 인식 시작
-      </button>
-      <button @click="stopRecognition" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-        음성 인식 중지
-      </button>
+    <div class="card shadow mb-4">
+      <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">음성 인식 제어</h6>
+      </div>
+      <div class="card-body">
+        <button @click="startRecognition" class="btn btn-primary mr-2">
+          <i class="fas fa-microphone"></i> 음성 인식 시작
+        </button>
+        <button @click="stopRecognition" class="btn btn-danger">
+          <i class="fas fa-microphone-slash"></i> 음성 인식 중지
+        </button>
+
+        <div class="mt-4">
+          <p>현재 상태: <strong>{{ recognitionStatus }}</strong></p>
+        </div>
+      </div>
     </div>
 
-    <div class="mt-4">
-      <p>현재 상태: <strong>{{ recognitionStatus }}</strong></p>
-    </div>
-
-    <div v-if="results.length" class="mt-6">
-      <h2 class="text-2xl font-semibold mb-4">생성된 문단 및 예상 질문</h2>
-      <div v-for="(item, index) in results" :key="index" class="mb-6 p-4 border rounded bg-yellow-100">
-        <p class="font-medium mb-2">{{ item.paragraph }}</p>
-        <ul class="list-disc ml-6">
-          <li v-for="(question, qIndex) in item.questions" :key="qIndex">{{ question }}</li>
-        </ul>
+    <div v-if="results.length" class="card shadow mb-4">
+      <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-success">생성된 문단 및 예상 질문</h6>
+      </div>
+      <div class="card-body">
+        <div v-for="(item, index) in results" :key="index" class="mb-4">
+          <div class="card mb-3">
+            <div class="card-body">
+              <p class="font-weight-bold">{{ item.paragraph }}</p>
+              <ul class="list-group list-group-flush mt-3">
+                <li v-for="(question, qIndex) in item.questions" :key="qIndex" class="list-group-item">
+                  {{ question }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -47,7 +62,7 @@ export default {
 
       this.recognition = new webkitSpeechRecognition();
       this.recognition.lang = 'ko-KR';
-      this.recognition.interimResults = false; // VAD처럼 문장 단위 확정만 받기
+      this.recognition.interimResults = false;
       this.recognition.continuous = true;
 
       this.recognition.onstart = () => {
@@ -95,7 +110,7 @@ export default {
 
         const data = await response.json();
         if (data.results) {
-          this.results.push(...data.results); // 결과를 누적 표시
+          this.results.push(...data.results);
         }
       } catch (error) {
         console.error(error);
