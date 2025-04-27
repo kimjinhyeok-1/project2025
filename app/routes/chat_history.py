@@ -6,6 +6,7 @@ from app.auth import get_current_user_id, verify_student, verify_professor  # �
 from app.models import QuestionAnswer
 import openai
 import os
+import re
 
 router = APIRouter()
 
@@ -81,7 +82,7 @@ async def get_question_summary(
         processed_questions = [minimal_preprocess(q) for q in questions]
 
         # 3. 포맷팅
-        formatted_questions = "\n".join(f"{idx+1}. {q}" fogir idx, q in enumerate(processed_questions))
+        formatted_questions = "\n".join(f"{idx+1}. {q}" for idx, q in enumerate(processed_questions))
 
         # 4. 프롬프트 작성 (Markdown 지시 추가)
         prompt = f"""
