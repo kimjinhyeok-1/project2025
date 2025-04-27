@@ -28,11 +28,13 @@ export default {
   },
   methods: {
     async toggleAudioRecording() {
-      if (!this.isRecording) {
+      if (!recordingManager.getState().isRecording) {
         await recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
       }
+    // 🔥 버튼 상태 강제 반영
+    this.isRecording = recordingManager.getState().isRecording;
     },
     async testOptions() {
       await testOptionsRequest();
