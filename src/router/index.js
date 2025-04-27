@@ -46,11 +46,6 @@ const routes = [
         component: StudentQnA,
       },
       {
-        path: 'test',
-        name: 'Daesungtest',
-        component: DaesungTest,
-      },
-      {
         path: 'history',
         name: 'StudentHistory',
         component: StudentHistory,
