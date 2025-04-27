@@ -12,10 +12,16 @@
       />
       <div class="icon-group">
         <button class="icon-button" @click="fetchAnswer">🌐 검색</button>
+        <button class="icon-button" disabled>🔍 심층 리서치</button>
+        <button class="icon-button" disabled>🎨 이미지 그리기</button>
+        <button class="icon-button" disabled>⋯</button>
       </div>
     </div>
 
-    <div v-if="loading" class="loading-text">답변을 가져오는 중...</div>
+    <div v-if="loading" class="loading-container">
+      <div class="spinner"></div>
+      <div class="loading-text">답변을 가져오는 중...</div>
+    </div>
     <div v-else-if="answerMarkdown">
       <MarkdownViewer :markdown="answerMarkdown" />
     </div>
@@ -36,7 +42,11 @@ const fetchAnswer = async () => {
   loading.value = true
   try {
     const response = await axios.get('/api/ask_rag', { params: { q: question.value } })
-    answerMarkdown.value = response.data.answer
+    if (response.data && response.data.answer) {
+      answerMarkdown.value = response.data.answer
+    } else {
+      answerMarkdown.value = '❗ 답변을 가져오는 데 실패했습니다. 다시 질문해 주세요.'
+    }
   } catch (error) {
     console.error('답변 가져오기 실패:', error)
     answerMarkdown.value = '❗ 답변을 가져오는 데 실패했습니다.'
@@ -104,8 +114,30 @@ const fetchAnswer = async () => {
   cursor: not-allowed;
 }
 
-.loading-text {
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-top: 2rem;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #000;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: 1rem;
   font-size: 1rem;
   color: #666;
 }
