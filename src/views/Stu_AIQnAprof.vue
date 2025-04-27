@@ -23,8 +23,8 @@
       <div class="loading-text">답변을 가져오는 중...</div>
     </div>
 
-    <div v-else-if="answerMarkdown" ref="answerSection" class="markdown-body">
-      <div v-html="answerMarkdown"></div>
+    <div v-else-if="answerHtml" ref="answerSection" class="markdown-body">
+      <div v-html="answerHtml"></div>
     </div>
   </div>
 </template>
@@ -32,15 +32,21 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import axios from 'axios'
+import MarkdownIt from 'markdown-it'
 
 const backendBaseURL = process.env.NODE_ENV === 'production'
   ? 'https://project2025-backend.onrender.com/api'
   : '/api';
 
 const question = ref('')
-const answerMarkdown = ref('')
+const answerHtml = ref('')
 const loading = ref(false)
 const answerSection = ref(null)
+
+const md = new MarkdownIt({
+  breaks: true,         // 줄바꿈 자동 처리
+  linkify: true         // 링크 자동 인식
+})
 
 const fetchAnswer = async () => {
   if (!question.value.trim()) return
@@ -53,17 +59,18 @@ const fetchAnswer = async () => {
       }
     })
     if (response.data && response.data.answer) {
-      answerMarkdown.value = response.data.answer
+      // ✅ Markdown -> HTML 변환
+      answerHtml.value = md.render(response.data.answer)
       await nextTick()
       if (answerSection.value) {
         answerSection.value.scrollIntoView({ behavior: 'smooth' })
       }
     } else {
-      answerMarkdown.value = '❗ 답변을 가져오는 데 실패했습니다. 다시 질문해 주세요.'
+      answerHtml.value = '❗ 답변을 가져오는 데 실패했습니다. 다시 질문해 주세요.'
     }
   } catch (error) {
     console.error('답변 가져오기 실패:', error)
-    answerMarkdown.value = '❗ 답변을 가져오는 데 실패했습니다.'
+    answerHtml.value = '❗ 답변을 가져오는 데 실패했습니다.'
   } finally {
     loading.value = false
   }
@@ -156,6 +163,7 @@ const fetchAnswer = async () => {
   color: #666;
 }
 
+/* ✨ Markdown 스타일 적용 */
 .markdown-body {
   max-width: 800px;
   padding: 2rem;
@@ -174,6 +182,7 @@ const fetchAnswer = async () => {
   font-weight: bold;
   margin-top: 1.5rem;
   margin-bottom: 1rem;
+  color: #222;
 }
 
 .markdown-body p {
@@ -181,20 +190,35 @@ const fetchAnswer = async () => {
 }
 
 .markdown-body ul {
-  list-style: none;
-  padding-left: 1rem;
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
-.markdown-body ul li::before {
-  content: "✅ ";
+.markdown-body ul li {
+  margin-bottom: 0.5rem;
 }
 
+/* 이모지가 있는 문단 강조 */
+.markdown-body p:has(✅),
+.markdown-body p:has(📌),
+.markdown-body p:has(👉),
+.markdown-body p:has(🚀) {
+  background-color: #f3f9f4;
+  padding: 0.8rem;
+  border-radius: 8px;
+}
+
+/* 코드 블럭 스타일 */
 .markdown-body pre {
-  background: #f6f8fa;
+  background: #2d2d2d;
+  color: #f8f8f2;
   padding: 1rem;
   border-radius: 8px;
   overflow-x: auto;
-  margin: 1rem 0;
+  font-size: 0.9rem;
+  margin: 1.5rem 0;
 }
 
 .markdown-body code {
@@ -203,6 +227,7 @@ const fetchAnswer = async () => {
   border-radius: 4px;
 }
 
+/* 링크 스타일 */
 .markdown-body a {
   color: #007bff;
   text-decoration: underline;
