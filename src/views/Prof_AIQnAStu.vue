@@ -4,7 +4,7 @@
 
     <div class="btn-group d-flex justify-content-center mb-4">
       <button class="btn btn-primary m-2" @click="toggleRecognition">
-        {{ recognitionStatus === '시작' ? '녹음 중지 버튼 확인' : '녹음 시작 버튼 확인' }} 🎙️
+        {{ recognitionStatus === '시작' ? '음성 중지' : '음성 시작' }} 🎙️
       </button>
 
       <button class="btn btn-danger m-2" @click="toggleScreenRecording">
@@ -35,8 +35,8 @@ export default {
       isScreenRecording: false,
       mediaRecorder: null,
       screenStream: null,
-      keywords: ['중요', '퀴즈', '요약'], // 키워드 목록
-      uploadMessage: '' // 업로드 상태 메시지
+      keywords: ['중요', '퀴즈', '요약'],
+      uploadMessage: ''
     };
   },
   methods: {
@@ -53,9 +53,8 @@ export default {
         this.recognition.onresult = (event) => {
           const transcript = event.results[event.results.length - 1][0].transcript.trim();
           console.log('인식된 텍스트:', transcript);
-          this.generatedQuestion = transcript;
+          this.sendToBackend(transcript);
 
-          // 키워드 감지
           this.keywords.forEach(keyword => {
             if (transcript.includes(keyword)) {
               console.log(`키워드 '${keyword}' 감지됨! 화면 캡처 시작.`);
@@ -75,6 +74,22 @@ export default {
       } else {
         this.recognition.stop();
         this.recognitionStatus = '정지됨';
+      }
+    },
+
+    async sendToBackend(transcript) {
+      try {
+        const response = await fetch('/api/ask-assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: transcript })
+        });
+
+        const data = await response.json();
+        this.generatedQuestion = data.generated_question || transcript;
+      } catch (error) {
+        console.error('서버 전송 실패:', error);
+        this.generatedQuestion = transcript;
       }
     },
 
@@ -150,7 +165,6 @@ export default {
           console.error('스크린샷 업로드 실패');
         }
 
-        // 5초 뒤 알림 자동 삭제
         setTimeout(() => {
           this.uploadMessage = '';
         }, 5000);
