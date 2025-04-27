@@ -3,16 +3,13 @@ import axios from 'axios'
 
 const BASE_URL = 'https://project2025-backend.onrender.com'
 
-// 🖼️ 스냅샷 업로드 (date, time, text, screenshot_base64 포맷)
+// 🖼️ 스냅샷 업로드 (timestamp, transcript, screenshot_base64 포맷)
 export async function uploadSnapshot({ timestamp, transcript, screenshot_base64 }) {
   try {
-    const [date, time] = timestamp.split(' ');  // "2025-04-28 15:30:00" → "2025-04-28", "15:30:00"
-
     const response = await axios.post(`${BASE_URL}/snapshots/snapshots`, {
-      date,
-      time,
-      text: transcript,
-      screenshot_base64,
+      timestamp,          // ✅ timestamp 하나만 보냄
+      transcript,         // ✅ transcript
+      screenshot_base64,  // ✅ 스크린샷 (Base64 or "")
     }, {
       withCredentials: true
     });

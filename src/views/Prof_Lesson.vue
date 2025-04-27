@@ -75,7 +75,7 @@ export default {
     },
 
     toggleScreenRecording() {
-      // 선택적 구현
+      // 선택적 구현 (추후 확장)
     },
 
     startRecognition() {
@@ -131,7 +131,7 @@ export default {
         await uploadSnapshot({
           timestamp,
           transcript,
-          screenshot_base64: "", // 빈 문자열이라도 항상 채워서 보내기
+          screenshot_base64: "", // 텍스트만 보내니까 빈 문자열
         });
 
         console.log("✅ 텍스트만 전송 완료");
