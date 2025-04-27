@@ -1,6 +1,6 @@
 <template>
   <div class="p-6">
-    <h1 class="text-3xl font-bold mb-6">실시간 질문 시연</h1>
+    <h1 class="text-3xl font-bold mb-6">실시간 질문 시연 (VAD 단위)</h1>
 
     <div class="mb-4">
       <button @click="startRecognition" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2">
@@ -13,16 +13,6 @@
 
     <div class="mt-4">
       <p>현재 상태: <strong>{{ recognitionStatus }}</strong></p>
-      <p>🎤 인식된 텍스트:</p>
-      <div class="bg-gray-100 p-4 rounded mt-2">
-        {{ transcript }}
-      </div>
-    </div>
-
-    <div class="mt-6">
-      <button @click="generateQuestion" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-        AI 질문 생성하기
-      </button>
     </div>
 
     <div v-if="results.length" class="mt-6">
@@ -44,7 +34,6 @@ export default {
   data() {
     return {
       recognition: null,
-      transcript: '',
       recognitionStatus: '정지됨',
       results: []
     };
@@ -58,18 +47,18 @@ export default {
 
       this.recognition = new webkitSpeechRecognition();
       this.recognition.lang = 'ko-KR';
-      this.recognition.interimResults = true;
+      this.recognition.interimResults = false; // VAD처럼 문장 단위 확정만 받기
       this.recognition.continuous = true;
 
       this.recognition.onstart = () => {
         this.recognitionStatus = '음성 인식 중 🎙️';
       };
 
-      this.recognition.onresult = (event) => {
+      this.recognition.onresult = async (event) => {
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcriptPiece = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            this.transcript += transcriptPiece + ' ';
+          const transcriptPiece = event.results[i][0].transcript.trim();
+          if (event.results[i].isFinal && transcriptPiece) {
+            await this.sendTextChunk(transcriptPiece);
           }
         }
       };
@@ -90,19 +79,14 @@ export default {
       }
       this.recognitionStatus = '정지됨';
     },
-    async generateQuestion() {
-      if (!this.transcript) {
-        alert('먼저 음성을 인식해서 텍스트를 받아야 합니다!');
-        return;
-      }
-
+    async sendTextChunk(textChunk) {
       try {
         const response = await fetch('https://project2025-backend.onrender.com/vad/upload_text_chunk', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ text: this.transcript }),
+          body: JSON.stringify({ text: textChunk }),
         });
 
         if (!response.ok) {
@@ -110,7 +94,9 @@ export default {
         }
 
         const data = await response.json();
-        this.results = data.results; // 수정: results 배열로 저장
+        if (data.results) {
+          this.results.push(...data.results); // 결과를 누적 표시
+        }
       } catch (error) {
         console.error(error);
         alert('질문 생성에 실패했습니다.');
