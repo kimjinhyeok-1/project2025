@@ -4,11 +4,11 @@
 
     <div class="btn-group d-flex justify-content-center mb-4">
       <button class="btn btn-primary m-2" @click="toggleRecognition">
-        {{ recognitionStatus === '시작' ? '녹음 시작 버튼 확인' : '녹음 중지 버튼 확인' }} 🎙️
+        {{ recognitionStatus === '시작' ? '녹음 중지 버튼 확인' : '녹음 시작 버튼 확인' }} 🎙️
       </button>
 
       <button class="btn btn-danger m-2" @click="toggleScreenRecording">
-        {{ isScreenRecording ? '화면 녹화 시작' : '화면 녹화 중지' }} 📹
+        {{ isScreenRecording ? '화면 녹화 중지' : '화면 녹화 시작' }} 📹
       </button>
     </div>
 
