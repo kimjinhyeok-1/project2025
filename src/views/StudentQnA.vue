@@ -8,10 +8,13 @@
         type="text"
         placeholder="무엇이든 물어보세요"
         class="input-box"
+        :disabled="loading"
         @keyup.enter="fetchAnswer"
       />
       <div class="icon-group">
-        <button class="icon-button" @click="fetchAnswer">🌐 검색</button>
+        <button class="icon-button" @click="fetchAnswer" :disabled="loading">
+          🌐 검색
+        </button>
       </div>
     </div>
 
@@ -19,28 +22,39 @@
       <div class="spinner"></div>
       <div class="loading-text">답변을 가져오는 중...</div>
     </div>
-    <div v-else-if="answerMarkdown">
+
+    <div v-else-if="answerMarkdown" ref="answerSection">
       <MarkdownViewer :markdown="answerMarkdown" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import axios from 'axios'
 import MarkdownViewer from '@/components/common/MarkdownViewer.vue'
 
 const question = ref('')
 const answerMarkdown = ref('')
 const loading = ref(false)
+const answerSection = ref(null)
 
 const fetchAnswer = async () => {
   if (!question.value.trim()) return
   loading.value = true
   try {
-    const response = await axios.get('/api/ask_rag', { params: { q: question.value } })
+    const response = await axios.get('/api/ask_rag', {
+      params: {
+        q: question.value,
+        t: Date.now(),
+      }
+    })
     if (response.data && response.data.answer) {
       answerMarkdown.value = response.data.answer
+      await nextTick()
+      if (answerSection.value) {
+        answerSection.value.scrollIntoView({ behavior: 'smooth' })
+      }
     } else {
       answerMarkdown.value = '❗ 답변을 가져오는 데 실패했습니다. 다시 질문해 주세요.'
     }
