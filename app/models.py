@@ -1,174 +1,190 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
-from sqlalchemy.orm import relationship
-from datetime import datetime
-from app.database import Base
-from sqlalchemy import text
+import os
+import asyncio
+import openai
+from fastapi import APIRouter, Request, HTTPException
 
-# ✅ 사용자 (학생 / 교수자)
-class User(Base):
-    __tablename__ = "users"
+router = APIRouter()
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="student")  # 'student' 또는 'professor'
-    is_admin = Column(Boolean, default=False)
-    assistant_thread_id = Column(String, nullable=True)  # 일반 대화용 Thread
-    questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
-    assignment_questions = relationship("AssignmentQuestion", back_populates="user", cascade="all, delete-orphan")
-    assignment_threads = relationship("AssignmentThread", back_populates="user", cascade="all, delete-orphan")
+# 📌 서버 메모리 기반 누적 텍스트 저장소
+lecture_texts = {}  # {lecture_id: [chunk1, chunk2, ...]}
 
-# ✅ 질문-응답 기록 (일반 대화형)
-class QuestionAnswer(Base):
-    __tablename__ = "chat_history"
+# 📌 OpenAI Client 설정
+openai_client = openai.AsyncOpenAI(
+    api_key=os.getenv("OPENAI_API_KEY")
+)
 
-    id = Column(Integer, primary_key=True, index=True)
-    question = Column(Text, nullable=False)
-    answer = Column(Text, nullable=False)
-    created_at = Column(DateTime, server_default=text("(now() - interval '8 hour')"))
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    user = relationship("User", back_populates="questions")
+# 📌 Assistant ID (.env에 저장된 요약 전용 Assistant)
+ASSISTANT_ID = os.getenv("LECTURE_SUMMARY_ASSISTANT_ID")
 
-# ✅ 강의
-class Lecture(Base):
-    __tablename__ = "lectures"
+# ✂️ 텍스트를 블록으로 나누는 함수
+def split_text(text: str, max_chars: int = 4000) -> list:
+    blocks = []
+    while len(text) > max_chars:
+        idx = text[:max_chars].rfind('\n')  # 최대한 문단 단위로 자르기
+        if idx == -1:
+            idx = max_chars
+        blocks.append(text[:idx].strip())
+        text = text[idx:].strip()
+    if text:
+        blocks.append(text)
+    return blocks
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(String, nullable=True)
+@router.post("/upload_text_chunk")
+async def upload_text_chunk(request: Request):
+    """텍스트 chunk를 받아서 lecture_id별로 누적 저장"""
+    body = await request.json()
+    lecture_id = body.get("lecture_id")
+    text_chunk = body.get("text", "").strip()
 
-    recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
-    snapshots = relationship("Snapshot", back_populates="lecture", cascade="all, delete-orphan")
+    if not lecture_id or not text_chunk:
+        raise HTTPException(status_code=400, detail="lecture_id와 text는 필수입니다.")
 
-# ✅ 녹음 파일 (음성 업로드)
-class Recording(Base):
-    __tablename__ = "recordings"
+    if lecture_id not in lecture_texts:
+        lecture_texts[lecture_id] = []
+    lecture_texts[lecture_id].append(text_chunk)
 
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
-    file_path = Column(String, nullable=False)
-    uploaded_at = Column(DateTime, default=func.now())
+    return {"message": "Chunk 저장 완료"}
 
-    lecture = relationship("Lecture", back_populates="recordings")
+@router.get("/lecture_text/{lecture_id}")
+async def get_lecture_text(lecture_id: str):
+    """현재까지 저장된 수업 텍스트 확인"""
+    if lecture_id not in lecture_texts:
+        raise HTTPException(status_code=404, detail="해당 수업이 존재하지 않습니다.")
 
-# ✅ 강의 중간 이미지 및 텍스트 캡처
-class Snapshot(Base):
-    __tablename__ = "lecture_snapshots"
+    return {
+        "lecture_id": lecture_id,
+        "texts": lecture_texts[lecture_id],
+        "full_text": "\n".join(lecture_texts[lecture_id])
+    }
 
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
-    timestamp = Column(String)
-    transcript = Column(Text)
-    image_url = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+@router.post("/reset_lecture/{lecture_id}")
+async def reset_lecture(lecture_id: str):
+    """특정 수업 텍스트 초기화"""
+    if lecture_id in lecture_texts:
+        del lecture_texts[lecture_id]
+    return {"message": f"{lecture_id} 수업 데이터 초기화 완료"}
 
-    lecture = relationship("Lecture", back_populates="snapshots")
+@router.post("/summarize_lecture")
+async def summarize_lecture(request: Request):
+    """수업 종료 시 전체 텍스트 요약"""
+    body = await request.json()
+    lecture_id = body.get("lecture_id")
 
-# ✅ 강의자료 텍스트 전체 요약
-class LectureMaterial(Base):
-    __tablename__ = "pdf_summary"
+    if not lecture_id:
+        raise HTTPException(status_code=400, detail="lecture_id가 필요합니다.")
 
-    id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String, unique=True, index=True)
-    file_path = Column(String)
-    content = Column(Text)
-    embedding = Column(Text)
+    chunks = lecture_texts.get(lecture_id)
+    if not chunks:
+        raise HTTPException(status_code=404, detail="해당 수업 텍스트가 없습니다.")
 
-    embeddings = relationship("Embedding", back_populates="material", cascade="all, delete-orphan")
+    # 1. 전체 텍스트 합치기
+    full_text = "\n".join(chunks)
 
-# ✅ chunk 임베딩 저장
-class Embedding(Base):
-    __tablename__ = "embedding"
+    # 2. AI를 이용해 텍스트 클린업
+    print("🧹 AI 클린업 시작...")
+    cleaned_text = await ai_clean_text(full_text)
 
-    id = Column(Integer, primary_key=True, index=True)
-    material_id = Column(Integer, ForeignKey("pdf_summary.id"))
-    chunk_index = Column(Integer)
-    content = Column(Text)
-    embedding = Column(Text)
+    # 3. 텍스트 분할
+    text_blocks = split_text(cleaned_text, max_chars=4000)
+    print(f"✅ 클린업 후 텍스트 블록 수: {len(text_blocks)}개")
 
-    material = relationship("LectureMaterial", back_populates="embeddings")
+    # 4. 각 블록 요약
+    partial_summaries = []
+    for idx, block in enumerate(text_blocks):
+        print(f"🧩 블록 {idx+1} 요약 중...")
+        summary = await summarize_with_assistant(block)
+        partial_summaries.append(summary)
 
-# ✅ 퀴즈
-class Quiz(Base):
-    __tablename__ = "quiz"
+    # 5. 부분 요약 합치기
+    combined_summary_text = "\n\n".join(partial_summaries)
 
-    id = Column(Integer, primary_key=True, index=True)
-    question = Column(String)
-    options = Column(Text)
-    answer = Column(String)
-    material_id = Column(Integer, ForeignKey("pdf_summary.id"))
+    # 6. 최종 요약
+    print("🧠 최종 요약 시작...")
+    final_summary = await summarize_with_assistant(combined_summary_text)
 
-# ✅ 과제 정보
-class Assignment(Base):
-    __tablename__ = "assignments"
+    # ✅ 완료 후 메모리에서 삭제
+    del lecture_texts[lecture_id]
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    sample_answer = Column(Text,nullable=True)  # 정답/예시코드 (GPT 참고용)
-    deadline = Column(DateTime, nullable=True)
-    attached_file_path = Column(String, nullable=True)  # 교수자 첨부 PDF 경로
-    created_at = Column(DateTime, default=func.now())
+    return {
+        "lecture_id": lecture_id,
+        "summary": final_summary
+    }
 
-    questions = relationship("AssignmentQuestion", back_populates="assignment", cascade="all, delete-orphan")
-    submissions = relationship("AssignmentSubmission", back_populates="assignment", cascade="all, delete-orphan")
-    threads = relationship("AssignmentThread", back_populates="assignment", cascade="all, delete-orphan")
+# 🔥 Assistant로 텍스트 클린업하는 함수
+async def ai_clean_text(text: str) -> str:
+    thread = await openai_client.beta.threads.create()
 
-# ✅ 과제 질문 + GPT 응답 저장
-class AssignmentQuestion(Base):
-    __tablename__ = "assignment_questions"
+    await openai_client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=f"""
+아래 수업 녹취록에서 다음에 해당하는 문장을 모두 제거해 주세요:
+- 의미 없는 잡담 (예: 음, 어, 끊기는 말, unrelated small talk)
+- 강의 주제와 무관한 대화
+- 어색하거나 연결이 안 되는 중간 멘트
 
-    id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+오로지 강의 핵심 내용, 수업 설명만 남기고 정리해 주세요.
 
-    question_text = Column(Text, nullable=True)
-    code_snippet = Column(Text, nullable=True)
-    gpt_answer = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=func.now())
+수업 텍스트:
+{text}
+        """
+    )
 
-    assignment = relationship("Assignment", back_populates="questions")
-    user = relationship("User", back_populates="assignment_questions")
+    run = await openai_client.beta.threads.runs.create(
+        thread_id=thread.id,
+        assistant_id=ASSISTANT_ID
+    )
 
-# ✅ 과제 제출 + GPT 피드백 결과
-class AssignmentSubmission(Base):
-    __tablename__ = "assignment_submissions"
+    while True:
+        run_status = await openai_client.beta.threads.runs.retrieve(
+            thread_id=thread.id,
+            run_id=run.id
+        )
+        if run_status.status in ["completed", "failed", "cancelled", "expired"]:
+            break
+        await asyncio.sleep(1)
 
-    id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
-    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    if run_status.status != "completed":
+        raise Exception(f"AI 클린업 실패: {run_status.status}")
 
-    submitted_file_path = Column(String, nullable=False)
-    submitted_at = Column(DateTime, default=func.now())
+    messages = await openai_client.beta.threads.messages.list(thread_id=thread.id)
+    cleaned_text = messages.data[0].content[0].text.value.strip()
 
-    gpt_feedback = Column(Text, nullable=True)
-    gpt_feedback_created_at = Column(DateTime, nullable=True)
-    assistant_thread_id = Column(String, nullable=True)  # 과제별 Thread
+    return cleaned_text
 
-    assignment = relationship("Assignment", back_populates="submissions")
-    student = relationship("User")
+# 🔥 Assistant로 텍스트 요약하는 함수
+async def summarize_with_assistant(text: str) -> str:
+    thread = await openai_client.beta.threads.create()
 
-# ✅ 과제별 Q&A 전용 Assistant Thread 관리
-class AssignmentThread(Base):
-    __tablename__ = "assignment_threads"
+    await openai_client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=f"""
+다음은 수업 녹취록 일부입니다. 이 내용을 부드럽고 깔끔하게 요약해 주세요.
 
-    id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
-    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    thread_id = Column(String, nullable=False)  # OpenAI Thread ID
-    created_at = Column(DateTime, default=func.now())
+수업 텍스트:
+{text}
+        """
+    )
 
-    assignment = relationship("Assignment", back_populates="threads")
-    user = relationship("User", back_populates="assignment_threads")
+    run = await openai_client.beta.threads.runs.create(
+        thread_id=thread.id,
+        assistant_id=ASSISTANT_ID
+    )
 
-# ✅ 새로운 "질문 피드백" 테이블 추가
-class QuestionFeedback(Base):
-    __tablename__ = "question_feedback"
+    while True:
+        run_status = await openai_client.beta.threads.runs.retrieve(
+            thread_id=thread.id,
+            run_id=run.id
+        )
+        if run_status.status in ["completed", "failed", "cancelled", "expired"]:
+            break
+        await asyncio.sleep(1)
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # 학생 ID
-    question_text = Column(Text, nullable=False)  # 질문 내용
-    knows = Column(Boolean, nullable=False)  # True: 안다, False: 모른다
-    created_at = Column(DateTime, default=func.now())
+    if run_status.status != "completed":
+        raise Exception(f"Run 실패: {run_status.status}")
 
-    user = relationship("User")  # 사용자 관계
+    messages = await openai_client.beta.threads.messages.list(thread_id=thread.id)
+    summary_text = messages.data[0].content[0].text.value.strip()
+
+    return summary_text
