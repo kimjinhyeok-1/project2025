@@ -1,35 +1,39 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from app.models import Assignment, AssignmentQuestion
-from app.schemas import AssignmentCreate, AssignmentOut, AssignmentUpdate, AssignmentQuestionListOut
-from app.database import get_db
-from app.auth import verify_professor
 from datetime import datetime
 import os
 import shutil
 import uuid
+import aiofiles
+import asyncio
+import fitz
+
+from app.models import Assignment, AssignmentSubmission, AssignmentQuestion
+from app.schemas import AssignmentCreate, AssignmentOut, AssignmentUpdate, AssignmentQuestionListOut
+from app.database import get_db
+from app.auth import verify_professor, get_current_user
+from app.utils.gpt_feedback import generate_assignment_feedback, create_feedback_thread
+from app.models import User
 
 router = APIRouter()
 
 
-# ✅ 과제 등록 (첨부파일 + 마감일 포함)
+# ✅ 과제 등록 (교수자)
 @router.post("/create", response_model=AssignmentOut, tags=["Assignments"], dependencies=[Depends(verify_professor)])
 async def create_assignment(
-    title: str = Form(..., description="과제 제목"),
-    description: str = Form(..., description="과제 설명"),
-    deadline: str = Form(None, description="마감일 (예: 2025-05-01T23:59:00)"),
-    sample_answer: str = Form("", description="예시 코드 (선택)"),
-    file: UploadFile = File(None, description="부가설명 PDF 파일 (선택)"),
+    title: str = Form(...),
+    description: str = Form(...),
+    deadline: str = Form(None),
+    sample_answer: str = Form(""),
+    file: UploadFile = File(None),
     db: AsyncSession = Depends(get_db)
 ):
-    # 🔹 마감일 파싱
     try:
         parsed_deadline = datetime.fromisoformat(deadline) if deadline else None
     except ValueError:
         raise HTTPException(status_code=400, detail="마감일 형식이 올바르지 않습니다. 예: 2025-05-01T23:59:00")
 
-    # 🔹 PDF 파일 저장
     file_path = None
     if file:
         if not file.filename.lower().endswith(".pdf"):
@@ -41,7 +45,6 @@ async def create_assignment(
         with open(file_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
 
-    # 🔹 과제 저장
     new_assignment = Assignment(
         title=title.strip(),
         description=description.strip(),
@@ -59,7 +62,10 @@ async def create_assignment(
 @router.get("/", response_model=list[AssignmentOut], tags=["Assignments"])
 async def get_assignments(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Assignment))
-    return result.scalars().all()
+    assignments = result.scalars().all()
+    for assignment in assignments:
+        assignment.sample_answer = None  # sample_answer 절대 공개 금지
+    return assignments
 
 
 # ✅ 과제 상세 조회
@@ -69,10 +75,12 @@ async def get_assignment(assignment_id: int, db: AsyncSession = Depends(get_db))
     assignment = result.scalar_one_or_none()
     if assignment is None:
         raise HTTPException(status_code=404, detail="과제를 찾을 수 없습니다.")
+
+    assignment.sample_answer = None  # sample_answer 절대 공개 금지
     return assignment
 
 
-# ✅ 과제 수정
+# ✅ 과제 수정 (교수자)
 @router.put("/{assignment_id}", response_model=AssignmentOut, tags=["Assignments"], dependencies=[Depends(verify_professor)])
 async def update_assignment_form(
     assignment_id: int,
@@ -101,10 +109,11 @@ async def update_assignment_form(
 
     await db.commit()
     await db.refresh(assignment)
+    assignment.sample_answer = None
     return assignment
 
 
-# ✅ 과제 삭제
+# ✅ 과제 삭제 (교수자)
 @router.delete("/{assignment_id}", tags=["Assignments"], dependencies=[Depends(verify_professor)])
 async def delete_assignment(assignment_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
@@ -117,7 +126,82 @@ async def delete_assignment(assignment_id: int, db: AsyncSession = Depends(get_d
     return {"message": f"과제(ID={assignment_id})가 성공적으로 삭제되었습니다."}
 
 
-# ✅ 과제별 질문 조회 (교수자만)
+# ✅ 과제 제출 (학생)
+@router.post("/assignments/{assignment_id}/submit", tags=["Assignments"])
+async def submit_assignment(
+    assignment_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="과제를 찾을 수 없습니다.")
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="PDF 파일만 제출할 수 있습니다.")
+
+    if assignment.deadline and datetime.utcnow() < assignment.deadline:
+        raise HTTPException(status_code=400, detail="마감일이 지나야 제출이 가능합니다.")
+
+    save_dir = "uploads/submissions"
+    os.makedirs(save_dir, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}_{current_user.id}_{assignment_id}.pdf"
+    file_path = os.path.join(save_dir, filename)
+
+    async with aiofiles.open(file_path, "wb") as out_file:
+        contents = await file.read()
+        await out_file.write(contents)
+
+    try:
+        with fitz.open(stream=contents, filetype="pdf") as doc:
+            pdf_text = "\n".join(page.get_text("text") for page in doc)
+    except Exception:
+        raise HTTPException(status_code=500, detail="PDF 텍스트 추출 실패")
+
+    try:
+        feedback = await generate_assignment_feedback(assignment.description, pdf_text)
+    except Exception:
+        await asyncio.sleep(1)
+        try:
+            feedback = await generate_assignment_feedback(assignment.description, pdf_text)
+        except Exception:
+            raise HTTPException(status_code=500, detail="GPT 피드백 생성에 실패했습니다.")
+
+    thread_id = await create_feedback_thread(feedback)
+
+    # 기존 제출 확인 (덮어쓰기)
+    result = await db.execute(
+        select(AssignmentSubmission).where(
+            AssignmentSubmission.assignment_id == assignment.id,
+            AssignmentSubmission.student_id == current_user.id
+        )
+    )
+    existing_submission = result.scalar_one_or_none()
+
+    if existing_submission:
+        existing_submission.submitted_file_path = file_path
+        existing_submission.gpt_feedback = feedback
+        existing_submission.gpt_feedback_created_at = datetime.utcnow()
+        existing_submission.assistant_thread_id = thread_id
+    else:
+        new_submission = AssignmentSubmission(
+            assignment_id=assignment.id,
+            student_id=current_user.id,
+            submitted_file_path=file_path,
+            gpt_feedback=feedback,
+            gpt_feedback_created_at=datetime.utcnow(),
+            assistant_thread_id=thread_id,
+        )
+        db.add(new_submission)
+
+    await db.commit()
+
+    return {"message": "제출 및 피드백 생성 완료", "feedback": feedback, "thread_id": thread_id}
+
+
+# ✅ 과제별 질문 조회 (교수자)
 @router.get("/{assignment_id}/questions", response_model=AssignmentQuestionListOut, tags=["Assignments"], dependencies=[Depends(verify_professor)])
 async def get_questions_for_assignment(assignment_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
@@ -130,8 +214,4 @@ async def get_questions_for_assignment(assignment_id: int, db: AsyncSession = De
     )
     questions = result.scalars().all()
 
-    return {
-        "assignment": assignment,
-        "questions": questions
-    }
-
+    return {"assignment": assignment, "questions": questions}
