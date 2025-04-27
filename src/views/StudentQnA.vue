@@ -35,7 +35,7 @@ const fetchAnswer = async () => {
   if (!question.value.trim()) return
   loading.value = true
   try {
-    const response = await axios.get('/ask_rag', { params: { q: question.value } })
+    const response = await axios.get('/api/ask_rag', { params: { q: question.value } })
     answerMarkdown.value = response.data.answer
   } catch (error) {
     console.error('답변 가져오기 실패:', error)
