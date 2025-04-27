@@ -11,8 +11,7 @@
         @keyup.enter="fetchAnswer"
       />
       <div class="icon-group">
-        <button class="icon-button">🌐 검색</button>
-        <button class="icon-button">⋯</button>
+        <button class="icon-button" @click="fetchAnswer">🌐 검색</button>
       </div>
     </div>
 
@@ -91,21 +90,18 @@ const fetchAnswer = async () => {
   border: none;
   cursor: pointer;
   font-size: 0.9rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
 }
 
-.voice-group {
-  margin-left: 0.5rem;
+.icon-button:hover:enabled {
+  background: #f0f0f0;
 }
 
-.voice-button {
-  background: black;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 2.5rem;
-  height: 2.5rem;
-  font-size: 1.2rem;
-  cursor: pointer;
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .loading-text {
