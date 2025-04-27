@@ -39,6 +39,12 @@ export default {
     async testOptions() {
       await testOptionsRequest();
     }
+  },
+  mounted() {
+    const state = recordingManager.getState();
+    this.isRecording = state.isRecording;
+
+    recordingManager.reconnectRecognition();
   }
 };
 </script>

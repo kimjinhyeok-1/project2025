@@ -1,3 +1,4 @@
+// src/managers/RecordingManager.js
 import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 
 class RecordingManager {
@@ -68,6 +69,16 @@ class RecordingManager {
       }
     };
 
+    this.recognition.onerror = (event) => {
+      console.error('🎙️ 음성 인식 에러:', event.error);
+      // 에러 발생해도 끊기지 않게 복구
+      if (event.error === "no-speech" || event.error === "network") {
+        console.log('🎙️ 음성 인식 재시작');
+        this.recognition.stop();
+        this.recognition.start();
+      }
+    };
+
     this.recognition.start();
   }
 
@@ -76,6 +87,19 @@ class RecordingManager {
       this.recognition.stop();
       this.recognition = null;
     }
+  }
+
+  reconnectRecognition() {
+    if (this.isRecording && !this.recognition) {
+      console.log('🎙️ 음성 인식 재연결 시도');
+      this.startRecognition();
+    }
+  }
+
+  getState() {
+    return {
+      isRecording: this.isRecording,
+    };
   }
 }
 
