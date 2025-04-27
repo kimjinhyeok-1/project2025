@@ -34,7 +34,6 @@ import { ref, nextTick } from 'vue'
 import axios from 'axios'
 import MarkdownViewer from '@/components/common/MarkdownViewer.vue'
 
-// ✅ 개발/배포 구분해서 backend 주소 다르게 처리
 const backendBaseURL = process.env.NODE_ENV === 'production'
   ? 'https://project2025-backend.onrender.com'
   : '/api';
