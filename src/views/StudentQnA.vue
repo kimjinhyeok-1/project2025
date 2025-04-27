@@ -34,6 +34,11 @@ import { ref, nextTick } from 'vue'
 import axios from 'axios'
 import MarkdownViewer from '@/components/common/MarkdownViewer.vue'
 
+// ✅ 개발/배포 구분해서 backend 주소 다르게 처리
+const backendBaseURL = process.env.NODE_ENV === 'production'
+  ? 'https://project2025-backend.onrender.com'
+  : '/api';
+
 const question = ref('')
 const answerMarkdown = ref('')
 const loading = ref(false)
@@ -43,7 +48,7 @@ const fetchAnswer = async () => {
   if (!question.value.trim()) return
   loading.value = true
   try {
-    const response = await axios.get('/api/ask_rag', {
+    const response = await axios.get(`${backendBaseURL}/ask_rag`, {
       params: {
         q: question.value,
         t: Date.now(),
