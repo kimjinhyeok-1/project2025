@@ -161,7 +161,7 @@ async def ask_rag(
 --- 강의자료 발췌 끝 ---
 
 질문: {q}
-답변:
+답변은 친절하고 명확하게 작성해주세요.
 """
 
     # 6. GPT 응답 생성
@@ -172,11 +172,10 @@ async def ask_rag(
                 {
                     "role": "system",
                     "content": (
-                        "학생의 질문에 친절하고 따뜻하게 답해주세요. "
-                        "코드 문제는 정답을 주지 말고, 학생이 스스로 생각해볼 수 있도록 단계별로 힌트를 주세요. "
-                        "개념 설명은 명확하게 하되, 지나치게 길지 않게 해주세요. "
-                        "줄바꿈은 <br>로 표시해주세요. "
-                        "만약 질문이 강의자료와 관련 없는 내용이라면, 관련이 없다고 정중히 안내해주세요."
+                        "학생의 질문에 친절하고 부드럽게 답해주세요. "
+                        "가능하면 **Markdown 포맷**을 사용해서 제목, 리스트, 코드블럭 등을 활용해서 보기 좋게 작성해주세요. "
+                        "코딩 문제는 정답 대신 단계별 힌트를 주고, 개념 설명은 명확하고 간결하게 해주세요. "
+                        "관련 없는 질문에는 정중히 안내만 해주세요."
                     )
                 },
                 {"role": "user", "content": prompt}
@@ -185,7 +184,9 @@ async def ask_rag(
             temperature=0.7,
         )
         raw_answer = response.choices[0].message.content.strip()
-        formatted_answer = raw_answer.replace("\n", "<br>")
+
+        # ✅ 줄바꿈 변환 삭제
+        formatted_answer = raw_answer
 
         # 7. 결과 저장
         new_qa = QuestionAnswer(
