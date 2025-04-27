@@ -27,7 +27,7 @@ async def upload_recording(
     lecture_id: int,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    _: str = Depends(verify_professor)  # ✅ 교수자만 접근 가능
+    _: str = Depends(verify_professor)  # ✅ 교수자만 접근 가능해
 ):
     print("📥 [1] 파일 업로드 요청 수신")
 
