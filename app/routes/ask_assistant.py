@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from app.database import get_db  # 수정된 부분: get_db로 변경
+from app.database import get_db
 from app.models import User, QuestionAnswer
 from app.services.assistant import ask_assistant
+from app.auth import get_current_user  # 현재 로그인한 사용자 가져오기
 import os
 import httpx
 
@@ -11,25 +11,24 @@ router = APIRouter()
 API_KEY = os.getenv("OPENAI_API_KEY")
 
 async def create_thread():
-    headers = {"Authorization": f"Bearer {API_KEY}", "OpenAI-Beta": "assistants=v2"}
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "OpenAI-Beta": "assistants=v2"
+    }
     async with httpx.AsyncClient() as client:
         res = await client.post("https://api.openai.com/v1/threads", headers=headers)
+        res.raise_for_status()  # 오류 방지용 추가
         return res.json()["id"]
 
 @router.post("/ask_assistant")
 async def ask_question(
-    username: str = Form(...),
     question: str = Form(...),
-    db: AsyncSession = Depends(get_db)  # 수정된 부분: get_db로 변경
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    # 1. 사용자 조회
-    result = await db.execute(select(User).where(User.name == username))
-    user = result.scalars().first()
+    user = current_user  # 바로 현재 로그인한 사용자 사용
 
-    if not user:
-        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
-    # 2. 스레드 없으면 생성
+    # 1. 스레드 없으면 새로 생성
     if not user.assistant_thread_id:
         thread_id = await create_thread()
         user.assistant_thread_id = thread_id
@@ -37,11 +36,11 @@ async def ask_question(
     else:
         thread_id = user.assistant_thread_id
 
-    # 3. Assistant 응답 받기
-    from app.config import OPENAI_ASSISTANT_ID # assistant_id는 환경변수에서 불러온다고 가정
+    # 2. Assistant에게 질문
+    from app.config import OPENAI_ASSISTANT_ID
     answer = await ask_assistant(question, thread_id, OPENAI_ASSISTANT_ID)
 
-    # 4. DB 저장
+    # 3. 질문과 답변 DB 저장
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
     db.add(chat)
     await db.commit()
