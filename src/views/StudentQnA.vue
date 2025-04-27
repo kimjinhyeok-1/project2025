@@ -1,20 +1,28 @@
 <template>
-  <div class="container py-4">
-    <h2 class="mb-4">질문하기</h2>
+  <div class="qna-wrapper">
+    <h2 class="title">오늘은 무슨 생각을 하고 계신가요?</h2>
 
-    <!-- 질문 입력창 -->
-    <div class="input-group mb-3">
-      <input v-model="question" type="text" class="form-control" placeholder="질문을 입력하세요" @keyup.enter="fetchAnswer" />
-      <button class="btn btn-primary" @click="fetchAnswer">질문하기</button>
+    <div class="input-area">
+      <input
+        v-model="question"
+        type="text"
+        placeholder="무엇이든 물어보세요"
+        class="input-box"
+        @keyup.enter="fetchAnswer"
+      />
+      <div class="icon-group">
+        <button class="icon-button">🌐 검색</button>
+        <button class="icon-button">🔍 심층 리서치</button>
+        <button class="icon-button">🎨 이미지 그리기</button>
+        <button class="icon-button">⋯</button>
+      </div>
+      <div class="voice-group">
+        <button class="voice-button">🎙️</button>
+      </div>
     </div>
 
-    <!-- 답변 영역 -->
-    <div v-if="loading" class="text-center my-4">
-      답변을 가져오는 중...
-    </div>
-
+    <div v-if="loading" class="loading-text">답변을 가져오는 중...</div>
     <div v-else-if="answerMarkdown">
-      <h4 class="mt-4">답변</h4>
       <MarkdownViewer :markdown="answerMarkdown" />
     </div>
   </div>
@@ -31,7 +39,6 @@ const loading = ref(false)
 
 const fetchAnswer = async () => {
   if (!question.value.trim()) return
-
   loading.value = true
   try {
     const response = await axios.get('/ask_rag', { params: { q: question.value } })
@@ -46,7 +53,69 @@ const fetchAnswer = async () => {
 </script>
 
 <style scoped>
-.container {
-  max-width: 800px;
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.input-area {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 2rem;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 600px;
+}
+
+.input-box {
+  flex: 1;
+  border: none;
+  font-size: 1rem;
+  padding: 0.5rem;
+  outline: none;
+}
+
+.icon-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.voice-group {
+  margin-left: 0.5rem;
+}
+
+.voice-button {
+  background: black;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.loading-text {
+  margin-top: 2rem;
+  font-size: 1rem;
+  color: #666;
 }
 </style>
