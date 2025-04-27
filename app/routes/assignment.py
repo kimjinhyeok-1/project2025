@@ -12,7 +12,7 @@ import fitz
 from app.models import Assignment, AssignmentSubmission, AssignmentQuestion
 from app.schemas import AssignmentCreate, AssignmentOut, AssignmentUpdate, AssignmentQuestionListOut
 from app.database import get_db
-from app.auth import verify_professor, get_current_user
+from app.auth import verify_professor, get_current_user_id as get_current_user 
 from app.utils.gpt_feedback import generate_assignment_feedback, create_feedback_thread
 from app.models import User
 
