@@ -1,7 +1,7 @@
 <template>
   <div class="lecture-container text-center mt-5">
     <h2>🎤 수업 녹화 & 음성 인식</h2>
-    <p class="text-muted">녹음 중 키워드가 감지되면 자동으로 화면 캐퍼와 함께 백어드에 전송됩니다.</p>
+    <p class="text-muted">녹음 중 키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드에 전송됩니다.</p>
 
     <div class="btn-group mt-4">
       <button class="btn btn-danger m-2" @click="toggleScreenRecording">
@@ -12,7 +12,6 @@
         {{ isAudioRecording ? "🔝 음성 인식 종료" : "🎙️ 음성 인식 시작" }}
       </button>
 
-      <!-- 🧪 개발용: OPTIONS 테스트 버튼 -->
       <button class="btn btn-warning m-2" @click="testOptions">
         🧪 OPTIONS 테스트
       </button>
@@ -66,7 +65,7 @@ export default {
           this.isAudioRecording = true
           this.startRecognition()
         } catch (err) {
-          console.error("❌ 오디오 녹음 또는 화면 캐퍼 권한 실패:", err)
+          console.error("❌ 오디오 녹음 또는 화면 캡처 권한 실패:", err)
         }
       } else {
         this.audioRecorder.stop()
@@ -76,7 +75,7 @@ export default {
     },
 
     toggleScreenRecording() {
-      // 선택적 기능 (uc0ad제전)
+      // 선택적 구현
     },
 
     startRecognition() {
@@ -120,53 +119,73 @@ export default {
     },
 
     async sendTranscriptOnly(transcript) {
+      if (!transcript || transcript.trim() === "") {
+        console.error("❌ transcript가 비어있어서 전송 중단");
+        return;
+      }
+
       try {
-        const now = new Date()
-        const timestamp = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 
         await uploadSnapshot({
           timestamp,
           transcript,
-          screenshot_base64: "",
-        })
+          screenshot_base64: "", // 빈 문자열이라도 항상 채워서 보내기
+        });
 
-        console.log("✅ 텍스트만 전송 완료")
+        console.log("✅ 텍스트만 전송 완료");
       } catch (err) {
-        console.error("❌ 텍스트 만 전송 실패:", err.response?.data || err.message || err)
+        console.error("❌ 텍스트만 전송 실패:", err.response?.data || err.message || err);
       }
     },
 
     async takeScreenshotAndUpload(transcript) {
+      if (!transcript || transcript.trim() === "") {
+        console.error("❌ transcript가 비어있어서 전송 중단");
+        return;
+      }
+
       try {
-        if (!this.displayStream) return
+        if (!this.displayStream) {
+          console.error("❌ displayStream 없음, 기본 스크린샷 빈 문자열로 보냄");
+          const now = new Date();
+          const timestamp = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 
-        const track = this.displayStream.getVideoTracks()[0]
-        const imageCapture = new ImageCapture(track)
-        const bitmap = await imageCapture.grabFrame()
+          await uploadSnapshot({
+            timestamp,
+            transcript,
+            screenshot_base64: "",
+          });
+          return;
+        }
 
-        const canvas = document.createElement("canvas")
-        canvas.width = bitmap.width
-        canvas.height = bitmap.height
-        const ctx = canvas.getContext("2d")
-        ctx.drawImage(bitmap, 0, 0)
-        const imageBase64 = canvas.toDataURL("image/png")
+        const track = this.displayStream.getVideoTracks()[0];
+        const imageCapture = new ImageCapture(track);
+        const bitmap = await imageCapture.grabFrame();
 
-        const now = new Date()
-        const timestamp = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`
+        const canvas = document.createElement("canvas");
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(bitmap, 0, 0);
+        const imageBase64 = canvas.toDataURL("image/png");
+
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 
         await uploadSnapshot({
           timestamp,
           transcript,
           screenshot_base64: imageBase64,
-        })
+        });
 
-        console.log("✅ 백어드에 스크린샷 전송 완료")
+        console.log("✅ 백엔드에 스크린샷 전송 완료");
       } catch (err) {
-        console.error("❌ 스크린샷 전송 실패:", err.response?.data || err.message || err)
+        console.error("❌ 스크린샷 전송 실패:", err.response?.data || err.message || err);
       }
     },
 
-    // 🧪 개발용: OPTIONS 테스트 함수
     async testOptions() {
       await testOptionsRequest();
     }
