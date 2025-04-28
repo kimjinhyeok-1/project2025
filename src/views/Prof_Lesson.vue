@@ -16,7 +16,7 @@
 </template>
 
 <script>
-import recordingManager from "@/managers/recordingManager";
+import recordingManager from "@/managers/RecordingManager"; <!-- ✅ 여기 수정 완료 -->
 import { testOptionsRequest } from "@/api/snapshotService";
 
 export default {
@@ -33,8 +33,8 @@ export default {
       } else {
         recordingManager.stopRecording();
       }
-    // 🔥 버튼 상태 강제 반영
-    this.isRecording = recordingManager.getState().isRecording;
+      // 🔥 버튼 상태 강제 반영
+      this.isRecording = recordingManager.getState().isRecording;
     },
     async testOptions() {
       await testOptionsRequest();
