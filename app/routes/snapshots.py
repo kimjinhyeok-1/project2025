@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.database import get_db
 from app.models import Snapshot
 import os
@@ -10,7 +11,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-# 저장 경로 설정!
+# 저장 경로 설정
 IMAGE_DIR = "tmp/snapshots"
 FULL_IMAGE_DIR = os.path.join("static", IMAGE_DIR)
 os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
@@ -30,7 +31,7 @@ class SnapshotRequest(BaseModel):
         }
 
 @router.post("/snapshots")
-def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
+async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_db)):
     print("📥 /snapshots 요청 도착")
     timestamp = data.timestamp
     text = data.transcript
@@ -77,11 +78,10 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
 
     db.add(snapshot)
 
-    # 🛠️ db.commit() 에러 핸들링 추가
     try:
-        db.commit()
+        await db.commit()
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         print(f"DB 커밋 에러: {e}")
         raise HTTPException(status_code=500, detail="DB 저장 실패")
 
@@ -95,38 +95,44 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
     }
 
 @router.get("/summaries")
-def get_all_summary_dates(db: Session = Depends(get_db)):
-    results = db.query(Snapshot.date).distinct().order_by(Snapshot.date.desc()).all()
-    return {"dates": [r.date for r in results]}
+async def get_all_summary_dates(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Snapshot.date).distinct().order_by(Snapshot.date.desc()))
+    dates = result.scalars().all()
+    return {"dates": dates}
 
 @router.get("/summaries/{date}")
-def get_summary_by_date(date: str, db: Session = Depends(get_db)):
-    snapshots = db.query(Snapshot).filter(Snapshot.date == date).order_by(Snapshot.time.asc()).all()
-    result = []
+async def get_summary_by_date(date: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Snapshot).where(Snapshot.date == date).order_by(Snapshot.time.asc()))
+    snapshots = result.scalars().all()
+
+    highlights = []
     for snap in snapshots:
-        result.append({
+        highlights.append({
             "lecture_id": snap.lecture_id,
             "time": snap.time,
             "text": snap.text,
             "image_url": snap.image_path
         })
+
     return {
         "summary": f"{date} 강의 요약",
-        "highlights": result
+        "highlights": highlights
     }
 
 @router.get("/snapshots/nearest")
-def get_nearest_snapshot(
+async def get_nearest_snapshot(
     date: str = Query(..., description="yyyy-MM-dd"),
     time: str = Query(..., description="HH:mm:ss"),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         target_time = datetime.strptime(time, "%H:%M:%S").time()
     except ValueError:
         raise HTTPException(status_code=400, detail="time 형식 오류 (HH:mm:ss)")
 
-    snapshots = db.query(Snapshot).filter(Snapshot.date == date).all()
+    result = await db.execute(select(Snapshot).where(Snapshot.date == date))
+    snapshots = result.scalars().all()
+
     if not snapshots:
         raise HTTPException(status_code=404, detail="해당 날짜에 스냅샷 없음")
 
