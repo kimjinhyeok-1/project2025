@@ -105,7 +105,7 @@ markdown 형식으로 하되 제목은 적지 말고 리스트 번호는 매기�
         summary = response.choices[0].message.content.strip()
 
         return {
-            "most_common_questions": processed_questions[:5],
+            "most_common_questions": processed_questions[:4],
             "summary_for_professor": summary
         }
 
