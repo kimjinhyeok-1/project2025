@@ -64,7 +64,8 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
     try:
         with open(save_path, "wb") as f:
             f.write(image_bytes)
-        print(f"✅ 파일 저장 성공: {save_path}")  # 추가
+        print(f"✅ 파일 저장 성공: {os.path.abspath(save_path)}")
+
     except Exception as e:
         print(f"❌ 파일 저장 실패: {e}")  # 이미 있음
         raise HTTPException(status_code=500, detail="이미지 파일 저장 실패")
