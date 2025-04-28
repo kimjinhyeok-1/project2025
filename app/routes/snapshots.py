@@ -10,7 +10,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-# 저장 경로 설정
+# 저장 경로 설정!
 IMAGE_DIR = "tmp/snapshots"
 FULL_IMAGE_DIR = os.path.join("static", IMAGE_DIR)
 os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
