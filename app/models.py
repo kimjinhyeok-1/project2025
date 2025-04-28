@@ -40,7 +40,7 @@ class Lecture(Base):
     recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
     snapshots = relationship("Snapshot", back_populates="lecture", cascade="all, delete-orphan")
 
-# ✅ 녹음 파일 (음성 업로드)
+# ✅ 녹음 파일 (음성 업로드!)
 class Recording(Base):
     __tablename__ = "recordings"
 
@@ -59,7 +59,7 @@ class Snapshot(Base):
     lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)  # ✅ Lecture와 연결
     date = Column(String, nullable=False)  # 날짜 (예: 2025-04-28)
     time = Column(String, nullable=False)  # 시간 (예: 15:30:00)
-    text = Column(Text, nullable=False)  # STT로 변환된 문장
+    text = Column(Text, nullable=False)  # STT로 변환된 문장````````````
     image_path = Column(String, nullable=False)  # 저장된 이미지 경로
     created_at = Column(DateTime, default=datetime.utcnow)  # 업로드 시간 (자동)
 
