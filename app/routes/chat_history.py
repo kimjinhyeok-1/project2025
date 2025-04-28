@@ -89,3 +89,26 @@ markdown 형식으로 하되 제목은 적지 말고 리스트 번호는 매기�
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"[chat_history/summary] 요약 생성 중 오류: {str(e)}")
+
+# ✅ 학생 자신의 질문 내역 확인 (학생 전용)
+@router.get("/chat_history/me")
+async def get_my_chat_history(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+    _: str = Depends(verify_student)  # ✅ 학생만 접근 가능
+):
+    result = await db.execute(
+        select(QuestionAnswer)
+        .where(QuestionAnswer.user_id == user_id)
+        .order_by(QuestionAnswer.created_at.desc())
+    )
+    records = result.scalars().all()
+
+    return [
+        {
+            "question": r.question,
+            "answer": r.answer,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        }
+        for r in records
+    ]
