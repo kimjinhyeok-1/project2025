@@ -10,12 +10,11 @@ from datetime import datetime
 
 router = APIRouter()
 
-# ✅ 저장 경로 설정
-IMAGE_DIR = "tmp/snapshots"  # 렌더 서버에서도 접근 가능한 tmp 아래
-FULL_IMAGE_DIR = os.path.join("static", IMAGE_DIR)  # /static/tmp/snapshots 경로로 정적 제공
-os.makedirs(FULL_IMAGE_DIR, exist_ok=True)  # 폴더 없으면 생성
+# 저장 경로 설정
+IMAGE_DIR = "tmp/snapshots"
+FULL_IMAGE_DIR = os.path.join("static", IMAGE_DIR)
+os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
 
-# ✅ 요청 바디 스키마 (lecture_id 제거)
 class SnapshotRequest(BaseModel):
     timestamp: str
     transcript: str
@@ -25,22 +24,18 @@ class SnapshotRequest(BaseModel):
         schema_extra = {
             "example": {
                 "timestamp": "2025-04-28 15:30:00",
-                "transcript": "광합성은 빛을 이용해 포도당을 만드는 과정입니다. 이 과정에서 산소가 부산물로 발생합니다.",
+                "transcript": "광합성은 빛을 이용해 포도당을 만드는 과정입니다.",
                 "screenshot_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA..."
             }
         }
 
-# ✅ /snapshots: 스크린샷 + STT 텍스트 저장
 @router.post("/snapshots")
 def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
-    """
-    수업 중 프론트가 스크린샷 + 텍스트 + 타임스탬프를 전송
-    """
     print("📥 /snapshots 요청 도착")
     timestamp = data.timestamp
     text = data.transcript
     image_data = data.screenshot_base64
-    lecture_id = 1  # ✅ 프론트에서 안 보내고, 백엔드에서 고정
+    lecture_id = 1
 
     if not timestamp or not text or not image_data:
         raise HTTPException(status_code=400, detail="timestamp, transcript, screenshot_base64가 필요합니다.")
@@ -52,25 +47,34 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="timestamp 형식 오류 (yyyy-MM-dd HH:mm:ss)")
 
     try:
-        header, encoded = image_data.split(",", 1)
+        if "," in image_data:
+            header, encoded = image_data.split(",", 1)
+        else:
+            encoded = image_data
         image_bytes = base64.b64decode(encoded)
-    except Exception:
+    except Exception as e:
+        print(f"디코딩 에러: {e}")
         raise HTTPException(status_code=400, detail="이미지 디코딩 실패")
 
     filename = f"{uuid.uuid4().hex}.png"
-    save_path = os.path.join(FULL_IMAGE_DIR, filename)  # 실제 저장 경로
-    relative_url = f"/static/{IMAGE_DIR}/{filename}"    # 웹에서 접근할 경로
+    save_path = os.path.join(FULL_IMAGE_DIR, filename)
+    relative_url = f"/static/{IMAGE_DIR}/{filename}"
 
-    with open(save_path, "wb") as f:
-        f.write(image_bytes)
+    try:
+        with open(save_path, "wb") as f:
+            f.write(image_bytes)
+    except Exception as e:
+        print(f"파일 저장 에러: {e}")
+        raise HTTPException(status_code=500, detail="이미지 파일 저장 실패")
 
     snapshot = Snapshot(
         lecture_id=lecture_id,
         date=date_group,
         time=dt.strftime("%H:%M:%S"),
         text=text,
-        image_path=relative_url  # 저장은 상대경로로
+        image_path=relative_url
     )
+
     db.add(snapshot)
     db.commit()
 
@@ -83,13 +87,11 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
         "image_url": relative_url
     }
 
-# ✅ /summaries: 날짜 목록 조회
 @router.get("/summaries")
 def get_all_summary_dates(db: Session = Depends(get_db)):
     results = db.query(Snapshot.date).distinct().order_by(Snapshot.date.desc()).all()
     return {"dates": [r.date for r in results]}
 
-# ✅ /summaries/{date}: 특정 날짜 요약 목록
 @router.get("/summaries/{date}")
 def get_summary_by_date(date: str, db: Session = Depends(get_db)):
     snapshots = db.query(Snapshot).filter(Snapshot.date == date).order_by(Snapshot.time.asc()).all()
@@ -106,7 +108,6 @@ def get_summary_by_date(date: str, db: Session = Depends(get_db)):
         "highlights": result
     }
 
-# ✅ /snapshots/nearest: 가장 가까운 스냅샷 찾기
 @router.get("/snapshots/nearest")
 def get_nearest_snapshot(
     date: str = Query(..., description="yyyy-MM-dd"),
