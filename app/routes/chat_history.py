@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc
 from app.database import get_db
-from app.auth import verify_professor, get_current_user_id
+from app.auth import verify_professor, get_current_user_id, verify_student
 from app.models import QuestionAnswer, Summary
 import openai
 import os
