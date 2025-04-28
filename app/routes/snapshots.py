@@ -76,7 +76,14 @@ def upload_snapshot(data: SnapshotRequest, db: Session = Depends(get_db)):
     )
 
     db.add(snapshot)
-    db.commit()
+
+    # 🛠️ db.commit() 에러 핸들링 추가
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"DB 커밋 에러: {e}")
+        raise HTTPException(status_code=500, detail="DB 저장 실패")
 
     return {
         "message": "스냅샷 저장 완료",
