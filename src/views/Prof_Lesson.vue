@@ -16,7 +16,7 @@
 </template>
 
 <script>
-import recordingManager from "@/managers/RecordingManager";
+import RecordingManager from "@/managers/RecordingManager";
 import { testOptionsRequest } from "@/api/snapshotService";
 
 export default {
@@ -28,27 +28,27 @@ export default {
   },
   methods: {
     async toggleAudioRecording() {
-      if (!recordingManager.getState().isRecording) {
-        await recordingManager.startRecording();
+      if (!RecordingManager.getState().isRecording) {
+        await RecordingManager.startRecording();
       } else {
-        recordingManager.stopRecording();
+        RecordingManager.stopRecording();
       }
     // 🔥 버튼 상태 강제 반영
-    this.isRecording = recordingManager.getState().isRecording;
+    this.isRecording = RecordingManager.getState().isRecording;
     },
     async testOptions() {
       await testOptionsRequest();
     }
   },
   mounted() {
-    this.isRecording = recordingManager.getState().isRecording;
+    this.isRecording = RecordingManager.getState().isRecording;
 
-    recordingManager.subscribe((newState) => {
+    RecordingManager.subscribe((newState) => {
       this.isRecording = newState;
     });
 
     // ✅ 진짜 중요: 돌아올 때 음성 인식이 끊겼으면 복구
-    recordingManager.reconnectRecognition();
+    RecordingManager.reconnectRecognition();
   }
 };
 </script>
