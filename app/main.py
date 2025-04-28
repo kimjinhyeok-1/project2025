@@ -111,7 +111,9 @@ app.include_router(ask_assistant.router)
 app.include_router(vad.router, prefix="/vad", tags=["VAD"])
 
 # 정적 파일 경로 등록
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+static_dir = os.path.join(os.getcwd(), "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 # 기본 엔드포인트
