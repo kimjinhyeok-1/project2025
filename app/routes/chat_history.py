@@ -85,20 +85,17 @@ async def get_question_summary(
         formatted_questions = "\n".join(f"{idx+1}. {q}" for idx, q in enumerate(processed_questions))
 
         # 4. 프롬프트 작성 (Markdown 지시 추가)
-        prompt = f"""
+       prompt = f"""
 아래는 학생들이 최근에 한 질문 목록입니다.
 
 {formatted_questions}
+유의사항:
+1. "JAVA 언어" 또는 "객체지향프로그래밍" 과목과 관련된 질문만 선별하여 요약해 주세요.
+2. 관련 질문들을 중복 제거 및 유사 질문끼리 통합하여 간결하게 요약해 주세요.
+3. 결과는 Markdown 형식으로 작성해 주세요.
 
-이 질문들을 참고하여:
-
-1. 강의 주제(객체지향프로그래밍&자바)와 관련된 주요 개념만 요약해 주세요.
-2. Markdown 형식으로 작성해 주세요. (예: # 제목, ## 소제목, - 목록, **강조** 등)
-3. 요약은 명확하고 간결하게 작성해 주세요.
-4. 필요 시 보충 강의가 필요한 주제도 추천해 주세요.
-
-**[응답은 반드시 Markdown 형식으로만 작성하세요.]**
 """
+
 
         # 5. GPT 호출
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
