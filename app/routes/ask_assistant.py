@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import User, QuestionAnswer
@@ -109,8 +109,8 @@ async def ask_question(
     # 4. Run 완료 대기
     run_status = await wait_for_run_completion(thread_id, run_id)
 
-    # 5. file_search 검색 결과 확인
-    retrieval_outputs = run_status.get("retrieval_tool_outputs", [])
+    # 5. file_search 검색 결과 확인 (개선된 방식)
+    retrieval_outputs = run_status.get("required_action", {}).get("submit_tool_outputs", {}).get("tool_calls", [])
     if not retrieval_outputs:
         answer = "강의자료에 해당 내용이 없습니다."
     else:
