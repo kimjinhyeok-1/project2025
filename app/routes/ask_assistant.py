@@ -109,15 +109,22 @@ async def ask_question(
     # 4. Run 완료 대기
     run_status = await wait_for_run_completion(thread_id, run_id)
 
-    # 5. file_search 검색 결과 확인 (개선된 방식)
+    # 5. file_search 검색 결과 확인
     retrieval_outputs = run_status.get("required_action", {}).get("submit_tool_outputs", {}).get("tool_calls", [])
+
+    # 6. file_search 결과 없으면 바로 종료
     if not retrieval_outputs:
         answer = "강의자료에 해당 내용이 없습니다."
-    else:
-        # 6. 답변 가져오기
-        answer = await fetch_answer(thread_id)
+        # 질문과 답변 DB 저장
+        chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
+        db.add(chat)
+        await db.commit()
+        return {"answer": answer}
 
-    # 7. 질문과 답변 DB 저장
+    # 7. file_search 결과가 있으면 답변 가져오기
+    answer = await fetch_answer(thread_id)
+
+    # 8. 질문과 답변 DB 저장
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
     db.add(chat)
     await db.commit()
