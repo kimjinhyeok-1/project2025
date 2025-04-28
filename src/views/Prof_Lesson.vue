@@ -16,7 +16,7 @@
 </template>
 
 <script>
-import RecordingManager from "@/managers/RecordingManager";
+import recordingManager from "@/managers/RecordingManager";
 import { testOptionsRequest } from "@/api/snapshotService";
 
 export default {
