@@ -1,21 +1,16 @@
 const { defineConfig } = require('@vue/cli-service');
-const path = require('path'); // ✅ path 모듈 추가
+const path = require('path');
 
 module.exports = defineConfig({
-  publicPath: '/', // 새로고침 문제 대응
+  publicPath: '/',
   transpileDependencies: true,
 
-  chainWebpack: config => {
-    config.resolve.alias
-      .set('@', path.resolve(__dirname, 'src')); // ✅ @를 src로 연결해주는 alias 추가
-    config.plugin('define').tap(definitions => {
-      definitions[0]['process.env'] = JSON.stringify(process.env);
-      return definitions;
-    });
-  },
-
   configureWebpack: {
-    plugins: [],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src') // ✅ @ = src
+      }
+    },
     optimization: {
       minimize: true,
       splitChunks: {
@@ -24,7 +19,7 @@ module.exports = defineConfig({
     },
     performance: {
       hints: false,
-    }
+    },
   },
 
   devServer: {
@@ -32,7 +27,7 @@ module.exports = defineConfig({
     allowedHosts: 'all',
     proxy: {
       '^/api': {
-        target: 'http://localhost:8000', // ⬅️ FastAPI 백엔드 서버 주소
+        target: 'http://localhost:8000',
         changeOrigin: true,
         pathRewrite: { '^/api': '/api' },
       }
