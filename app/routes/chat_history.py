@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.database import get_db
-from app.auth import get_current_user_id, verify_student, verify_professor  # ✅ 추가됨
+from app.auth import get_current_user_id, verify_student, verify_professor
 from app.models import QuestionAnswer
 import openai
 import os
@@ -24,7 +24,7 @@ async def get_my_chat_history(
     )
     records = result.scalars().all()
 
-    return [  # ✅ 들여쓰기 정확히 맞춤
+    return [
         {
             "question": r.question,
             "answer": r.answer,
@@ -33,8 +33,7 @@ async def get_my_chat_history(
         for r in records
     ]
 
-
-# ✅ 전체 질문 내역 확인 (교수자 전용, 질문자 정보 없음)
+# ✅ 전체 질문 내역 확인 (교수자 전용)
 @router.get("/chat_history/all")
 async def get_all_chat_history(
     db: AsyncSession = Depends(get_db),
@@ -44,7 +43,7 @@ async def get_all_chat_history(
         select(QuestionAnswer).order_by(QuestionAnswer.created_at.desc())
     )
     records = result.scalars().all()
-   
+
     return [
         {
             "question": r.question,
@@ -56,13 +55,12 @@ async def get_all_chat_history(
 
 # ✅ minimal 전처리 함수
 def minimal_preprocess(text: str) -> str:
-    # 특수문자 정리 (.,!? 만 허용)
     text = re.sub(r"[^\w\s.,!?]", "", text)
     text = text.replace("\n", " ").replace("\t", " ")
     text = re.sub(r"\s+", " ", text).strip()
-    # 길이 제한
     return text if len(text) <= 250 else text[:247] + "..."
 
+# ✅ 요약 기능 (교수자 전용)
 @router.get("/chat_history/summary")
 async def get_question_summary(
     db: AsyncSession = Depends(get_db),
@@ -84,18 +82,17 @@ async def get_question_summary(
         # 3. 포맷팅
         formatted_questions = "\n".join(f"{idx+1}. {q}" for idx, q in enumerate(processed_questions))
 
-        # 4. 프롬프트 작성 (Markdown 지시 추가)
-       prompt = f"""
+        # 4. 프롬프트 작성 (★ 들여쓰기 수정 완료)
+        prompt = f"""
 아래는 학생들이 최근에 한 질문 목록입니다.
 
 {formatted_questions}
+
 유의사항:
 1. "JAVA 언어" 또는 "객체지향프로그래밍" 과목과 관련된 질문만 선별하여 요약해 주세요.
-2. 관련 질문들을 중복 제거 및 유사 질문끼리 통합하여 간결하게 요약해 주세요.
-3. 결과는 Markdown 형식으로 작성해 주세요.
-
+3. 관련 질문들은 중복 제거 및 유사 질문끼리 통합하여 간결하게 요약해 주세요.
+4. 결과는 Markdown 형식으로 작성해 주세요
 """
-
 
         # 5. GPT 호출
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -108,8 +105,8 @@ async def get_question_summary(
         summary = response.choices[0].message.content.strip()
 
         return {
-            "most_common_questions": processed_questions[:5],  # 프론트용 상위 5개
-            "summary_for_professor": summary  # Markdown 포맷 적용된 요약
+            "most_common_questions": processed_questions[:5],
+            "summary_for_professor": summary
         }
 
     except Exception as e:
