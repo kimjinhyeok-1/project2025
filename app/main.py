@@ -112,7 +112,7 @@ app.include_router(vad.router, prefix="/vad", tags=["VAD"])
 
 # 정적 파일 경로 등록
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-app.mount("/snapshots", StaticFiles(directory="snapshots"), name="snapshots")
+
 
 # 기본 엔드포인트
 @app.get("/")
