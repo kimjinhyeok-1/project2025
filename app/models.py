@@ -174,3 +174,10 @@ class QuestionFeedback(Base):
     created_at = Column(DateTime, default=func.now())
 
     user = relationship("User")  # 사용자 관계
+    
+class Summary(Base):
+    __tablename__ = "summary"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    summary_text = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
