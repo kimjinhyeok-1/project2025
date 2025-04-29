@@ -72,6 +72,9 @@ async def fetch_answer(thread_id: str):
 
 # 🧠 file_search 성공 여부 검사 함수
 def was_file_search_successful(run_status: dict) -> bool:
+    """
+    file_search tool_call이 존재하고, query가 정상적으로 채워져 있으면 True 반환
+    """
     tool_calls = run_status.get("required_action", {}).get("submit_tool_outputs", {}).get("tool_calls", [])
     if not tool_calls:
         return False
@@ -124,20 +127,16 @@ async def ask_question(
     run_status = await wait_for_run_completion(thread_id, run_id)
 
     # 5. file_search 성공 여부 판단
-    if not was_file_search_successful(run_status):
+    searched = was_file_search_successful(run_status)
+
+    if not searched:
         answer = "강의자료에 해당 내용이 없습니다."
-        # 질문과 답변 DB 저장
-        chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
-        db.add(chat)
-        await db.commit()
-        return {"answer": answer}
+    else:
+        answer = await fetch_answer(thread_id)
 
-    # 6. file_search 성공 시 답변 가져오기
-    answer = await fetch_answer(thread_id)
-
-    # 7. 질문과 답변 DB 저장
+    # 6. 질문과 답변 DB 저장
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
     db.add(chat)
     await db.commit()
 
-    return {"answer": answer}
+    return {"answer": answer, "searched": searched}
