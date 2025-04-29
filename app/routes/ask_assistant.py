@@ -21,17 +21,16 @@ async def create_thread():
         res.raise_for_status()
         return res.json()["id"]
 
-# 🧠 Assistant Run 실행 함수
+# 🧠 Assistant Run 실행 함수 (URL 수정됨)
 async def run_assistant(thread_id: str, assistant_id: str):
-    url = "https://api.openai.com/v1/runs"
+    url = f"https://api.openai.com/v1/threads/{thread_id}/runs"
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "OpenAI-Beta": "assistants=v2",
         "Content-Type": "application/json"
     }
     json_data = {
-        "assistant_id": assistant_id,
-        "thread_id": thread_id
+        "assistant_id": assistant_id
     }
     async with httpx.AsyncClient() as client:
         res = await client.post(url, headers=headers, json=json_data)
@@ -72,19 +71,14 @@ async def fetch_answer(thread_id: str):
 
 # 🧠 file_search 성공 여부 검사 함수
 def was_file_search_successful(run_status: dict) -> bool:
-    """
-    file_search tool_call이 존재하고, query가 정상적으로 채워져 있으면 True 반환
-    """
     tool_calls = run_status.get("required_action", {}).get("submit_tool_outputs", {}).get("tool_calls", [])
     if not tool_calls:
         return False
-
     for tool_call in tool_calls:
         function = tool_call.get("function", {})
         arguments = function.get("arguments", "")
         if '"query":' in arguments and arguments.strip() != "":
             return True
-
     return False
 
 # 🎯 최종 ask_assistant API
