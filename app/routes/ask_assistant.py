@@ -21,7 +21,21 @@ async def create_thread():
         res.raise_for_status()
         return res.json()["id"]
 
-# 🧠 Assistant Run 실행 함수 (URL 수정됨)
+# 🧠 Thread 존재 여부 확인 함수 (404 처리)
+async def check_thread_exists(thread_id: str) -> bool:
+    url = f"https://api.openai.com/v1/threads/{thread_id}"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "OpenAI-Beta": "assistants=v2"
+    }
+    async with httpx.AsyncClient() as client:
+        res = await client.get(url, headers=headers)
+        if res.status_code == 404:
+            return False
+        res.raise_for_status()
+        return True
+
+# 🧠 Assistant Run 실행 함수
 async def run_assistant(thread_id: str, assistant_id: str):
     url = f"https://api.openai.com/v1/threads/{thread_id}/runs"
     headers = {
@@ -90,13 +104,13 @@ async def ask_question(
 ):
     user = current_user
 
-    # 1. 스레드 없으면 새로 생성
-    if not user.assistant_thread_id:
+    thread_id = user.assistant_thread_id
+
+    # 1. 스레드 없거나 유효하지 않으면 새로 생성
+    if not thread_id or not await check_thread_exists(thread_id):
         thread_id = await create_thread()
         user.assistant_thread_id = thread_id
         await db.commit()
-    else:
-        thread_id = user.assistant_thread_id
 
     # 2. 사용자 질문 메시지 전송
     url_post_message = f"https://api.openai.com/v1/threads/{thread_id}/messages"
