@@ -21,20 +21,6 @@ async def create_thread():
         res.raise_for_status()
         return res.json()["id"]
 
-# ✅ Thread 유효성 검사 함수
-async def is_thread_valid(thread_id: str) -> bool:
-    url = f"https://api.openai.com/v1/threads/{thread_id}"
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "OpenAI-Beta": "assistants=v2"
-    }
-    async with httpx.AsyncClient() as client:
-        try:
-            res = await client.get(url, headers=headers)
-            return res.status_code == 200
-        except httpx.HTTPStatusError:
-            return False
-
 # 🧠 Assistant Run 실행 함수
 async def run_assistant(thread_id: str, assistant_id: str):
     url = f"https://api.openai.com/v1/threads/{thread_id}/runs"
@@ -95,7 +81,7 @@ def was_file_search_successful(run_status: dict) -> bool:
             return True
     return False
 
-# 🧠 문자열 전송 함수
+# 🧠 메시지 전송 함수
 async def post_message(thread_id: str, question: str):
     url = f"https://api.openai.com/v1/threads/{thread_id}/messages"
     headers = {
@@ -111,7 +97,7 @@ async def post_message(thread_id: str, question: str):
         res = await client.post(url, headers=headers, json=message_data)
         res.raise_for_status()
 
-# 🎯 최종 ask_assistant API
+# ✅ 최종 ask_assistant API
 @router.post("/ask_assistant")
 async def ask_question(
     question: str = Form(...),
@@ -119,13 +105,11 @@ async def ask_question(
     current_user: User = Depends(get_current_user)
 ):
     user = current_user
-    thread_id = user.assistant_thread_id
 
-    # ✅ thread_id 유효성 검사
-    if not thread_id or not await is_thread_valid(thread_id):
-        thread_id = await create_thread()
-        user.assistant_thread_id = thread_id
-        await db.commit()
+    # ✅ 항상 새로운 thread 생성
+    thread_id = await create_thread()
+    user.assistant_thread_id = thread_id
+    await db.commit()
 
     from app.config import OPENAI_ASSISTANT_ID
 
