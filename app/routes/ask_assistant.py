@@ -81,24 +81,9 @@ def was_file_search_successful(run_status: dict) -> bool:
             return True
     return False
 
-# 🎯 최종 ask_assistant API
-@router.post("/ask_assistant")
-async def ask_question(
-    question: str = Form(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    user = current_user
-    thread_id = user.assistant_thread_id
-
-    # 1. 스레드 없으면 새로 생성
-    if not thread_id:
-        thread_id = await create_thread()
-        user.assistant_thread_id = thread_id
-        await db.commit()
-
-    # 2. 사용자 질문 메시지 전송
-    url_post_message = f"https://api.openai.com/v1/threads/{thread_id}/messages"
+# 🧠 문자열 전송 함수
+async def post_message(thread_id: str, question: str):
+    url = f"https://api.openai.com/v1/threads/{thread_id}/messages"
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "OpenAI-Beta": "assistants=v2",
@@ -109,43 +94,54 @@ async def ask_question(
         "content": question
     }
     async with httpx.AsyncClient() as client:
-        res = await client.post(url_post_message, headers=headers, json=message_data)
+        res = await client.post(url, headers=headers, json=message_data)
         res.raise_for_status()
 
-    # 3. Assistant 실행 (404 복구 로직 추가)
+# 🌟 최종 ask_assistant API
+@router.post("/ask_assistant")
+async def ask_question(
+    question: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    user = current_user
+    thread_id = user.assistant_thread_id
+
+    # 1. 업데이트: thread_id 가 없으면 생성
+    if not thread_id:
+        thread_id = await create_thread()
+        user.assistant_thread_id = thread_id
+        await db.commit()
+
     from app.config import OPENAI_ASSISTANT_ID
 
+    # 2. try 방식으로 run시 404 추가 처리
     try:
+        await post_message(thread_id, question)
         run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
-            # thread_id 만료되었으면 새로 생성
+            # thread 목적이 사라진 경우
             thread_id = await create_thread()
             user.assistant_thread_id = thread_id
             await db.commit()
 
-            # 새 thread로 메시지 다시 전송
-            url_post_message = f"https://api.openai.com/v1/threads/{thread_id}/messages"
-            async with httpx.AsyncClient() as client:
-                res = await client.post(url_post_message, headers=headers, json=message_data)
-                res.raise_for_status()
-
+            await post_message(thread_id, question)
             run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
         else:
             raise e
 
-    # 4. Run 완료 대기
+    # 3. Run 결과 대기
     run_status = await wait_for_run_completion(thread_id, run_id)
-
-    # 5. file_search 성공 여부 판단
     searched = was_file_search_successful(run_status)
 
+    # 4. 답변 찾기 또는 기본 메시지 표시
     if not searched:
         answer = "강의자료에 해당 내용이 없습니다."
     else:
         answer = await fetch_answer(thread_id)
 
-    # 6. 질문과 답변 DB 저장
+    # 5. DB에 저장
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
     db.add(chat)
     await db.commit()
