@@ -70,6 +70,20 @@ async def fetch_answer(thread_id: str):
         if message["role"] == "assistant":
             return message["content"][0]["text"]["value"]
 
+# 🧠 file_search 성공 여부 검사 함수
+def was_file_search_successful(run_status: dict) -> bool:
+    tool_calls = run_status.get("required_action", {}).get("submit_tool_outputs", {}).get("tool_calls", [])
+    if not tool_calls:
+        return False
+
+    for tool_call in tool_calls:
+        function = tool_call.get("function", {})
+        arguments = function.get("arguments", "")
+        if '"query":' in arguments and arguments.strip() != "":
+            return True
+
+    return False
+
 # 🎯 최종 ask_assistant API
 @router.post("/ask_assistant")
 async def ask_question(
@@ -109,11 +123,8 @@ async def ask_question(
     # 4. Run 완료 대기
     run_status = await wait_for_run_completion(thread_id, run_id)
 
-    # 5. file_search 검색 결과 확인
-    retrieval_outputs = run_status.get("required_action", {}).get("submit_tool_outputs", {}).get("tool_calls", [])
-
-    # 6. file_search 결과 없으면 바로 종료
-    if not retrieval_outputs:
+    # 5. file_search 성공 여부 판단
+    if not was_file_search_successful(run_status):
         answer = "강의자료에 해당 내용이 없습니다."
         # 질문과 답변 DB 저장
         chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
@@ -121,10 +132,10 @@ async def ask_question(
         await db.commit()
         return {"answer": answer}
 
-    # 7. file_search 결과가 있으면 답변 가져오기
+    # 6. file_search 성공 시 답변 가져오기
     answer = await fetch_answer(thread_id)
 
-    # 8. 질문과 답변 DB 저장
+    # 7. 질문과 답변 DB 저장
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
     db.add(chat)
     await db.commit()
