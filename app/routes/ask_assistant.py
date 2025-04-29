@@ -21,20 +21,6 @@ async def create_thread():
         res.raise_for_status()
         return res.json()["id"]
 
-# 🧠 Thread 존재 여부 확인 함수 (404 처리)
-async def check_thread_exists(thread_id: str) -> bool:
-    url = f"https://api.openai.com/v1/threads/{thread_id}"
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "OpenAI-Beta": "assistants=v2"
-    }
-    async with httpx.AsyncClient() as client:
-        res = await client.get(url, headers=headers)
-        if res.status_code == 404:
-            return False
-        res.raise_for_status()
-        return True
-
 # 🧠 Assistant Run 실행 함수
 async def run_assistant(thread_id: str, assistant_id: str):
     url = f"https://api.openai.com/v1/threads/{thread_id}/runs"
@@ -103,11 +89,10 @@ async def ask_question(
     current_user: User = Depends(get_current_user)
 ):
     user = current_user
-
     thread_id = user.assistant_thread_id
 
-    # 1. 스레드 없거나 유효하지 않으면 새로 생성
-    if not thread_id or not await check_thread_exists(thread_id):
+    # 1. 스레드 없으면 새로 생성
+    if not thread_id:
         thread_id = await create_thread()
         user.assistant_thread_id = thread_id
         await db.commit()
@@ -127,9 +112,27 @@ async def ask_question(
         res = await client.post(url_post_message, headers=headers, json=message_data)
         res.raise_for_status()
 
-    # 3. Assistant 실행
+    # 3. Assistant 실행 (404 복구 로직 추가)
     from app.config import OPENAI_ASSISTANT_ID
-    run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
+
+    try:
+        run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            # thread_id 만료되었으면 새로 생성
+            thread_id = await create_thread()
+            user.assistant_thread_id = thread_id
+            await db.commit()
+
+            # 새 thread로 메시지 다시 전송
+            url_post_message = f"https://api.openai.com/v1/threads/{thread_id}/messages"
+            async with httpx.AsyncClient() as client:
+                res = await client.post(url_post_message, headers=headers, json=message_data)
+                res.raise_for_status()
+
+            run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
+        else:
+            raise e
 
     # 4. Run 완료 대기
     run_status = await wait_for_run_completion(thread_id, run_id)
