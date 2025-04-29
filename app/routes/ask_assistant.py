@@ -21,6 +21,20 @@ async def create_thread():
         res.raise_for_status()
         return res.json()["id"]
 
+# ✅ Thread 유효성 검사 함수
+async def is_thread_valid(thread_id: str) -> bool:
+    url = f"https://api.openai.com/v1/threads/{thread_id}"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "OpenAI-Beta": "assistants=v2"
+    }
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await client.get(url, headers=headers)
+            return res.status_code == 200
+        except httpx.HTTPStatusError:
+            return False
+
 # 🧠 Assistant Run 실행 함수
 async def run_assistant(thread_id: str, assistant_id: str):
     url = f"https://api.openai.com/v1/threads/{thread_id}/runs"
@@ -97,7 +111,7 @@ async def post_message(thread_id: str, question: str):
         res = await client.post(url, headers=headers, json=message_data)
         res.raise_for_status()
 
-# 🌟 최종 ask_assistant API
+# 🎯 최종 ask_assistant API
 @router.post("/ask_assistant")
 async def ask_question(
     question: str = Form(...),
@@ -107,41 +121,29 @@ async def ask_question(
     user = current_user
     thread_id = user.assistant_thread_id
 
-    # 1. 업데이트: thread_id 가 없으면 생성
-    if not thread_id:
+    # ✅ thread_id 유효성 검사
+    if not thread_id or not await is_thread_valid(thread_id):
         thread_id = await create_thread()
         user.assistant_thread_id = thread_id
         await db.commit()
 
     from app.config import OPENAI_ASSISTANT_ID
 
-    # 2. try 방식으로 run시 404 추가 처리
-    try:
-        await post_message(thread_id, question)
-        run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            # thread 목적이 사라진 경우
-            thread_id = await create_thread()
-            user.assistant_thread_id = thread_id
-            await db.commit()
+    # ✅ 질문 전송 및 실행
+    await post_message(thread_id, question)
+    run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
 
-            await post_message(thread_id, question)
-            run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
-        else:
-            raise e
-
-    # 3. Run 결과 대기
+    # ✅ Run 완료 대기 및 검색 여부 판단
     run_status = await wait_for_run_completion(thread_id, run_id)
     searched = was_file_search_successful(run_status)
 
-    # 4. 답변 찾기 또는 기본 메시지 표시
+    # ✅ 답변 또는 기본 메시지 반환
     if not searched:
         answer = "강의자료에 해당 내용이 없습니다."
     else:
         answer = await fetch_answer(thread_id)
 
-    # 5. DB에 저장
+    # ✅ DB 저장
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
     db.add(chat)
     await db.commit()
