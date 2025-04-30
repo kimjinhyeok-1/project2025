@@ -61,7 +61,7 @@ import axios from 'axios'
 import MarkdownIt from 'markdown-it'
 
 const backendBaseURL = process.env.NODE_ENV === 'production'
-  ? 'https://project2025-backend.onrender.com/api'
+  ? 'https://project2025-backend.onrender.com'
   : '/api';
 
 const question = ref('')
