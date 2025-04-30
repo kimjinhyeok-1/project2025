@@ -111,36 +111,49 @@ def was_file_search_successful(run_status: dict) -> bool:
             return True
     return False
 
-# 🚀 메인 API
-@router.post("/ask_assistant")
+#@router.post("/ask_assistant")
 async def ask_question(
     question: str = Form(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    from app.config import OPENAI_ASSISTANT_ID
+
     user = current_user
     thread_id = user.assistant_thread_id
 
+    # ✅ 1. thread 유효성 확인 (없거나 삭제된 경우 새로 생성)
     if not thread_id or not await is_thread_valid(thread_id):
         thread_id = await create_thread()
         user.assistant_thread_id = thread_id
         await db.commit()
 
-    from app.config import OPENAI_ASSISTANT_ID
+    try:
+        # ✅ 2. 메시지를 먼저 thread에 추가
+        await post_message(thread_id, question)
 
-    # ✅ 순서 중요! 질문 먼저 → run 호출
-    await post_message(thread_id, question)
-    run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
-    run_status = await wait_for_run_completion(thread_id, run_id)
+        # ✅ 3. 메시지 추가 후에 run 실행
+        run_id = await run_assistant(thread_id, OPENAI_ASSISTANT_ID)
 
-    searched = was_file_search_successful(run_status)
-    if not searched:
-        answer = "강의자료에 해당 내용이 없습니다."
-    else:
-        answer = await fetch_answer(thread_id)
+        # ✅ 4. run 완료 대기
+        run_status = await wait_for_run_completion(thread_id, run_id)
+        searched = was_file_search_successful(run_status)
 
+        # ✅ 5. 답변 추출
+        if not searched:
+            answer = "강의자료에 해당 내용이 없습니다."
+        else:
+            answer = await fetch_answer(thread_id)
+
+    except Exception as e:
+        # ✅ 6. 예외 발생 시 기본 응답 반환
+        answer = f"오류가 발생했습니다: {str(e)}"
+        searched = False
+
+    # ✅ 7. DB 저장
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
     db.add(chat)
     await db.commit()
 
     return {"answer": answer, "searched": searched}
+
