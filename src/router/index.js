@@ -9,6 +9,7 @@ import StudentQnA from '../views/Stu_AIQnAprof.vue'
 import StudentAssignment from '../views/Stu_Assign.vue'
 import StudentHistory from '../views/StudentHistory.vue'
 import StudentLessonSummary from '../views/Stu_LessonSummary.vue'
+import StudentLessonQnA from '../views/Stu_LessonQnA.vue'
 
 // 교수 관련 뷰
 import ProfessorLayout from '../views/Prof_Layout.vue'
@@ -50,6 +51,11 @@ const routes = [
         path: 'history',
         name: 'StudentHistory',
         component: StudentHistory,
+      },
+      {
+        path: 'lessonquestion',
+        name: 'StudentLessonQnA',
+        component: StudentLessonQnA,
       },
       {
         path: 'summary',

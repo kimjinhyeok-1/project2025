@@ -19,6 +19,21 @@
         </router-link>
       </li>
 
+      <!-- 새로 추가될 메뉴 -->
+      <li class="nav-item">
+        <router-link class="nav-link" to="/student/summary">
+          <i class="fas fa-lightbulb"></i>
+          <span> 요약 요약!</span>
+        </router-link>
+      </li>
+
+      <li class="nav-item">
+        <router-link class="nav-link" to="/student/lessonquestion">
+          <i class="fas fa-lightbulb"></i>
+          <span> 강의 중 질문 </span>
+        </router-link>
+      </li>
+
       <!-- ✅ 대화 기록 보기 메뉴 (확실히 추가) -->
       <li class="nav-item">
         <router-link class="nav-link" to="/student/history">
