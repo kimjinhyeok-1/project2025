@@ -5,10 +5,11 @@
     <!-- 탭 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start;">
       <li class="nav-item">
+        <!-- ✅ 변경: 자동 호출 제거 -->
         <a
           class="nav-link"
           :class="{ active: activeTab === 'summary', 'text-primary': true }"
-          @click="loadSummary"
+          @click="activeTab = 'summary'"
         >
           요약 보기
         </a>
@@ -39,12 +40,17 @@
       <div v-if="activeTab === 'summary'">
         <h5>📋 질문 요약</h5>
 
+        <!-- ✅ 버튼 추가: 요약이 없을 때만 보임 -->
+        <button v-if="!summary.summary_for_professor && !summaryLoading" class="btn btn-primary mb-3" @click="loadSummary">
+          📥 요약 불러오기
+        </button>
+
         <div v-if="summaryLoading" class="d-flex align-items-center">
           <strong role="status">불러오는 중...</strong>
           <div class="spinner-border ms-auto" aria-hidden="true"></div>
         </div>
 
-        <div v-else>
+        <div v-else-if="summary.summary_for_professor">
           <h6>📝 요약 내용</h6>
           <p>{{ summary.summary_for_professor }}</p>
 
@@ -54,6 +60,10 @@
               {{ index + 1 }}. {{ q }}
             </li>
           </ul>
+        </div>
+
+        <div v-else-if="!summaryLoading">
+          <p class="text-muted">📭 아직 요약을 불러오지 않았습니다.</p>
         </div>
       </div>
 
@@ -119,7 +129,6 @@ function formatDate(dateStr) {
 }
 
 const loadSummary = async () => {
-  activeTab.value = 'summary'
   summaryLoading.value = true
 
   try {
@@ -167,8 +176,7 @@ const loadFullChat = async () => {
   }
 }
 
-// ✅ 최초엔 요약 먼저 로딩
-loadSummary()
+// ✅ 자동 호출 제거됨 (loadSummary 호출 X)
 </script>
 
 <style scoped>
