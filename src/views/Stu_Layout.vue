@@ -22,7 +22,7 @@
       <!-- 새로 추가될 메뉴 -->
       <li class="nav-item">
         <router-link class="nav-link" to="/student/summary">
-          <i class="fas fa-lightbulb"></i>
+          <i class="fas fa-file-alt"></i>
           <span> 요약 요약!</span>
         </router-link>
       </li>
