@@ -34,7 +34,7 @@ async def ask_question(
         user.assistant_thread_id = thread_id
         await db.commit()
     else:
-        thread_id = user.assis  tant_thread_id
+        thread_id = user.assistant_thread_id
 
     # 2. Assistant에게 질문
     from app.config import OPENAI_ASSISTANT_ID
