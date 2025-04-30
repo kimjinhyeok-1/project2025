@@ -1,7 +1,7 @@
 <template>
   <div class="lecture-container text-center mt-5">
     <h2>🎤 수업 녹화 & 음성 인식</h2>
-    <p class="text-muted">녹음 중 키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드에 전송됩니다.</p>
+    <p class="text-muted">녹음 중 인식된 문장이 중요하다고 판단되면 자동으로 스크린샷과 함께 백엔드로 전송됩니다.</p>
 
     <div class="btn-group mt-4">
       <button class="btn btn-primary m-2" @click="toggleAudioRecording">
@@ -33,7 +33,6 @@ export default {
       } else {
         recordingManager.stopRecording();
       }
-      // 🔥 버튼 상태 강제 반영 - 이 줄이 if-else 블록 밖으로 정확히 나와야 해
       this.isRecording = recordingManager.getState().isRecording;
     },
     async testOptions() {
@@ -42,12 +41,9 @@ export default {
   },
   mounted() {
     this.isRecording = recordingManager.getState().isRecording;
-
     recordingManager.subscribe((newState) => {
       this.isRecording = newState;
     });
-
-    // ✅ 진짜 중요: 돌아올 때 음성 인식이 끊겼으면 복구
     recordingManager.reconnectRecognition();
   }
 };
