@@ -37,7 +37,7 @@
         <div v-html="showMore ? answerHtml : shortHtml" class="markdown-body"></div>
       </transition>
 
-      <!-- 복사 버튼 -->
+      <!-- 복사 버튼 (호버 시만 표시) -->
       <button
         v-if="hovering"
         class="copy-button"
@@ -73,6 +73,7 @@ const isLongAnswer = ref(false)
 const answerSection = ref(null)
 const hovering = ref(false)
 
+// ✅ 줄바꿈 breaks 확실히 true로 설정
 const md = new MarkdownIt({
   breaks: true,
   linkify: true
@@ -83,15 +84,12 @@ const fetchAnswer = async () => {
   loading.value = true
   showMore.value = false
   try {
-    const formData = new FormData()
-    formData.append("question", question.value)
-
-    const response = await axios.post(`${backendBaseURL}/ask_assistant`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
+    const response = await axios.post(`${backendBaseURL}/ask_assistant`, {
+      params: {
+        q: question.value,
+        t: Date.now(),
       }
     })
-
     if (response.data && response.data.answer) {
       const fullHtml = md.render(response.data.answer)
       answerHtml.value = fullHtml
@@ -138,5 +136,161 @@ const copyAnswer = async () => {
 </script>
 
 <style scoped>
-/* 스타일 생략 – 기존 코드 유지 */
+/* ===== 기본 레이아웃 ===== */
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: #2c3e50;
+}
+
+/* ===== 입력창 스타일 ===== */
+.input-area {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 2rem;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 600px;
+}
+
+/* input */
+.input-box {
+  flex: 1;
+  border: none;
+  font-size: 1rem;
+  padding: 0.5rem;
+  outline: none;
+}
+
+/* 버튼 */
+.icon-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.icon-button {
+  background: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+}
+
+.icon-button:hover:enabled {
+  background: #2980b9;
+}
+
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ===== 답변 카드 ===== */
+.answer-wrapper {
+  position: relative;
+  max-width: 950px; /* ✅ 카드 폭 넓힘 */
+  margin: 2rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+/* 복사 버튼 */
+.copy-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.answer-wrapper:hover .copy-button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.copy-button:hover {
+  background: #2980b9;
+}
+
+/* ===== 마크다운 스타일 ===== */
+.markdown-body {
+  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 1.1rem;
+  line-height: 2.0; /* ✅ 줄간격 늘림 */
+  color: #333;
+  word-break: break-word;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  font-weight: bold;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: #1f2d3d;
+  font-size: 1.7rem;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.3rem;
+}
+
+.markdown-body p {
+  margin: 1.2rem 0; /* ✅ 문단 간격 키움 */
+}
+
+.markdown-body ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.markdown-body ul li {
+  margin-bottom: 0.7rem;
+}
+
+/* 코드블럭 */
+.markdown-body pre {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.markdown-body code {
+  background: #f6f8fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+/* ===== 트랜지션 효과 ===== */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
 </style>
