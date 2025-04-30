@@ -181,3 +181,16 @@ class Summary(Base):
     id = Column(Integer, primary_key=True, index=True)
     summary_text = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+# ✅ 지속 대화 context 관리를 위한 메시지 테이블 추가
+class ThreadMessage(Base):
+    __tablename__ = "thread_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    thread_id = Column(String, nullable=False)  # OpenAI Thread ID
+    role = Column(String, nullable=False)       # 'user' 또는 'assistant'
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+    user = relationship("User")

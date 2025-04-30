@@ -8,7 +8,7 @@ from app.config import OPENAI_ASSISTANT_ID
 
 router = APIRouter()
 
-# 🔹 질문 요청 라우터
+# ✅ 지속 대화 기반 질문 처리 라우터
 @router.post("/ask_assistant")
 async def ask_question(
     question: str = Form(...),
@@ -17,10 +17,10 @@ async def ask_question(
 ):
     user = current_user
 
-    # ✅ 질문마다 새 Thread로 처리 (비용/성능 최적화)
-    answer = await ask_assistant(question, OPENAI_ASSISTANT_ID)
+    # ✅ 지속 대화용 ask_assistant 호출 (DB + 요약 포함)
+    answer = await ask_assistant(question, db, user, OPENAI_ASSISTANT_ID)
 
-    # ✅ DB에 질문/답변 기록
+    # ✅ 질문-응답 기록 (요약은 별도 ThreadMessage로 관리되므로 최소 기록만 유지)
     chat = QuestionAnswer(user_id=user.id, question=question, answer=answer)
     db.add(chat)
     await db.commit()
