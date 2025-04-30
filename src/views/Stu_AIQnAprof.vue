@@ -84,12 +84,15 @@ const fetchAnswer = async () => {
   loading.value = true
   showMore.value = false
   try {
-    const response = await axios.post(`${backendBaseURL}/ask_assistant`, {
-      params: {
-        q: question.value,
-        t: Date.now(),
+    const formData = new FormData()
+    formData.append("question", question.value)
+
+    const response = await axios.post(`${backendBaseURL}/ask_assistant`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
       }
     })
+
     if (response.data && response.data.answer) {
       const fullHtml = md.render(response.data.answer)
       answerHtml.value = fullHtml
