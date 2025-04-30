@@ -1,7 +1,7 @@
 <template>
   <div class="lecture-container text-center mt-5">
     <h2>🎤 수업 녹화 & 음성 인식</h2>
-    <p class="text-muted">녹음 중 인식된 문장이 중요하다고 판단되면 자동으로 스크린샷과 함께 백엔드로 전송됩니다.</p>
+    <p class="text-muted">녹음 중 AI가 중요하다고 판단한 문장이 나오면 자동으로 스크린샷을 캡처하고 백엔드에 저장합니다.</p>
 
     <div class="btn-group mt-4">
       <button class="btn btn-primary m-2" @click="toggleAudioRecording">
@@ -41,9 +41,11 @@ export default {
   },
   mounted() {
     this.isRecording = recordingManager.getState().isRecording;
+
     recordingManager.subscribe((newState) => {
       this.isRecording = newState;
     });
+
     recordingManager.reconnectRecognition();
   }
 };

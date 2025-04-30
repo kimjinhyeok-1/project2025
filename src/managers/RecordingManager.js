@@ -1,6 +1,5 @@
 // src/managers/RecordingManager.js
-import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
-import { evaluateSnapshotImportance } from "@/api/snapshotAnalyzer"; // 🔥 새로 만든 평가 API
+import { uploadSnapshot, captureScreenshot, evaluateSnapshotImportance } from "@/api/snapshotService"; // ✅ 통합된 파일에서 모두 가져오기
 
 class RecordingManager {
   constructor() {
