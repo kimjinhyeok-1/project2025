@@ -7,12 +7,12 @@ from app.models import ThreadMessage, User
 from datetime import datetime
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-MAX_CONTEXT_MESSAGES = 6
+MAX_CONTEXT_MESSAGES = 3
 
 # ✅ 요약 함수
 async def summarize_messages(messages: list[str]) -> str:
     summary_prompt = (
-        "다음 Java 질문/답변 대화를 핵심 위주로 300자 이내로 요약해 주세요:\n\n"
+        "다음 Java 질문/답변 대화를 핵심 위주로 100자 이내로 요약해 주세요:\n\n"
         + "\n".join(messages)
     )
 
