@@ -4,87 +4,68 @@ import asyncio
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-async def ask_assistant(question: str, thread_id: str, assistant_id: str) -> str:
+async def ask_assistant(question: str, assistant_id: str) -> str:
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
         "OpenAI-Beta": "assistants=v2",
         "Content-Type": "application/json"
     }
 
-    payload = {
-        "assistant_id": assistant_id,
-        "instructions": "학생 질문에 친절하게 답해주세요."
-    }
-
-    print(f"\n🟢 Run 생성 요청: thread_id={thread_id}")
-    print(f"Payload: {payload}")
-
     async with httpx.AsyncClient() as client:
+        # ✅ 1. 질문마다 새로운 Thread 생성 (비용 최적화)
+        thread_res = await client.post("https://api.openai.com/v1/threads", headers=headers)
+        thread_res.raise_for_status()
+        thread_id = thread_res.json()["id"]
+
+        # ✅ 2. 사용자 질문 메시지 추가
+        await client.post(
+            f"https://api.openai.com/v1/threads/{thread_id}/messages",
+            headers=headers,
+            json={"role": "user", "content": question}
+        )
+
+        # ✅ 3. Run 생성
+        payload = {
+            "assistant_id": assistant_id,
+            "instructions": (
+                "You are a Java course AI tutor. You must only answer questions based on the uploaded lecture material using the File Search tool. "
+                "Do not use general knowledge or inference.\n\n"
+                "- If the answer is not in the lecture files, reply with:\n"
+                "→ \"강의자료에 없는 내용입니다. 강의자료와 관련된 질문을 해주세요.\"\n"
+                "- Never write or generate complete code. Only explain concepts, syntax, and approach step-by-step.\n"
+                "- Only use Java. Do not mention Python, Kotlin, or any other languages."
+            )
+        }
         run_res = await client.post(
             f"https://api.openai.com/v1/threads/{thread_id}/runs",
             headers=headers,
             json=payload
         )
+        run_res.raise_for_status()
+        run_id = run_res.json()["id"]
 
-    print(f"📡 응답 상태코드: {run_res.status_code}")
-    try:
-        run_data = run_res.json()
-        print(f"📄 응답 본문: {run_data}")
-    except Exception as e:
-        print(f"❌ JSON 파싱 실패: {e}")
-        raise RuntimeError(f"응답 파싱 실패: {run_res.text}")
-
-    if run_res.status_code != 200 or "id" not in run_data:
-        raise RuntimeError(f"❌ Run 생성 실패: {run_data}")
-
-    run_id = run_data["id"]
-    print(f"✅ Run ID: {run_id}")
-
-    # 🔁 Run 상태 polling
-    status = "queued"
-    timeout = 20
-    elapsed = 0
-
-    async with httpx.AsyncClient() as client:
-        while status not in ("completed", "failed", "cancelled"):
+        # ✅ 4. Run 상태 polling
+        status = "queued"
+        for _ in range(20):
             await asyncio.sleep(1)
-            elapsed += 1
-
             poll_res = await client.get(
                 f"https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}",
                 headers=headers
             )
-            poll_data = poll_res.json()
-            status = poll_data.get("status", "unknown")
-            print(f"⏳ [{elapsed}s] Run 상태: {status}")
-
-            if elapsed >= timeout:
-                raise RuntimeError(f"⛔ Run 응답 대기 시간 초과: {poll_data}")
-
+            status = poll_res.json().get("status", "unknown")
+            if status == "completed":
+                break
         if status != "completed":
-            raise RuntimeError(f"❌ Run 실패 또는 중단됨: {poll_data}")
+            raise RuntimeError(f"❌ Run 실패 또는 시간 초과")
 
-    # 🔍 메시지 추출
-    async with httpx.AsyncClient() as client:
+        # ✅ 5. Assistant 메시지 추출
         msg_res = await client.get(
             f"https://api.openai.com/v1/threads/{thread_id}/messages",
             headers=headers
         )
-
-    msg_data = msg_res.json()
-    print(f"📩 메시지 응답: {msg_data}")
-
-    try:
-        messages = msg_data["data"]
-        assistant_msg = next(
-            (m for m in messages if m["role"] == "assistant"), None
-        )
+        messages = msg_res.json().get("data", [])
+        assistant_msg = next((m for m in messages if m["role"] == "assistant"), None)
         if not assistant_msg:
             raise RuntimeError("🛑 Assistant 메시지를 찾을 수 없습니다.")
 
-        answer = assistant_msg["content"][0]["text"]["value"]
-        print(f"✅ 최종 답변: {answer}")
-        return answer
-
-    except Exception as e:
-        raise RuntimeError(f"❌ 메시지 파싱 오류: {e} / 데이터: {msg_data}")
+        return assistant_msg["content"][0]["text"]["value"]
