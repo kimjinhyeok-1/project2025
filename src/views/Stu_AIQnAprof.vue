@@ -1,6 +1,6 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">오늘은 무슨 생각을 하고 계신가요?</h2>
+    <h2 class="title">궁금한 것이 무엇인가요?</h2>
 
     <div class="input-area">
       <input
