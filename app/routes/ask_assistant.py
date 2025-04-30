@@ -111,7 +111,7 @@ def was_file_search_successful(run_status: dict) -> bool:
             return True
     return False
 
-#@router.post("/ask_assistant")
+@router.post("/ask_assistant")
 async def ask_question(
     question: str = Form(...),
     db: AsyncSession = Depends(get_db),
