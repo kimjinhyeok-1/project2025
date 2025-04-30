@@ -84,7 +84,7 @@ const fetchAnswer = async () => {
   loading.value = true
   showMore.value = false
   try {
-    const response = await axios.get(`${backendBaseURL}/ask_rag`, {
+    const response = await axios.post(`${backendBaseURL}/ask_assistant`, {
       params: {
         q: question.value,
         t: Date.now(),
