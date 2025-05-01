@@ -4,24 +4,24 @@ from pydantic import BaseModel
 from app.services.gpt import generate_expected_questions
 from app.services.embedding import get_sentence_embeddings
 from app.database import get_db_context
-from app.models import GeneratedQuestion, QuestionFeedback          # 🔸 추가
+from app.models import GeneratedQuestion, QuestionFeedback
+from sqlalchemy.future import select
 import numpy as np
 
 router = APIRouter()
 
 SIMILARITY_THRESHOLD = 0.8  # 문단 구분 임계값
+
 # ──────────────────────────────────────────────────────────────
 # Pydantic 요청 스키마
 # ──────────────────────────────────────────────────────────────
 class TextChunkRequest(BaseModel):
     text: str
 
-
 class FeedbackRequest(BaseModel):
     user_id: int
     question_text: str
     knows: bool
-
 
 # ──────────────────────────────────────────────────────────────
 # 프리플라이트 대응
@@ -32,7 +32,6 @@ async def dummy_text_route():
     return JSONResponse(
         content={"message": "This endpoint only accepts POST requests."}
     )
-
 
 # ──────────────────────────────────────────────────────────────
 # 텍스트 업로드 → 문단 분리 → 예상 질문 생성 → DB 저장
@@ -50,7 +49,7 @@ async def upload_text_chunk(body: TextChunkRequest):
 
         embeddings = get_sentence_embeddings(sentences)
 
-        # ───────── 문단 단위로 묶기 ─────────
+        # 문단 단위로 묶기
         paragraphs = []
         current_paragraph = [sentences[0]]
         for i in range(1, len(sentences)):
@@ -62,19 +61,16 @@ async def upload_text_chunk(body: TextChunkRequest):
         if current_paragraph:
             paragraphs.append(" ".join(current_paragraph))
 
-        # ───────── 질문 생성 & DB 저장 ─────────
+        # 질문 생성 & DB 저장
         results = []
         orm_objects = []
-
         for paragraph in paragraphs:
             questions = generate_expected_questions(paragraph)
-
             results.append({"paragraph": paragraph, "questions": questions})
             orm_objects.append(
                 GeneratedQuestion(paragraph=paragraph, questions=questions)
             )
 
-        # 한 번에 bulk-insert
         async with get_db_context() as db:
             db.add_all(orm_objects)
             await db.commit()
@@ -87,20 +83,30 @@ async def upload_text_chunk(body: TextChunkRequest):
         print("❌ 처리 중 오류:", e)
         raise HTTPException(status_code=500, detail="서버 오류")
 
-
 # ──────────────────────────────────────────────────────────────
-# 유틸 함수
+# 학생용 질문 조회 API
 # ──────────────────────────────────────────────────────────────
-def split_text_into_sentences(text: str) -> list[str]:
-    import re
+@router.get("/questions")
+async def get_all_questions():
+    """
+    학생 페이지에서 생성된 문단·질문 전체를 읽기 전용으로 반환
+    """
+    try:
+        async with get_db_context() as db:
+            result = await db.execute(
+                select(GeneratedQuestion).order_by(GeneratedQuestion.created_at)
+            )
+            rows = result.scalars().all()
 
-    return [s.strip() for s in re.split(r"(?<=[.?!])\s+", text) if s.strip()]
-
-
-def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
-    denom = np.linalg.norm(vec1) * np.linalg.norm(vec2)
-    return 0.0 if denom == 0 else float(np.dot(vec1, vec2) / denom)
-
+        return {
+            "results": [
+                {"paragraph": q.paragraph, "questions": q.questions}
+                for q in rows
+            ]
+        }
+    except Exception as e:
+        print("❌ 질문 조회 실패:", e)
+        raise HTTPException(status_code=500, detail="서버 오류")
 
 # ──────────────────────────────────────────────────────────────
 # 학생 “모른다” 피드백 저장
@@ -122,3 +128,14 @@ async def submit_feedback(body: FeedbackRequest):
     except Exception as e:
         print("❌ Feedback 저장 실패:", e)
         raise HTTPException(status_code=500, detail="서버 오류")
+
+# ──────────────────────────────────────────────────────────────
+# 유틸 함수
+# ──────────────────────────────────────────────────────────────
+def split_text_into_sentences(text: str) -> list[str]:
+    import re
+    return [s.strip() for s in re.split(r"(?<=[.?!])\s+", text) if s.strip()]
+
+def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    denom = np.linalg.norm(vec1) * np.linalg.norm(vec2)
+    return 0.0 if denom == 0 else float(np.dot(vec1, vec2) / denom)
