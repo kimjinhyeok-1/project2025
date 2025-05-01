@@ -1,19 +1,14 @@
-import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from app.services.gpt import generate_expected_questions
 from app.services.embedding import get_sentence_embeddings
 from app.database import get_db_context
-from app.models import GeneratedQuestion
+from app.models import GeneratedQuestion, QuestionFeedback
 from sqlalchemy.future import select
 import numpy as np
-import openai
 
 router = APIRouter()
-
-# GPT API Key 설정 (환경변수에 반드시 설정되어 있어야 합니다)
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 SIMILARITY_THRESHOLD = 0.8  # 문단 구분 임계값
 
@@ -23,28 +18,10 @@ SIMILARITY_THRESHOLD = 0.8  # 문단 구분 임계값
 class TextChunkRequest(BaseModel):
     text: str
 
-# `/api/evaluate_snapshot` 응답은 "중요" 또는 "무시"로 단순 반환
-# ──────────────────────────────────────────────────────────────
-@router.get("/evaluate_snapshot")
-async def evaluate_snapshot(q: str):
-    if not q:
-        raise HTTPException(status_code=400, detail="q 파라미터가 필요합니다.")
-    try:
-        resp = openai.ChatCompletion.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "넌 강의 내용을 분석해서, 중요한 문장이면 '중요', 중요하지 않으면 '무시'라고만 대답해."},
-                {"role": "user", "content": f"이 문장이 강의에서 중요한 내용인가요? '{q}'"}
-            ]
-        )
-        answer = resp.choices[0].message.content.strip()
-        if answer not in ("중요", "무시"):
-            # GPT 응답 형식이 다를 경우 기본값으로 처리
-            answer = "무시"
-        return JSONResponse(content=answer)
-    except Exception as e:
-        print("❌ 평가 중 오류:", e)
-        raise HTTPException(status_code=500, detail="서버 오류")
+class FeedbackRequest(BaseModel):
+    user_id: int
+    question_text: str
+    knows: bool
 
 # ──────────────────────────────────────────────────────────────
 # 프리플라이트 대응
@@ -129,6 +106,27 @@ async def get_all_questions():
         }
     except Exception as e:
         print("❌ 질문 조회 실패:", e)
+        raise HTTPException(status_code=500, detail="서버 오류")
+
+# ──────────────────────────────────────────────────────────────
+# 학생 “모른다” 피드백 저장
+# ──────────────────────────────────────────────────────────────
+@router.post("/feedback")
+async def submit_feedback(body: FeedbackRequest):
+    try:
+        async with get_db_context() as db:
+            db.add(
+                QuestionFeedback(
+                    user_id=body.user_id,
+                    question_text=body.question_text,
+                    knows=body.knows,
+                )
+            )
+            await db.commit()
+        return {"message": "Feedback 저장 완료"}
+
+    except Exception as e:
+        print("❌ Feedback 저장 실패:", e)
         raise HTTPException(status_code=500, detail="서버 오류")
 
 # ──────────────────────────────────────────────────────────────
