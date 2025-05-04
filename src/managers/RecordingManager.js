@@ -1,5 +1,4 @@
-// src/managers/RecordingManager.js
-import { uploadSnapshot, captureScreenshot, evaluateSnapshotImportance } from "@/api/snapshotService"; // ✅ 통합된 파일에서 모두 가져오기
+import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 
 class RecordingManager {
   constructor() {
@@ -10,6 +9,8 @@ class RecordingManager {
     this.displayStream = null;
     this.recognition = null;
     this.listeners = [];
+
+    this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
   }
 
   subscribe(callback) {
@@ -70,22 +71,16 @@ class RecordingManager {
     this.recognition.interimResults = false;
 
     this.recognition.onresult = async (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript.trim();
+      const transcript = event.results[event.results.length - 1][0].transcript;
       console.log('🎤 인식된 문장:', transcript);
 
-      if (!transcript || transcript.length < 5) return;
+      const hit = this.triggerKeywords.some(kw => transcript.includes(kw));
 
-      try {
-        const isImportant = await evaluateSnapshotImportance(transcript);
-        if (isImportant) {
-          const imageBase64 = await captureScreenshot(this.displayStream);
-          await uploadSnapshot({ transcript, screenshot_base64: imageBase64 });
-        } else {
-          await uploadSnapshot({ transcript });
-        }
-      } catch (err) {
-        console.error("❌ 중요도 평가 중 오류:", err);
-        await uploadSnapshot({ transcript }); // fallback
+      if (hit) {
+        const imageBase64 = await captureScreenshot(this.displayStream);
+        await uploadSnapshot({ transcript, screenshot_base64: imageBase64 });
+      } else {
+        await uploadSnapshot({ transcript });
       }
     };
 

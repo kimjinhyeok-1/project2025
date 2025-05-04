@@ -1,7 +1,6 @@
-// src/api/snapshotService.js
-import axios from 'axios'
+import axios from 'axios';
 
-const BASE_URL = 'https://project2025-backend.onrender.com'
+const BASE_URL = 'https://project2025-backend.onrender.com';
 
 function getFormattedTimestamp() {
   const now = new Date();
@@ -50,27 +49,4 @@ async function uploadSnapshot({ transcript, screenshot_base64 = "" }) {
   }
 }
 
-// 🧠 AI 기반 스냅샷 중요도 판단
-async function evaluateSnapshotImportance(transcript) {
-  if (!transcript || transcript.trim().length < 5) return false;
-
-  try {
-    const response = await axios.get(`${BASE_URL}/api/evaluate_snapshot`, {
-      params: { q: transcript },
-      withCredentials: true
-    });
-
-    const reply = response.data.trim();
-    console.log("🧠 GPT 스냅샷 판단:", reply);
-    return reply.includes("중요");
-  } catch (error) {
-    console.error("❌ GPT 판단 API 실패:", error);
-    return false;
-  }
-}
-
-export {
-  uploadSnapshot,
-  captureScreenshot,
-  evaluateSnapshotImportance
-}
+export { uploadSnapshot, captureScreenshot };
