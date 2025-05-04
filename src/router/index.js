@@ -18,7 +18,6 @@ import ProfessorLesson from '../views/Prof_Lesson.vue'
 import ProfessorQnA from '../views/Prof_QnA.vue'
 import ProfessorAssignments from '../views/Prof_Assign.vue'
 import ProfessorReviewView from '../views/Prof_Review.vue'
-import ProfessorSummaryDetailView from '../views/Prof_SummaryDetail.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
 import ProfessorRealtimeQuestion from '../views/Prof_AIQnAStu.vue'
@@ -97,11 +96,6 @@ const routes = [
         path: 'review',
         name: 'ProfessorReviewView',
         component: ProfessorReviewView,
-      },
-      {
-        path: 'review/:id',
-        name: 'ProfessorSummaryDetailView',
-        component: ProfessorSummaryDetailView,
       },
       {
         path: 'assignments',
