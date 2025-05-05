@@ -1,18 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from app.database import get_db
 from app.models import Snapshot
 import os
 import base64
 import uuid
 from datetime import datetime
-import openai  # ✅ GPT 추가
+
+from openai import AsyncOpenAI  # ✅ 최신 방식
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 router = APIRouter()
 
-# 저장 경로 설정
+# 디렉터리 설정
 IMAGE_DIR = "tmp/snapshots"
 FULL_IMAGE_DIR = os.path.join("static", IMAGE_DIR)
 os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
@@ -20,8 +21,6 @@ os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
 TEXT_LOG_DIR = "data"
 os.makedirs(TEXT_LOG_DIR, exist_ok=True)
 
-# ✅ OpenAI API 키 설정
-openai.api_key = os.getenv("OPENAI_API_KEY")  # .env에 키 넣기
 
 class SnapshotRequest(BaseModel):
     timestamp: str
@@ -34,6 +33,7 @@ class SnapshotRequest(BaseModel):
             "transcript": "이 코드는 시험에 나올 수 있습니다.",
             "screenshot_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA..."
         }
+
 
 @router.post("/snapshots")
 async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_db)):
@@ -60,6 +60,7 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
     filename = f"{uuid.uuid4().hex}.png"
     save_path = os.path.join(FULL_IMAGE_DIR, filename)
     relative_url = f"/static/{IMAGE_DIR}/{filename}"
+    absolute_url = f"https://project2025-backend.onrender.com{relative_url}"
 
     try:
         with open(save_path, "wb") as f:
@@ -67,7 +68,7 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
     except Exception as e:
         raise HTTPException(status_code=500, detail="이미지 파일 저장 실패")
 
-    # ✅ STT 텍스트 누적 저장
+    # 텍스트 누적 저장
     text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     try:
         with open(text_log_path, "a", encoding="utf-8") as log_file:
@@ -96,23 +97,25 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
         "date": date_group,
         "time": snapshot.time,
         "text": text,
-        "image_url": f"https://project2025-backend.onrender.com{relative_url}"  # ✅ 절대 URL
+        "image_url": absolute_url
     }
 
-# ✅ GPT 요약 함수
+
+# ✅ 최신 OpenAI 방식으로 GPT 요약 함수
 async def summarize_text_with_gpt(text: str) -> str:
     try:
-        response = await openai.ChatCompletion.acreate(
+        response = await client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "다음 텍스트를 강의 요약 형식으로 한국어로 간결하게 요약해주세요."},
-                {"role": "user", "content": text[:3000]}  # 최대 3000자 제한
+                {"role": "system", "content": "다음 텍스트를 한국어 강의 요약 형식으로 간결하게 정리해줘."},
+                {"role": "user", "content": text[:3000]}
             ]
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"❌ GPT 요약 실패: {e}")
         return "[요약 실패] GPT 호출 중 오류가 발생했습니다."
+
 
 @router.get("/generate_question_summary")
 async def generate_question_summary(lecture_id: int = 1):
@@ -124,7 +127,6 @@ async def generate_question_summary(lecture_id: int = 1):
     with open(text_log_path, "r", encoding="utf-8") as f:
         full_text = f.read()
 
-    # ✅ GPT 요약 호출
     summary = await summarize_text_with_gpt(full_text)
 
     return {
