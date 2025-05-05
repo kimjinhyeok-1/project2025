@@ -60,7 +60,7 @@ const submitAssignment = async () => {
 
   try {
     const token = localStorage.getItem('access_token')
-    await axios.post('https://project2025-backend.onrender.com/create', formData, {
+    await axios.post('https://project2025-backend.onrender.com/assignments/create', formData, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'multipart/form-data',
