@@ -105,9 +105,9 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
 async def summarize_text_with_gpt(text: str) -> str:
     try:
         response = await client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "다음 텍스트를 한국어 강의 요약 형식으로 간결하게 정리해줘."},
+                {"role": "system", "content": "다음 텍스트를 요약해줘."},
                 {"role": "user", "content": text[:3000]}
             ]
         )
