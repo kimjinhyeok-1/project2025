@@ -29,7 +29,6 @@ export default {
   data() {
     return {
       isRecording: false,
-      lectureId: 1, // TODO: 실제 수업 ID 받아오기
       summaryResult: null,
     };
   },
@@ -48,7 +47,7 @@ export default {
     },
     async requestLectureSummary() {
       try {
-        const response = await fetch(`https://project2025-backend.onrender.com/generate_question_summary?lecture_id=${this.lectureId}`);
+        const response = await fetch("https://project2025-backend.onrender.com/snapshots/generate_question_summary");
         if (!response.ok) throw new Error("요약 요청 실패");
 
         const data = await response.json();
