@@ -61,6 +61,7 @@
 </template>
 
 <script>
+/* global webkitSpeechRecognition */
 import pixelmatch from 'pixelmatch'
 import * as pdfjsLib from 'pdfjs-dist'
 
