@@ -31,18 +31,16 @@ async function captureScreenshot(displayStream) {
 }
 
 // 📤 스냅샷 업로드
-async function uploadSnapshot({ transcript, screenshot_base64 = "" }) {
-  if (!transcript || transcript.trim() === "") {
-    console.error("❌ transcript가 비어있어서 업로드 중단");
-    return;
-  }
+async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
+  const cleanedTranscript = transcript.trim();
 
+  // ✅ 빈 문장이라도 백엔드로 전달 (의도적으로 다 보내야 하므로)
   const timestamp = getFormattedTimestamp();
 
   try {
     const response = await axios.post(`${BASE_URL}/snapshots/snapshots`, {
       timestamp,
-      transcript,
+      transcript: cleanedTranscript,
       screenshot_base64,
     }, {
       withCredentials: true
@@ -55,5 +53,6 @@ async function uploadSnapshot({ transcript, screenshot_base64 = "" }) {
     throw error;
   }
 }
+
 
 export { uploadSnapshot, captureScreenshot };

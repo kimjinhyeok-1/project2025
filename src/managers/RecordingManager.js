@@ -71,18 +71,21 @@ class RecordingManager {
     this.recognition.interimResults = false;
 
     this.recognition.onresult = async (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript;
+      const raw = event.results[event.results.length - 1][0].transcript || "";
+      const transcript = raw.trim();
       console.log('🎤 인식된 문장:', transcript);
-
-      const hit = this.triggerKeywords.some(kw => transcript.includes(kw));
-
-      if (hit) {
-        const imageBase64 = await captureScreenshot(this.displayStream);
-        await uploadSnapshot({ transcript, screenshot_base64: imageBase64 });
-      } else {
-        await uploadSnapshot({ transcript });
+    
+      const hasKeyword = this.triggerKeywords.some(kw => transcript.includes(kw));
+      let imageBase64 = "";
+    
+      if (hasKeyword) {
+        imageBase64 = await captureScreenshot(this.displayStream);
       }
+    
+      // ✅ 빈 문장이어도 업로드 시도
+      await uploadSnapshot({ transcript, screenshot_base64: imageBase64 });
     };
+    
 
     this.recognition.onerror = (event) => {
       console.error('🎙️ 음성 인식 에러:', event.error);
