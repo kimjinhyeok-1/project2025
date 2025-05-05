@@ -10,6 +10,7 @@ import StudentAssignment from '../views/Stu_Assign.vue'
 import StudentHistory from '../views/StudentHistory.vue'
 import StudentLessonSummary from '../views/Stu_LessonSummary.vue'
 import StudentLessonQnA from '../views/Stu_LessonQnA.vue'
+import StudentReviewDetail from '../views/Stu_ReviewDetail.vue'
 
 // 교수 관련 뷰
 import ProfessorLayout from '../views/Prof_Layout.vue'
@@ -70,6 +71,11 @@ const routes = [
         path: 'assignments/:id',
         name: 'AssignmentSubmit',
         component: AssignmentSubmit,
+      },
+      {
+        path: 'review/:id',
+        name: 'StudentReviewDetail',
+        component: StudentReviewDetail,
       }
     ],
   },
