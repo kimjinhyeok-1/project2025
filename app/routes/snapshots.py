@@ -8,6 +8,7 @@ import os
 import base64
 import uuid
 from datetime import datetime
+import openai  # ✅ GPT 추가
 
 router = APIRouter()
 
@@ -18,6 +19,9 @@ os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
 
 TEXT_LOG_DIR = "data"
 os.makedirs(TEXT_LOG_DIR, exist_ok=True)
+
+# ✅ OpenAI API 키 설정
+openai.api_key = os.getenv("OPENAI_API_KEY")  # .env에 키 넣기
 
 class SnapshotRequest(BaseModel):
     timestamp: str
@@ -92,8 +96,23 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
         "date": date_group,
         "time": snapshot.time,
         "text": text,
-        "image_url": relative_url
+        "image_url": f"https://project2025-backend.onrender.com{relative_url}"  # ✅ 절대 URL
     }
+
+# ✅ GPT 요약 함수
+async def summarize_text_with_gpt(text: str) -> str:
+    try:
+        response = await openai.ChatCompletion.acreate(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "다음 텍스트를 강의 요약 형식으로 한국어로 간결하게 요약해주세요."},
+                {"role": "user", "content": text[:3000]}  # 최대 3000자 제한
+            ]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"❌ GPT 요약 실패: {e}")
+        return "[요약 실패] GPT 호출 중 오류가 발생했습니다."
 
 @router.get("/generate_question_summary")
 async def generate_question_summary(lecture_id: int = 1):
@@ -105,10 +124,10 @@ async def generate_question_summary(lecture_id: int = 1):
     with open(text_log_path, "r", encoding="utf-8") as f:
         full_text = f.read()
 
-    # ✨ 추후 GPT 요약 연결 가능
-    dummy_summary = f"[요약 결과]\n{full_text[:300]}..."
+    # ✅ GPT 요약 호출
+    summary = await summarize_text_with_gpt(full_text)
 
     return {
         "lecture_id": lecture_id,
-        "summary": dummy_summary
+        "summary": summary
     }
