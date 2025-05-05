@@ -8,40 +8,24 @@ function getFormattedTimestamp() {
   return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 }
 
-// 🖼️ 스크린샷 캡처 (video에 연결한 후 안정적 타이밍 확보)
-async function captureScreenshot() {
+// 🖼️ 스크린샷 Base64 캡처 (displayStream 이용)
+async function captureScreenshot(displayStream) {
+  if (!displayStream) return "";
+
   try {
-    const displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true
-    });
-
-    const video = document.createElement("video");
-    video.srcObject = displayStream;
-    video.muted = true;
-    video.playsInline = true;
-
-    // DOM 없이도 플레이 가능
-    await video.play();
-
-    await new Promise(resolve => {
-      video.onloadeddata = () => resolve();
-    });
+    const track = displayStream.getVideoTracks()[0];
+    const imageCapture = new ImageCapture(track);
+    const bitmap = await imageCapture.grabFrame();
 
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
-
-    // 스트림 정리
-    video.pause();
-    video.srcObject = null;
-    displayStream.getTracks().forEach(track => track.stop());
+    ctx.drawImage(bitmap, 0, 0);
 
     return canvas.toDataURL("image/png");
-
   } catch (err) {
-    console.error("❌ 화면 캡처 실패:", err);
+    console.error("❌ 이미지 캡처 실패:", err);
     return "";
   }
 }
@@ -66,11 +50,10 @@ async function uploadSnapshot({ transcript, screenshot_base64 = "" }) {
 
     console.log("✅ 스냅샷 업로드 성공:", response.data);
     return response.data;
-
   } catch (error) {
     console.error("❌ 스냅샷 업로드 실패:", error.response?.data || error.message || error);
     throw error;
   }
 }
 
-export { captureScreenshot, uploadSnapshot };
+export { uploadSnapshot, captureScreenshot };
