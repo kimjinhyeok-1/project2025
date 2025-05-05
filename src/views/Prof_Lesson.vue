@@ -12,6 +12,11 @@
         🧪 OPTIONS 테스트
       </button>
     </div>
+
+    <div v-if="summaryResult" class="alert alert-success mt-4 text-start" style="white-space: pre-line;">
+      <h5>📘 수업 요약 결과:</h5>
+      <p>{{ summaryResult }}</p>
+    </div>
   </div>
 </template>
 
@@ -24,6 +29,8 @@ export default {
   data() {
     return {
       isRecording: false,
+      lectureId: 1, // TODO: 실제 수업 ID 받아오기
+      summaryResult: null,
     };
   },
   methods: {
@@ -32,13 +39,29 @@ export default {
         await recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
+        this.isRecording = recordingManager.getState().isRecording;
+
+        // ✅ 수업 종료 → 요약 요청
+        await this.requestLectureSummary();
       }
-      // 🔥 버튼 상태 강제 반영 - 이 줄이 if-else 블록 밖으로 정확히 나와야 해
       this.isRecording = recordingManager.getState().isRecording;
+    },
+    async requestLectureSummary() {
+      try {
+        const response = await fetch(`https://project2025-backend.onrender.com/generate_question_summary?lecture_id=${this.lectureId}`);
+        if (!response.ok) throw new Error("요약 요청 실패");
+
+        const data = await response.json();
+        this.summaryResult = data.summary;
+        console.log("📘 요약 결과:", data.summary);
+      } catch (error) {
+        console.error("❌ 수업 요약 요청 실패:", error);
+        alert("요약 요청에 실패했습니다.");
+      }
     },
     async testOptions() {
       await testOptionsRequest();
-    }
+    },
   },
   mounted() {
     this.isRecording = recordingManager.getState().isRecording;
@@ -47,9 +70,8 @@ export default {
       this.isRecording = newState;
     });
 
-    // ✅ 진짜 중요: 돌아올 때 음성 인식이 끊겼으면 복구
     recordingManager.reconnectRecognition();
-  }
+  },
 };
 </script>
 
