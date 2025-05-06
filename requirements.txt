@@ -17,6 +17,7 @@ passlib
 python-jose
 numpy==1.24.4
 scikit-learn
+sentence-transformers
 torch==2.6.0+cpu
 torchaudio==2.6.0+cpu
 torchvision==0.21.0+cpu
