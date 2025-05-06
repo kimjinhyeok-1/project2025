@@ -47,7 +47,7 @@ export default {
     },
     async requestLectureSummary() {
       try {
-        const response = await fetch("https://project2025-backend.onrender.com/snapshots/generate_question_summary");
+        const response = await fetch("https://project2025-backend.onrender.com/snapshots/generate_markdown_summary");
         if (!response.ok) throw new Error("요약 요청 실패");
 
         const data = await response.json();

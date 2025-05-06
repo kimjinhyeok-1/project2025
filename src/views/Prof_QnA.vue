@@ -52,7 +52,7 @@
 
         <div v-else-if="summary.summary_for_professor">
           <h6>📝 요약 내용</h6>
-          <p>{{ summary.summary_for_professor }}</p>
+          <p style="white-space: pre-line;">{{ summary.summary_for_professor }}</p>
 
           <h6 class="mt-4">💡 자주 묻는 질문</h6>
           <ul>
