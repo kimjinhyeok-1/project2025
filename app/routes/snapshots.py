@@ -3,7 +3,7 @@ import base64
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -72,7 +72,10 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 # ──────────────────────────────────────────────────────────
 
 @router.post("/lectures", response_model=LectureSessionResponse)
-async def create_lecture(db: AsyncSession = Depends(get_db)):
+async def create_lecture(
+    db: AsyncSession = Depends(get_db),
+    body: dict = Body(None)  # ✅ 빈 바디 또는 {}를 받아도 에러 방지
+):
     lecture = Lecture()
     db.add(lecture)
     await db.commit()
