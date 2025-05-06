@@ -123,11 +123,18 @@ async def upload_snapshot(
 
 async def summarize_text_with_gpt(text: str) -> str:
     system_msg = {
-        "role": "system",
-        "content": (
-            "당신은 ‘교수의 강의 마무리 리마인더’를 작성하는 역할입니다.\n"
-            "• 이번 강의에서 등장한 핵심 키워드 5개를 추출하고,\n"
-            "• 각 키워드를 ### 헤딩으로, 간단한 설명을 bullet으로 작성하세요."
+    "role": "system",
+    "content": (
+        """
+        너는 수업 마지막에 보여줄 요약 카드를 만드는 조교야. 
+        학생들이 오늘 수업을 이해하기 쉽도록 오늘 배운 핵심 개념 5개를 Markdown 형식으로 정리해줘.  
+        형식은 반드시 아래처럼 써:
+
+        ## 개념명 (예: Overloading, Void 타입)
+
+        - 간단한 한 줄 설명 (학생이 바로 이해 가능하게)
+
+        개념명은 번역체 대신 정확한 개발 용어로 써줘. 설명은 한 문장만."""
         )
     }
     user_msg = {
