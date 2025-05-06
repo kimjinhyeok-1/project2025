@@ -10,7 +10,7 @@ import os
 import re
 from datetime import datetime, timezone
 
-# ✅ 상단 초기화
+# ✅ GPT 초기화
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
@@ -18,12 +18,23 @@ openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 router = APIRouter()
 
+# ✅ 간단한 전처리 함수
 def minimal_preprocess(text: str) -> str:
     text = re.sub(r"[^\w\s.,!?]", "", text)
     text = text.replace("\n", " ").replace("\t", " ")
     text = re.sub(r"\s+", " ", text).strip()
     return text if len(text) <= 250 else text[:247] + "..."
 
+# ✅ 후처리: 마커 제거 + 리스트 정리
+def clean_summary(text: str) -> str:
+    lines = text.strip().split("\n")
+    cleaned = [
+        "- " + re.sub(r"^[\d\.\-\•\●\*\s]*", "", line).strip()
+        for line in lines if line.strip()
+    ]
+    return "\n".join(cleaned)
+
+# ✅ 요약 엔드포인트
 @router.get("/chat_history/summary")
 async def get_question_summary(
     db: AsyncSession = Depends(get_db),
@@ -58,15 +69,15 @@ async def get_question_summary(
         processed_questions = [minimal_preprocess(q) for q in questions]
         formatted_questions = "\n".join(f"{idx+1}. {q}" for idx, q in enumerate(processed_questions))
 
+        # ✅ 간결한 프롬프트
         prompt = f"""
-아래는 학생들이 최근에 한 질문 목록입니다.
+다음은 학생들이 최근 한 질문입니다:
 
 {formatted_questions}
 
-유의사항:
-"JAVA 언어" 또는 "객체지향프로그래밍" 과목과 관련된 질문만 선별하여 요약해 주세요.
-관련 질문들은 중복 제거 및 유사 질문끼리 통합하여 간결하게 요약해 주세요.
-markdown 형식으로 하되 제목은 적지 말고 리스트 번호는 매기지 말고 줄바꿈만 구분하세요.
+JAVA 언어나 객체지향프로그래밍 관련 질문만 골라 요약하세요.
+유사 질문은 하나로 묶고, 중복은 제거하세요.
+간결한 문장으로 줄바꿈만 해주세요.
 """
 
         # 3. GPT 호출
@@ -74,9 +85,10 @@ markdown 형식으로 하되 제목은 적지 말고 리스트 번호는 매기�
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=800,
-            temperature=0.5
+            temperature=0.3
         )
         summary_text = response.choices[0].message.content.strip()
+        summary_text = clean_summary(summary_text)
 
         # 4. 새 summary 저장
         new_summary = Summary(summary_text=summary_text)
@@ -90,12 +102,12 @@ markdown 형식으로 하되 제목은 적지 말고 리스트 번호는 매기�
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"[chat_history/summary] 요약 생성 중 오류: {str(e)}")
 
-# ✅ 학생 자신의 질문 내역 확인 (학생 전용)
+# ✅ 학생 자신의 질문 내역 확인 (변경 없음)
 @router.get("/chat_history/me")
 async def get_my_chat_history(
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
-    _: str = Depends(verify_student)  # ✅ 학생만 접근 가능
+    _: str = Depends(verify_student)
 ):
     result = await db.execute(
         select(QuestionAnswer)
