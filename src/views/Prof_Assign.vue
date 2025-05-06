@@ -37,10 +37,10 @@
     </transition>
 
     <!-- 로딩 -->
-    <div v-if="loading" class="text-center">
-      <div class="spinner-border" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
+    <!-- 로딩 -->
+    <div v-if="loading" class="d-flex align-items-center justify-content-center my-5">
+      <strong role="status">불러오는 중...</strong>
+      <div class="spinner-border ms-3" aria-hidden="true"></div>
     </div>
 
     <!-- 과제 없음 -->
