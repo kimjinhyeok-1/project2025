@@ -30,7 +30,7 @@ async function captureScreenshot(displayStream) {
   }
 }
 
-// 📤 스냅샷 업로드 (변경됨)
+// 📤 스냅샷 업로드 (정상 경로로 수정됨)
 async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
   const cleanedTranscript = transcript.trim();
   const timestamp = getFormattedTimestamp();
@@ -60,7 +60,7 @@ async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
   }
 }
 
-// 📥 복습용 요약 목록 조회 (변경됨)
+// 📥 복습용 요약 목록 조회
 async function getSummaries() {
   const lecture_id = localStorage.getItem("lecture_id");
   if (!lecture_id) {
