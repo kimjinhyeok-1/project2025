@@ -51,15 +51,21 @@ export default {
         const { lecture_id } = res.data;
         localStorage.setItem("lecture_id", lecture_id);
         console.log("🎓 수업 세션 시작:", lecture_id);
+        return lecture_id;
       } catch (err) {
         console.error("❌ 수업 세션 시작 실패:", err);
         alert("수업 세션 생성에 실패했습니다.");
+        return null;
       }
     },
 
     async toggleAudioRecording() {
       if (!recordingManager.getState().isRecording) {
-        await this.startLectureSession(); // 수업 시작 시 세션 생성
+        const lectureId = await this.startLectureSession();
+        if (!lectureId) {
+          alert("수업 세션이 생성되지 않아 녹음을 시작할 수 없습니다.");
+          return;
+        }
         await recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
