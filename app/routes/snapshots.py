@@ -138,63 +138,52 @@ async def generate_question_summary(lecture_id: int = 1):
     return SummaryResponse(lecture_id=lecture_id, summary=summary)
 
 
-# ✅ 최종 API: 강의별 요약 + 관련 스냅샷 하이라이트
-class LectureTopicHighlight(BaseModel):
-    topic: str
-    summary: str
-    highlights: list
-
-
-@router.get("/lecture_summary", response_model=list[LectureTopicHighlight])
+# ✅ 최종 API: /lecture_summary
+@router.get("/lecture_summary")
 async def get_lecture_summary(lecture_id: int = 1, db: AsyncSession = Depends(get_db)):
-    # 1) 강의 로그 불러오기
+    # 1. 전체 텍스트 요약 받아오기
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="텍스트 파일 없음")
-    full_text = open(path, "r", encoding="utf-8").read()
 
-    # 2) Markdown 요약 생성
+    with open(path, "r", encoding="utf-8") as f:
+        full_text = f.read()
+
     markdown = await summarize_text_with_gpt(full_text)
 
-    # 3) Markdown에서 주제별 키워드와 요약 추출
+    # 2. Markdown에서 주제 추출
     topics = []
-    current_topic = None
+    current_topic = ""
     for line in markdown.splitlines():
         if line.startswith("### "):
-            current_topic = line.removeprefix("### ").strip()
+            current_topic = line.replace("### ", "").strip()
         elif line.startswith("-") and current_topic:
-            summary_line = line.lstrip("- ").strip()
-            topics.append({"topic": current_topic, "summary": summary_line})
-            current_topic = None
+            topics.append({"topic": current_topic, "summary": line.replace("-", "").strip()})
+            current_topic = ""
 
-    if not topics:
-        raise HTTPException(status_code=204, detail="추출된 토픽 없음")
-
-    # 4) DB에서 스냅샷 불러오기
+    # 3. DB에서 스냅샷 문장 불러오기
     result = await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))
-    snapshots = result.scalars().all()
-    if not snapshots:
+    snapshot_rows = result.scalars().all()
+    if not snapshot_rows:
         raise HTTPException(status_code=404, detail="스냅샷 없음")
-    texts = [s.text for s in snapshots]
-    data_urls = [f"https://project2025-backend.onrender.com{s.image_path}" for s in snapshots]
 
-    # 5) 임베딩 및 유사도 계산
+    snapshot_texts = [s.text for s in snapshot_rows]
+    snapshot_data = [{"text": s.text, "image_url": f"https://project2025-backend.onrender.com{s.image_path}"} for s in snapshot_rows]
+
+    # 4. 임베딩 유사도 계산
     model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-    topic_embs = model.encode([t["topic"] for t in topics])
-    snap_embs = model.encode(texts)
+    topic_embeddings = model.encode([t["topic"] for t in topics])
+    snapshot_embeddings = model.encode(snapshot_texts)
 
-    response = []
-    for idx, t in enumerate(topics):
-        sims = cosine_similarity([topic_embs[idx]], snap_embs)[0]
-        top_idxs = sims.argsort()[-3:][::-1]
-        highlights = [
-            {"text": texts[i], "image_url": data_urls[i]}
-            for i in top_idxs
-        ]
-        response.append({
-            "topic": t["topic"],
-            "summary": t["summary"],
+    result = []
+    for idx, topic in enumerate(topics):
+        sims = cosine_similarity([topic_embeddings[idx]], snapshot_embeddings)[0]
+        top_indices = sims.argsort()[-3:][::-1]
+        highlights = [snapshot_data[i] for i in top_indices]
+        result.append({
+            "topic": topic["topic"],
+            "summary": topic["summary"],
             "highlights": highlights
         })
 
-    return response
+    return result
