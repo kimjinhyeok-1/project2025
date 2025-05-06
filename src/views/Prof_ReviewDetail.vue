@@ -1,69 +1,95 @@
 <template>
-    <div class="container mt-5">
-      <h2>📄 교수용 수업 요약 상세보기</h2>
-  
-      <div v-if="loading" class="text-muted mt-3">요약을 불러오는 중입니다...</div>
-  
-      <div v-else-if="summary">
-        <p><strong>🗓 날짜:</strong> {{ summary.date }}</p>
-        <p><strong>📘 주차:</strong> {{ summary.week }}주차</p>
-  
-        <div class="mt-4 text-start">
-          <h5>📘 요약 내용</h5>
-          <div class="summary-box">
-            {{ summary.summary }}
-          </div>
-        </div>
-  
-        <button class="btn btn-outline-secondary mt-4" @click="$router.back()">← 목록으로 돌아가기</button>
-      </div>
-  
-      <div v-else class="alert alert-warning mt-3">
-        ❗ 요약 정보를 불러올 수 없습니다.
-      </div>
+  <div class="container mt-5">
+    <h2>📄 수업 복습 상세보기</h2>
+
+    <!-- 로딩 중 -->
+    <div v-if="loading" class="text-muted mt-3">
+      요약을 불러오는 중입니다...
     </div>
-  </template>
-  
-  <script setup>
-  import { onMounted, ref } from 'vue';
-  import { useRoute } from 'vue-router';
-  import { getSummaryById } from '@/api/snapshotService';
-  
-  const route = useRoute();
-  const summary = ref(null);
-  const loading = ref(true);
-  
-  const fetchSummaryDetail = async () => {
-    try {
-      const id = route.params.id;
-      summary.value = await getSummaryById(id);
-    } catch (error) {
-      console.error('❌ 요약 상세 불러오기 실패:', error);
-    } finally {
-      loading.value = false;
-    }
-  };
-  
-  onMounted(fetchSummaryDetail);
-  </script>
-  
-  <style scoped>
-  .container {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 1rem;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
-    max-width: 800px;
-    margin: auto;
+
+    <!-- 요약 데이터 있음 -->
+    <div v-else-if="summaryData.length">
+      <div
+        v-for="(topic, index) in summaryData"
+        :key="index"
+        class="topic-section mb-5"
+      >
+        <h4>📘 {{ topic.topic }}</h4>
+        <p class="mb-2 text-muted">{{ topic.summary }}</p>
+
+        <ul>
+          <li v-for="(highlight, idx) in topic.highlights" :key="idx">
+            <p class="mb-1">🗣 {{ highlight.text }}</p>
+            <img
+              v-if="imageVisibleMap[`${index}-${idx}`] !== false && highlight.image_url"
+              :src="highlight.image_url"
+              alt="스크린샷"
+              class="screenshot-preview"
+              @error="() => imageVisibleMap[`${index}-${idx}`] = false"
+            />
+          </li>
+        </ul>
+      </div>
+
+      <button class="btn btn-outline-secondary" @click="$router.back()">
+        ← 목록으로 돌아가기
+      </button>
+    </div>
+
+    <!-- 요약 없음 -->
+    <div v-else class="alert alert-warning mt-3">
+      📂 수업 요약이 아직 생성되지 않았거나, 해당 lecture_id에 대한 요약 파일이 존재하지 않습니다.
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
+import axios from "axios";
+
+const route = useRoute();
+const summaryData = ref([]);
+const loading = ref(true);
+const imageVisibleMap = ref({});
+
+const fetchLectureSummary = async () => {
+  try {
+    const id = route.params.id || 1;
+    const response = await axios.get(
+      `https://project2025-backend.onrender.com/snapshots/lecture_summary?lecture_id=${id}`
+    );
+    summaryData.value = response.data;
+    console.log("📘 최종 요약 데이터:", summaryData.value);
+  } catch (error) {
+    console.error("❌ 최종 요약 불러오기 실패:", error);
+  } finally {
+    loading.value = false;
   }
-  .summary-box {
-    white-space: pre-wrap;
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.75rem;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.05);
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-  </style>
-  
+};
+
+onMounted(fetchLectureSummary);
+</script>
+
+<style scoped>
+.container {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+  margin: auto;
+}
+.topic-section {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
+}
+.screenshot-preview {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+</style>
