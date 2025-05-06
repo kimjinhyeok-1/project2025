@@ -9,8 +9,17 @@ class RecordingManager {
     this.displayStream = null;
     this.recognition = null;
     this.listeners = [];
+    this.lectureId = null;
 
     this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
+  }
+
+  setLectureId(id) {
+    this.lectureId = id;
+  }
+
+  getLectureId() {
+    return this.lectureId;
   }
 
   subscribe(callback) {
@@ -36,9 +45,9 @@ class RecordingManager {
       this.isRecording = true;
       this.notify();
 
-      console.log('🎙️ Recording Started.');
+      console.log("🎙️ Recording Started.");
     } catch (error) {
-      console.error('❌ 녹음 시작 실패:', error);
+      console.error("❌ 녹음 시작 실패:", error);
     }
   }
 
@@ -46,14 +55,14 @@ class RecordingManager {
     if (!this.isRecording) return;
 
     this.audioRecorder?.stop();
-    this.audioStream?.getTracks().forEach(track => track.stop());
-    this.displayStream?.getTracks().forEach(track => track.stop());
+    this.audioStream?.getTracks().forEach((track) => track.stop());
+    this.displayStream?.getTracks().forEach((track) => track.stop());
     this.stopRecognition();
 
     this.isRecording = false;
     this.notify();
 
-    console.log('🔚 Recording Stopped.');
+    console.log("🔚 Recording Stopped.");
   }
 
   startRecognition() {
@@ -66,31 +75,34 @@ class RecordingManager {
     }
 
     this.recognition = new SpeechRecognition();
-    this.recognition.lang = 'ko-KR';
+    this.recognition.lang = "ko-KR";
     this.recognition.continuous = true;
     this.recognition.interimResults = false;
 
     this.recognition.onresult = async (event) => {
       const raw = event.results[event.results.length - 1][0].transcript || "";
       const transcript = raw.trim();
-      console.log('🎤 인식된 문장:', transcript);
-    
-      const hasKeyword = this.triggerKeywords.some(kw => transcript.includes(kw));
+      console.log("🎤 인식된 문장:", transcript);
+
+      const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
       let imageBase64 = "";
-    
+
       if (hasKeyword) {
         imageBase64 = await captureScreenshot(this.displayStream);
       }
-    
-      // ✅ 빈 문장이어도 업로드 시도
-      await uploadSnapshot({ transcript, screenshot_base64: imageBase64 });
+
+      if (!this.lectureId) {
+        console.warn("⛔ lecture_id가 설정되지 않아 업로드 중단");
+        return;
+      }
+
+      await uploadSnapshot({ transcript, screenshot_base64: imageBase64, lecture_id: this.lectureId });
     };
-    
 
     this.recognition.onerror = (event) => {
-      console.error('🎙️ 음성 인식 에러:', event.error);
+      console.error("🎙️ 음성 인식 에러:", event.error);
       if (event.error === "no-speech" || event.error === "network") {
-        console.log('🎙️ 음성 인식 재시작');
+        console.log("🎙️ 음성 인식 재시작");
         this.recognition.stop();
         this.recognition.start();
       }
@@ -110,7 +122,7 @@ class RecordingManager {
 
   reconnectRecognition() {
     if (this.isRecording && !this.isRecognizing) {
-      console.log('🎙️ 음성 인식 재연결 시도');
+      console.log("🎙️ 음성 인식 재연결 시도");
       this.startRecognition();
     }
   }
