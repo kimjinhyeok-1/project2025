@@ -17,29 +17,34 @@
           <span> 학생들의 질문</span>
         </router-link>
       </li>
+
+      <!-- ✅ 드롭다운 메뉴 시작 -->
       <li class="nav-item">
-        <router-link class="nav-link" to="/professor/lesson">
+        <a
+          class="nav-link collapsed"
+          href="#"
+          data-toggle="collapse"
+          data-target="#collapseLesson"
+          aria-expanded="false"
+          aria-controls="collapseLesson"
+        >
           <i class="fas fa-chalkboard"></i>
-          <span> 수업 시작</span>
-        </router-link>
+          <span>수업</span>
+        </a>
+        <div id="collapseLesson" class="collapse" data-parent="#accordionSidebar">
+          <div class="bg-white py-2 collapse-inner rounded">
+            <router-link class="collapse-item" to="/professor/lesson">수업 시작</router-link>
+            <router-link class="collapse-item" to="/professor/review">수업 요약</router-link>
+            <router-link class="collapse-item" to="/professor/realtime-question">실시간 질문</router-link>
+          </div>
+        </div>
       </li>
-      <li class="nav-item">
-        <router-link class="nav-link" to="/professor/review">
-          <i class="fas fa-book-open"></i>
-          <span> 수업 요약</span>
-        </router-link>
-      </li>
+      <!-- ✅ 드롭다운 끝 -->
+
       <li class="nav-item">
         <router-link class="nav-link" to="/professor/assignments">
           <i class="fas fa-tasks"></i>
           <span> 과제</span>
-        </router-link>
-      </li>
-      <!-- ✅ 새 메뉴 추가 -->
-      <li class="nav-item">
-        <router-link class="nav-link" to="/professor/realtime-question">
-          <i class="fas fa-microphone"></i>
-          <span> 실시간 질문</span>
         </router-link>
       </li>
     </ul>
