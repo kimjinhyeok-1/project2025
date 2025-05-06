@@ -61,7 +61,7 @@
         <h5>💬 전체 대화 내용</h5>
 
         <div v-if="chatLoading" class="d-flex align-items-center">
-          <strong role="status">불러오는 중...</strong>
+          <strong role="status">불러오는 중...  </strong>
           <div class="spinner-border ms-auto" aria-hidden="true"></div>
         </div>
 
