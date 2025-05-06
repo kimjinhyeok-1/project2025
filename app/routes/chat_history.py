@@ -10,6 +10,7 @@ import os
 import re
 from datetime import datetime, timezone
 
+
 # ✅ GPT 초기화
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
@@ -17,6 +18,42 @@ if not OPENAI_API_KEY:
 openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 router = APIRouter()
+
+@router.get("/chat_history/all")
+async def get_all_chat_history(
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(verify_professor)
+):
+    """
+    교수님용 전체 대화 보기:
+    - user_id, user_name, question, answer, created_at 반환
+    - 생성일자 내림차순 정렬
+    """
+    try:
+        # User 관계를 한 번에 로드
+        result = await db.execute(
+            select(QuestionAnswer)
+            .options(selectinload(QuestionAnswer.user))
+            .order_by(desc(QuestionAnswer.created_at))
+        )
+        records = result.scalars().all()
+
+        return [
+            {
+                "user_id":    qa.user_id,
+                "user_name":  qa.user.name,  # User.name 필드
+                "question":   qa.question,
+                "answer":     qa.answer,
+                "created_at": qa.created_at.isoformat() if qa.created_at else None
+            }
+            for qa in records
+        ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"[chat_history/all] 전체 대화 로드 중 오류: {str(e)}"
+        )
 
 # ✅ 간단한 전처리 함수
 def minimal_preprocess(text: str) -> str:
