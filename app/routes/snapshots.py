@@ -52,7 +52,7 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     if not clean_texts:
         raise HTTPException(status_code=400, detail="빈 텍스트로 임베딩 요청 불가")
     resp = await client.embeddings.create(
-        model="text-embedding-ada-002",
+        model="text-embedding-3-small",
         input=clean_texts
     )
     return [e.embedding for e in resp.data]
