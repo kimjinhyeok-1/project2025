@@ -6,7 +6,7 @@
         <div class="sidebar-brand-icon">
           <i class="fas fa-user-graduate"></i>
         </div>
-        <div class="sidebar-brand-text mx-3">STUDENT</div>
+        <div class="sidebar-brand-text mx-3" style="color: rgba(255,255,255,0.9);">STUDENT</div>
       </router-link>
 
       <hr class="sidebar-divider my-0" />
