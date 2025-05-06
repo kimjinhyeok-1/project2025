@@ -1,11 +1,11 @@
 <template>
-  <div class="lecture-container text-center mt-5">
-    <h2>🎤 수업 녹화 & 음성 인식</h2>
-    <p class="text-muted">
+  <div class="lecture-container mt-5">
+    <h2 class="text-center">🎤 수업 녹화 & 음성 인식</h2>
+    <p class="text-muted text-center">
       녹음 중 키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드에 전송됩니다.
     </p>
 
-    <div class="btn-group mt-4">
+    <div class="btn-group d-flex justify-content-center mt-4">
       <button class="btn btn-primary m-2" @click="toggleAudioRecording">
         {{ isRecording ? "🔝 음성 인식 종료" : "🎙️ 음성 인식 시작" }}
       </button>
@@ -17,8 +17,7 @@
 
     <div
       v-if="summaryResult"
-      class="alert alert-success mt-4 text-start"
-      style="white-space: normal;"
+      class="alert alert-success mt-4 markdown-body"
     >
       <h5>📘 수업 요약 결과:</h5>
       <div v-html="renderedSummary"></div>
@@ -29,7 +28,7 @@
 <script>
 import recordingManager from "@/managers/RecordingManager";
 import { testOptionsRequest } from "@/api/snapshotService";
-import { marked } from "marked"; // ✅ 마크다운 렌더러 추가
+import { marked } from "marked";
 
 export default {
   name: "ProfessorLesson",
@@ -40,7 +39,6 @@ export default {
     };
   },
   computed: {
-    // ✅ 마크다운 → HTML로 렌더링
     renderedSummary() {
       return this.summaryResult ? marked.parse(this.summaryResult) : "";
     },
@@ -52,7 +50,7 @@ export default {
       } else {
         recordingManager.stopRecording();
         this.isRecording = recordingManager.getState().isRecording;
-        await this.requestLectureSummary(); // 요약 호출
+        await this.requestLectureSummary();
       }
       this.isRecording = recordingManager.getState().isRecording;
     },
@@ -94,18 +92,26 @@ export default {
   padding: 30px;
 }
 
-/* ✅ 마크다운 스타일 조정 */
-.alert h3 {
+/* ✅ 마크다운 렌더링 시 왼쪽 정렬 적용 */
+.markdown-body {
+  text-align: left;
+  white-space: normal;
+}
+
+/* ✅ 마크다운 스타일 보정 */
+.markdown-body h3 {
   font-size: 1.2rem;
   font-weight: bold;
   color: #155724;
-  margin-top: 1.2rem;
+  margin-top: 1.5rem;
 }
-.alert ul {
-  margin-left: 1.2rem;
-  padding-left: 1rem;
+
+.markdown-body ul {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
 }
-.alert li {
+
+.markdown-body li {
   margin-bottom: 0.5rem;
 }
 </style>
