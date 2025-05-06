@@ -7,13 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
-
-from openai import AsyncOpenAI
 from sklearn.metrics.pairwise import cosine_similarity
 
+from openai import AsyncOpenAI
 from app.database import get_db
 from app.models import Lecture, Snapshot
+
+import tiktoken
 
 # ──────────────────────────────────────────────────────────
 # 전역 설정
@@ -48,6 +48,15 @@ class SummaryResponse(BaseModel):
     summary: str
 
 # ──────────────────────────────────────────────────────────
+# 헬퍼: 텍스트 토큰 슬라이싱
+# ──────────────────────────────────────────────────────────
+
+def truncate_by_token(text: str, max_tokens: int = 3500) -> str:
+    enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    tokens = enc.encode(text)
+    return enc.decode(tokens[:max_tokens])
+
+# ──────────────────────────────────────────────────────────
 # 헬퍼: OpenAI Embeddings 호출
 # ──────────────────────────────────────────────────────────
 
@@ -64,9 +73,6 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(db: AsyncSession = Depends(get_db)):
-    """
-    새로운 강의 세션을 생성하고 lecture_id, 생성일시를 반환합니다.
-    """
     lecture = Lecture()
     db.add(lecture)
     await db.commit()
@@ -86,7 +92,6 @@ async def upload_snapshot(
     lecture_id: int = Query(..., description="lecture_id from /lectures"),
     db: AsyncSession = Depends(get_db)
 ):
-    # 1) timestamp 파싱
     try:
         dt = datetime.strptime(data.timestamp, "%Y-%m-%d %H:%M:%S")
     except ValueError:
@@ -94,7 +99,6 @@ async def upload_snapshot(
 
     date_group = dt.strftime("%Y-%m-%d")
 
-    # 2) 이미지 디코딩 & 저장
     try:
         _, encoded = data.screenshot_base64.split(",", 1) \
             if "," in data.screenshot_base64 else ("", data.screenshot_base64)
@@ -109,7 +113,6 @@ async def upload_snapshot(
     rel_url = f"/static/{IMAGE_DIR}/{filename}"
     abs_url = f"https://project2025-backend.onrender.com{rel_url}"
 
-    # 3) 텍스트 로그 덮어쓰기
     text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     try:
         with open(text_log_path, "w", encoding="utf-8") as log_file:
@@ -117,7 +120,6 @@ async def upload_snapshot(
     except:
         pass
 
-    # 4) DB에 저장
     snapshot = Snapshot(
         lecture_id=lecture_id,
         date=date_group,
@@ -138,44 +140,77 @@ async def upload_snapshot(
     }
 
 # ──────────────────────────────────────────────────────────
-# 2) 마크다운 요약 API
+# 2) GPT 요약 함수
 # ──────────────────────────────────────────────────────────
 
 async def summarize_text_with_gpt(text: str) -> str:
+    truncated = truncate_by_token(text)
     system_msg = {
         "role": "system",
         "content": (
-            "당신은 ‘교수의 강의 마무리 리마인더’를 작성합니다.\n"
-            "핵심 키워드 5개를 ### 헤딩으로, bullet 설명으로 요약하세요."
+            "당신은 대학 강의의 전체 내용을 요약하는 AI 도우미입니다.\n\n"
+            "목표:\n"
+            "1. 수업 전체 내용을 학생들이 다시 볼 수 있도록 마크다운 형식으로 정리합니다.\n"
+            "2. 주제별로 '### 주제명'을 사용하고, 그 아래에 해당 주제의 설명을 '-' 형식으로 정리합니다.\n"
+            "3. 설명은 명확하고 일관되게, 복습이나 스냅샷 연결에 적합하도록 작성합니다.\n"
+            "4. 논리적 흐름을 유지하며, 중요한 개념이나 정의, 예시가 있다면 간결히 포함합니다.\n"
+            "5. 전체 분량은 3~5개의 주제로 구성되도록 조절하세요.\n"
+            "6. 가능한 경우 주제의 순서는 수업 흐름을 반영하세요."
         )
     }
     user_msg = {
         "role": "user",
-        "content": f"강의 로그:\n```text\n{text[:3000]}\n```"
+        "content": f"강의 로그:\n```text\n{truncated}\n```"
     }
     res = await client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[system_msg, user_msg],
         temperature=0.5,
-        max_tokens=800,
+        max_tokens=1200,
+    )
+    return res.choices[0].message.content.strip()
+
+async def summarize_text_with_gpt_reminder(text: str) -> str:
+    truncated = truncate_by_token(text)
+    system_msg = {
+        "role": "system",
+        "content": (
+            "당신은 대학교 강의의 마무리 리마인더를 작성하는 AI 비서입니다. "
+            "교수자가 수업을 마치기 전에 학생들에게 오늘의 핵심 내용을 간략히 정리해 주려고 합니다.\n\n"
+            "요구 사항:\n"
+            "1. 강의의 핵심 키워드 5개를 선정하고, 각 키워드별로 간단한 요약 설명을 제공합니다.\n"
+            "2. 출력 형식은 다음과 같습니다:\n"
+            "### 키워드1\n"
+            "- 간결한 요약 설명\n"
+            "### 키워드2\n"
+            "- 간결한 요약 설명\n"
+            "...\n"
+            "3. 가능하다면 Java 개념과 관련된 용어를 반영하세요."
+        )
+    }
+    user_msg = {
+        "role": "user",
+        "content": f"강의 로그:\n```text\n{truncated}\n```"
+    }
+    res = await client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[system_msg, user_msg],
+        temperature=0.5,
+        max_tokens=1200,
     )
     return res.choices[0].message.content.strip()
 
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
-async def generate_markdown_summary(
-    lecture_id: int = Query(...)
-):
+async def generate_markdown_summary(lecture_id: int = Query(...)):
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "요약할 텍스트 없음")
     text = open(path, "r", encoding="utf-8").read()
-    md = await summarize_text_with_gpt(text)
+    md = await summarize_text_with_gpt_reminder(text)
     return SummaryResponse(lecture_id=lecture_id, summary=md)
 
 @router.get("/generate_question_summary", response_model=SummaryResponse)
-async def generate_question_summary(
-    lecture_id: int = Query(...)
-):
+async def generate_question_summary(lecture_id: int = Query(...)):
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "요약할 텍스트 없음")
@@ -184,7 +219,7 @@ async def generate_question_summary(
     return SummaryResponse(lecture_id=lecture_id, summary=summ)
 
 # ──────────────────────────────────────────────────────────
-# 3) 최종 주제별 요약 + 스냅샷 매핑 API
+# 3) 최종 요약 + 이미지 매핑 API
 # ──────────────────────────────────────────────────────────
 
 @router.get("/lecture_summary")
@@ -192,23 +227,23 @@ async def get_lecture_summary(
     lecture_id: int = Query(...),
     db: AsyncSession = Depends(get_db)
 ):
-    # 1) 전체 텍스트 읽기 & GPT 마크다운 요약
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "텍스트 파일 없음")
     full_text = open(path, "r", encoding="utf-8").read()
     markdown = await summarize_text_with_gpt(full_text)
 
-    # 2) Markdown에서 주제+요약 추출
-    topics, current = [], ""
-    for line in markdown.splitlines():
-        if line.startswith("### "):
-            current = line[4:].strip()
-        elif line.startswith("-") and current:
-            topics.append({"topic": current, "summary": line[1:].strip()})
-            current = ""
+    topic_blocks = markdown.split("### ")[1:]
+    topics = []
+    for block in topic_blocks:
+        lines = block.strip().splitlines()
+        if not lines:
+            continue
+        topic_title = lines[0]
+        summary_lines = [line for line in lines[1:] if line.strip().startswith("-")]
+        summary = " ".join(line[1:].strip() for line in summary_lines)
+        topics.append({"topic": topic_title, "summary": summary})
 
-    # 3) DB에서 스냅샷 불러오기
     q = await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))
     snaps = q.scalars().all()
     if not snaps:
@@ -217,7 +252,6 @@ async def get_lecture_summary(
     texts = [s.text for s in snaps]
     data = [{"text": s.text, "image_url": f"https://project2025-backend.onrender.com{s.image_path}"} for s in snaps]
 
-    # 4) Embedding API & 유사도 매핑
     topic_embs = await embed_texts([t["topic"] for t in topics])
     snap_embs  = await embed_texts(texts)
 
