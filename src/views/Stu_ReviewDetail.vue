@@ -59,7 +59,7 @@ const fetchLectureSummary = async () => {
     }
 
     const response = await axios.get(
-      `https://project2025-backend.onrender.com/lecture_summary?lecture_id=${lectureId}`
+      `https://project2025-backend.onrender.com/snapshots/lecture_summary?lecture_id=${lectureId}`
     );
     summaryData.value = response.data;
     console.log("📘 최종 요약 데이터:", summaryData.value);
