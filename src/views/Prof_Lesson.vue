@@ -47,19 +47,20 @@ export default {
   methods: {
     async startLectureSession() {
       try {
-        const res = await axios({
-          method: "post",
-          url: "https://project2025-backend.onrender.com/lectures",
-          data: null, // ✅ 빈 바디
-          headers: {
-            "Content-Type": "text/plain" // ✅ FastAPI가 JSON 파싱 안 하게 함
+        const res = await axios.post(
+          "https://project2025-backend.onrender.com/lectures",
+          {}, // ✅ 빈 JSON 바디 명시
+          {
+            headers: {
+              "Content-Type": "application/json" // ✅ 명시적 JSON 타입
+            }
           }
-        });
+        );
 
         const { lecture_id } = res.data;
         localStorage.setItem("lecture_id", lecture_id);
 
-        // ✅ 녹음 매니저에도 lecture_id 전달
+        // ✅ 녹음 매니저에도 설정
         recordingManager.setLectureId(lecture_id);
 
         console.log("🎓 수업 세션 시작:", lecture_id);
