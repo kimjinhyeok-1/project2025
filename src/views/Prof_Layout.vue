@@ -57,3 +57,10 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+.sidebar .nav-link span {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+</style>
