@@ -27,7 +27,7 @@ def generate_expected_questions(summary_text: str, num_questions: int = 3) -> li
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
             max_tokens=500
