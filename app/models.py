@@ -77,8 +77,9 @@ class Lecture(Base):
     __tablename__ = "lectures"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(String, nullable=True)
+    title = Column(String, nullable=True)        # optional
+    description = Column(String, nullable=True)  # optional
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     recordings = relationship(
         "Recording", back_populates="lecture", cascade="all, delete-orphan"
