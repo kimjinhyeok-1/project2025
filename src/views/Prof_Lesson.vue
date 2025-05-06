@@ -26,6 +26,7 @@
 </template>
 
 <script>
+import axios from "axios";
 import recordingManager from "@/managers/RecordingManager";
 import { testOptionsRequest } from "@/api/snapshotService";
 import { marked } from "marked";
@@ -44,8 +45,21 @@ export default {
     },
   },
   methods: {
+    async startLectureSession() {
+      try {
+        const res = await axios.post("https://project2025-backend.onrender.com/lectures");
+        const { lecture_id } = res.data;
+        localStorage.setItem("lecture_id", lecture_id);
+        console.log("🎓 수업 세션 시작:", lecture_id);
+      } catch (err) {
+        console.error("❌ 수업 세션 시작 실패:", err);
+        alert("수업 세션 생성에 실패했습니다.");
+      }
+    },
+
     async toggleAudioRecording() {
       if (!recordingManager.getState().isRecording) {
+        await this.startLectureSession(); // 수업 시작 시 세션 생성
         await recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
@@ -54,10 +68,14 @@ export default {
       }
       this.isRecording = recordingManager.getState().isRecording;
     },
+
     async requestLectureSummary() {
       try {
+        const lectureId = localStorage.getItem("lecture_id");
+        if (!lectureId) throw new Error("lecture_id가 없습니다. 세션을 먼저 시작하세요.");
+
         const response = await fetch(
-          "https://project2025-backend.onrender.com/snapshots/generate_markdown_summary"
+          `https://project2025-backend.onrender.com/generate_markdown_summary?lecture_id=${lectureId}`
         );
         if (!response.ok) throw new Error("요약 요청 실패");
 
@@ -69,6 +87,7 @@ export default {
         alert("요약 요청에 실패했습니다.");
       }
     },
+
     async testOptions() {
       await testOptionsRequest();
     },
