@@ -66,7 +66,7 @@ async function getSummaries() {
   }
 
   try {
-    const response = await axios.get(`${BASE_URL}/lecture_summary?lecture_id=${lecture_id}`);
+    const response = await axios.get(`${BASE_URL}/snapshots/lecture_summary?lecture_id=${lecture_id}`);
     console.log("📥 요약 목록 수신 완료:", response.data);
     return response.data;
   } catch (error) {

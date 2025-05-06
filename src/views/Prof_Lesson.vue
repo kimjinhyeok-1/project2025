@@ -48,7 +48,7 @@ export default {
     async startLectureSession() {
       try {
         const res = await axios.post(
-          "https://project2025-backend.onrender.com/lectures",
+          "https://project2025-backend.onrender.com/snapshots/lectures",
           {}, // ✅ 빈 JSON 바디 명시
           {
             headers: {
@@ -94,7 +94,7 @@ export default {
         if (!lectureId) throw new Error("lecture_id가 없습니다. 세션을 먼저 시작하세요.");
 
         const response = await fetch(
-          `https://project2025-backend.onrender.com/generate_markdown_summary?lecture_id=${lectureId}`
+          `https://project2025-backend.onrender.com/snapshots/generate_markdown_summary?lecture_id=${lectureId}`
         );
         if (!response.ok) throw new Error("요약 요청 실패");
 
