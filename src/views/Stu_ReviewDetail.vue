@@ -21,10 +21,11 @@
             <li v-for="(highlight, idx) in topic.highlights" :key="idx">
               <p class="mb-1">🗣 {{ highlight.text }}</p>
               <img
-                v-if="highlight.image_url && highlight.image_url.length > 10"
+                v-if="imageVisibleMap[`${index}-${idx}`] !== false && highlight.image_url"
                 :src="highlight.image_url"
                 alt="스크린샷"
                 class="screenshot-preview"
+                @error="() => imageVisibleMap[`${index}-${idx}`] = false"
               />
             </li>
           </ul>
@@ -48,6 +49,7 @@
   
   const summaryData = ref([]);
   const loading = ref(true);
+  const imageVisibleMap = ref({});
   
   const fetchLectureSummary = async () => {
     try {
@@ -62,7 +64,6 @@
       loading.value = false;
     }
   };
-  
   onMounted(fetchLectureSummary);
   </script>
   
