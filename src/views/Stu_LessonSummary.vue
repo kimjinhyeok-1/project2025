@@ -7,26 +7,31 @@
       <div
         v-for="(item, index) in summaries"
         :key="index"
-        class="review-item mb-4 p-3"
+        class="review-item mb-4 p-3 d-flex justify-content-between align-items-center"
+        @click="goToDetail(item.id)"
+        style="cursor: pointer"
       >
-        <p><strong>🗓 날짜:</strong> {{ item.date }}</p>
-        <p><strong>📝 주차 요약 제목:</strong> {{ item.title }}</p>
-        <router-link :to="`/professor/review/${item.id}`" class="btn btn-outline-primary mt-2">
-          📄 요약 보기
-        </router-link>
+        <div class="text-start">
+          <p class="mb-1"><strong>🗓 날짜:</strong> {{ formatDate(item.date) }}</p>
+          <p class="mb-0"><strong>📘 주차:</strong> {{ item.week }}주차</p>
+        </div>
+        <div>
+          <span class="text-muted">➡️ 클릭하여 상세 보기</span>
+        </div>
       </div>
     </div>
-    <div v-else>
-      <p>현재 저장된 요약 목록이 없습니다.</p>
+
+    <div v-else class="alert alert-info mt-4">
+      현재 저장된 요약 목록이 없습니다.
     </div>
   </div>
 </template>
 
 <script>
-import { getSummaries } from "@/api/sttService";
+import { getSummaries } from "@/api/snapshotService";
 
 export default {
-  name: "ProfessorReviewView",
+  name: "StudentLessonSummary",
   data() {
     return {
       summaries: [],
@@ -39,6 +44,15 @@ export default {
       console.error("요약 목록 불러오기 실패:", error);
     }
   },
+  methods: {
+    formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+    },
+    goToDetail(id) {
+      this.$router.push({ name: "StudentReviewDetail", params: { id } });
+    }
+  }
 };
 </script>
 
@@ -52,5 +66,9 @@ export default {
   background-color: #f8f9fa;
   border-radius: 12px;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s ease;
+}
+.review-item:hover {
+  background-color: #e9ecef;
 }
 </style>

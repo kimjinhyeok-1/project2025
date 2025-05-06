@@ -34,7 +34,6 @@ async function captureScreenshot(displayStream) {
 async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
   const cleanedTranscript = transcript.trim();
 
-  // ✅ 빈 문장이라도 백엔드로 전달 (의도적으로 다 보내야 하므로)
   const timestamp = getFormattedTimestamp();
 
   try {
@@ -54,5 +53,33 @@ async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
   }
 }
 
+// 📥 전체 요약 목록 조회
+async function getSummaries() {
+  try {
+    const response = await axios.get(`${BASE_URL}/summaries`);
+    console.log("📥 요약 목록 수신 완료:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ 요약 목록 요청 실패:", error);
+    throw error;
+  }
+}
 
-export { uploadSnapshot, captureScreenshot };
+// 📄 특정 요약 상세 조회
+async function getSummaryById(id) {
+  try {
+    const response = await axios.get(`${BASE_URL}/summaries/${id}`);
+    console.log("📄 요약 상세 수신 완료:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ 요약 상세 요청 실패:", error);
+    throw error;
+  }
+}
+
+export {
+  uploadSnapshot,
+  captureScreenshot,
+  getSummaries,
+  getSummaryById,
+};

@@ -17,8 +17,9 @@ import ProfessorLayout from '../views/Prof_Layout.vue'
 import ProfessorView from '../views/Prof_DashBoard.vue'
 import ProfessorLesson from '../views/Prof_Lesson.vue'
 import ProfessorQnA from '../views/Prof_QnA.vue'
-import ProfessorAssignments from '../views/Prof_Assign.vue'
 import ProfessorReviewView from '../views/Prof_Review.vue'
+import ProfessorReviewDetail from '../views/Prof_ReviewDetail.vue' // ✅ 추가된 import
+import ProfessorAssignments from '../views/Prof_Assign.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
 import ProfessorRealtimeQuestion from '../views/Prof_AIQnAStu.vue'
@@ -31,7 +32,7 @@ const routes = [
   },
   {
     path: '/',
-    redirect: '/student/assignment' // 메인 페이지 → 과제 페이지로 리디렉션
+    redirect: '/student/assignment'
   },
   {
     path: '/student',
@@ -104,6 +105,11 @@ const routes = [
         component: ProfessorReviewView,
       },
       {
+        path: 'review/:id', // ✅ 상세 페이지 경로 추가
+        name: 'ProfessorReviewDetail',
+        component: ProfessorReviewDetail,
+      },
+      {
         path: 'assignments',
         name: 'ProfessorAssignments',
         component: ProfessorAssignments,
@@ -114,7 +120,7 @@ const routes = [
         component: AssignmentPostForm,
       },
       {
-        path: 'realtime-question', // ✅ 새로 추가된 경로
+        path: 'realtime-question',
         name: 'ProfessorRealtimeQuestion',
         component: ProfessorRealtimeQuestion,
       },
@@ -122,7 +128,7 @@ const routes = [
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/' // fallback 처리
+    redirect: '/'
   }
 ]
 
