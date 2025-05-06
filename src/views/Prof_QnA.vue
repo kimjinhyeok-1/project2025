@@ -90,12 +90,6 @@
           📭 아직 대화 기록이 없습니다.
         </div>
       </div>
-
-      <!-- 자료 보기 탭 -->
-      <div v-if="activeTab === 'resources'">
-        <h5>📂 자료 보기</h5>
-        <p>자료 기능은 추후 추가될 예정입니다.</p>
-      </div>
     </div>
   </div>
 </template>
