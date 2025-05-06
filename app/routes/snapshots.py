@@ -8,7 +8,7 @@ import base64
 import uuid
 from datetime import datetime
 
-from openai import AsyncOpenAI  # ✅ 최신 방식
+from openai import AsyncOpenAI
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 router = APIRouter()
@@ -40,7 +40,7 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
     timestamp = data.timestamp
     text = data.transcript
     image_data = data.screenshot_base64
-    lecture_id = 1
+    lecture_id = 1  # 필요 시 동적으로 변경
 
     try:
         dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
@@ -54,7 +54,7 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
         else:
             encoded = image_data
         image_bytes = base64.b64decode(encoded)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="이미지 디코딩 실패")
 
     filename = f"{uuid.uuid4().hex}.png"
@@ -65,13 +65,13 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
     try:
         with open(save_path, "wb") as f:
             f.write(image_bytes)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="이미지 파일 저장 실패")
 
-    # 텍스트 누적 저장
+    # 텍스트 저장 (덮어쓰기 모드)
     text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     try:
-        with open(text_log_path, "a", encoding="utf-8") as log_file:
+        with open(text_log_path, "w", encoding="utf-8") as log_file:
             log_file.write(f"{dt.strftime('%Y-%m-%d %H:%M:%S')} - {text}\n")
     except Exception as e:
         print(f"❌ 텍스트 저장 실패: {e}")
@@ -87,7 +87,7 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
     db.add(snapshot)
     try:
         await db.commit()
-    except Exception as e:
+    except Exception:
         await db.rollback()
         raise HTTPException(status_code=500, detail="DB 저장 실패")
 
@@ -101,7 +101,7 @@ async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_
     }
 
 
-# ✅ 최신 OpenAI 방식으로 GPT 요약 함수
+# GPT 요약 함수
 async def summarize_text_with_gpt(text: str) -> str:
     try:
         response = await client.chat.completions.create(
