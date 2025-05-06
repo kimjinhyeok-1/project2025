@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.database import get_db
 from app.models import Snapshot
 import os
@@ -9,8 +10,11 @@ import uuid
 from datetime import datetime
 
 from openai import AsyncOpenAI
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
+# OpenAI 클라이언트 초기화
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 router = APIRouter()
 
 # 디렉터리 설정
@@ -27,138 +31,170 @@ class SnapshotRequest(BaseModel):
     transcript: str
     screenshot_base64: str
 
-    class Config:
-        schema_extra = {
-            "timestamp": "2025-04-28 15:30:00",
-            "transcript": "이 코드는 시험에 나올 수 있습니다.",
-            "screenshot_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA..."
-        }
-
 
 @router.post("/snapshots")
 async def upload_snapshot(data: SnapshotRequest, db: AsyncSession = Depends(get_db)):
-    timestamp = data.timestamp
-    text = data.transcript
-    image_data = data.screenshot_base64
-    lecture_id = 1  # 필요 시 동적으로 변경
-
+    # 1) 요청 데이터 파싱
     try:
-        dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+        dt = datetime.strptime(data.timestamp, "%Y-%m-%d %H:%M:%S")
         date_group = dt.strftime("%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="timestamp 형식 오류 (yyyy-MM-dd HH:mm:ss)")
 
+    # 2) 이미지 디코딩 및 저장
     try:
-        if "," in image_data:
-            _, encoded = image_data.split(",", 1)
-        else:
-            encoded = image_data
+        _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
         image_bytes = base64.b64decode(encoded)
-    except Exception:
-        raise HTTPException(status_code=400, detail="이미지 디코딩 실패")
-
-    filename = f"{uuid.uuid4().hex}.png"
-    save_path = os.path.join(FULL_IMAGE_DIR, filename)
-    relative_url = f"/static/{IMAGE_DIR}/{filename}"
-    absolute_url = f"https://project2025-backend.onrender.com{relative_url}"
-
-    try:
+        filename = f"{uuid.uuid4().hex}.png"
+        save_path = os.path.join(FULL_IMAGE_DIR, filename)
         with open(save_path, "wb") as f:
             f.write(image_bytes)
     except Exception:
-        raise HTTPException(status_code=500, detail="이미지 파일 저장 실패")
+        raise HTTPException(status_code=400, detail="이미지 디코딩 또는 저장 실패")
 
-    # 텍스트 저장 (추가 모드)
+    relative_url = f"/static/{IMAGE_DIR}/{filename}"
+    absolute_url = f"https://project2025-backend.onrender.com{relative_url}"
+
+    # 3) 텍스트 로그 누적 저장
+    lecture_id = 1  # 동적 처리 필요 시 수정
     text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     try:
         with open(text_log_path, "a", encoding="utf-8") as log_file:
-            log_file.write(f"{dt.strftime('%Y-%m-%d %H:%M:%S')} - {text}\n")
-    except Exception as e:
-        print(f"❌ 텍스트 저장 실패: {e}")
+            log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
+    except Exception:
+        # 로깅 실패 시에도 API 차단하지 않음
+        pass
 
+    # 4) DB 저장
     snapshot = Snapshot(
         lecture_id=lecture_id,
         date=date_group,
         time=dt.strftime("%H:%M:%S"),
-        text=text,
+        text=data.transcript,
         image_path=relative_url
     )
-
     db.add(snapshot)
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise HTTPException(status_code=500, detail="DB 저장 실패")
+    await db.commit()
 
     return {
         "message": "스냅샷 저장 완료",
         "lecture_id": lecture_id,
         "date": date_group,
         "time": snapshot.time,
-        "text": text,
+        "text": data.transcript,
         "image_url": absolute_url
     }
 
-# GPT 요약 함수 (Markdown 요약용)
+
+# GPT 기반 Markdown 요약 함수
 async def summarize_text_with_gpt(text: str) -> str:
     system_msg = {
         "role": "system",
         "content": (
-            "당신은 ‘교수의 강의 마무리 Reminder’를 작성하는 역할입니다.\n"
-            "• 이번 강의에서 등장한 **핵심 키워드** 5개를 추출하고,\n"
-            "• 각 키워드를 ### 헤딩으로, 1–2문장 설명을 bullet으로\n"
-            "  마크다운 형식으로 정리하세요."
+            "당신은 ‘교수의 강의 마무리 리마인더’를 작성하는 역할입니다.\n"
+            "• 이번 강의에서 등장한 핵심 키워드 5개를 추출하고,\n"
+            "• 각 키워드를 ### 헤딩으로, 간단한 설명을 bullet으로 작성하세요. (마크다운 형식)"
         )
     }
     user_msg = {
         "role": "user",
-        "content": f"강의 로그 (최대 3000자):\n```text\n{text[:3000]}\n```\n\n위 텍스트를 바탕으로 Markdown 형식의 요약을 생성해주세요."
+        "content": f"강의 로그 (최대 3000자):\n```text\n{text[:3000]}\n```"
     }
-    try:
-        response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[system_msg, user_msg],
-            temperature=0.5,
-            max_tokens=600,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"❌ GPT 요약 실패: {e}")
-        return "[요약 실패] GPT 호출 중 오류가 발생했습니다."
+    res = await client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[system_msg, user_msg],
+        temperature=0.5,
+        max_tokens=800,
+    )
+    return res.choices[0].message.content.strip()
+
 
 class SummaryResponse(BaseModel):
     lecture_id: int
     summary: str
 
+
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
 async def generate_markdown_summary(lecture_id: int = 1):
-    text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
+    # 텍스트 로그 불러오기
+    path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="요약할 텍스트 없음")
+    text = open(path, "r", encoding="utf-8").read()
 
-    if not os.path.exists(text_log_path):
-        raise HTTPException(status_code=404, detail="요약할 텍스트 파일이 없습니다.")
-
-    with open(text_log_path, "r", encoding="utf-8") as f:
-        full_text = f.read()
-
-    markdown = await summarize_text_with_gpt(full_text)
-
+    # Markdown 요약 생성
+    markdown = await summarize_text_with_gpt(text)
     return SummaryResponse(lecture_id=lecture_id, summary=markdown)
 
-# 기존 요약 엔드포인트 유지 (텍스트 요약)
-@router.get("/generate_question_summary")
+
+@router.get("/generate_question_summary", response_model=SummaryResponse)
 async def generate_question_summary(lecture_id: int = 1):
-    text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
+    # 기존 텍스트 요약과 동일하게 처리
+    path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="요약할 텍스트 없음")
+    text = open(path, "r", encoding="utf-8").read()
+    summary = await summarize_text_with_gpt(text)
+    return SummaryResponse(lecture_id=lecture_id, summary=summary)
 
-    if not os.path.exists(text_log_path):
-        raise HTTPException(status_code=404, detail="요약할 텍스트 파일이 없습니다.")
 
-    with open(text_log_path, "r", encoding="utf-8") as f:
-        full_text = f.read()
+# ✅ 최종 API: 강의별 요약 + 관련 스냅샷 하이라이트
+class LectureTopicHighlight(BaseModel):
+    topic: str
+    summary: str
+    highlights: list
 
-    summary = await summarize_text_with_gpt(full_text)
 
-    return {
-        "lecture_id": lecture_id,
-        "summary": summary
-    }
+@router.get("/lecture_summary", response_model=list[LectureTopicHighlight])
+async def get_lecture_summary(lecture_id: int = 1, db: AsyncSession = Depends(get_db)):
+    # 1) 강의 로그 불러오기
+    path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="텍스트 파일 없음")
+    full_text = open(path, "r", encoding="utf-8").read()
+
+    # 2) Markdown 요약 생성
+    markdown = await summarize_text_with_gpt(full_text)
+
+    # 3) Markdown에서 주제별 키워드와 요약 추출
+    topics = []
+    current_topic = None
+    for line in markdown.splitlines():
+        if line.startswith("### "):
+            current_topic = line.removeprefix("### ").strip()
+        elif line.startswith("-") and current_topic:
+            summary_line = line.lstrip("- ").strip()
+            topics.append({"topic": current_topic, "summary": summary_line})
+            current_topic = None
+
+    if not topics:
+        raise HTTPException(status_code=204, detail="추출된 토픽 없음")
+
+    # 4) DB에서 스냅샷 불러오기
+    result = await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))
+    snapshots = result.scalars().all()
+    if not snapshots:
+        raise HTTPException(status_code=404, detail="스냅샷 없음")
+    texts = [s.text for s in snapshots]
+    data_urls = [f"https://project2025-backend.onrender.com{s.image_path}" for s in snapshots]
+
+    # 5) 임베딩 및 유사도 계산
+    model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+    topic_embs = model.encode([t["topic"] for t in topics])
+    snap_embs = model.encode(texts)
+
+    response = []
+    for idx, t in enumerate(topics):
+        sims = cosine_similarity([topic_embs[idx]], snap_embs)[0]
+        top_idxs = sims.argsort()[-3:][::-1]
+        highlights = [
+            {"text": texts[i], "image_url": data_urls[i]}
+            for i in top_idxs
+        ]
+        response.append({
+            "topic": t["topic"],
+            "summary": t["summary"],
+            "highlights": highlights
+        })
+
+    return response
