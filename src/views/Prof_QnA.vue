@@ -22,15 +22,6 @@
           전체 대화 보기
         </a>
       </li>
-      <li class="nav-item">
-        <a
-          class="nav-link"
-          :class="{ active: activeTab === 'resources', 'text-primary': true }"
-          @click="activeTab = 'resources'"
-        >
-          자료 보기
-        </a>
-      </li>
     </ul>
 
     <!-- 탭 내용 -->
