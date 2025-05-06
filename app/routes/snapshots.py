@@ -17,10 +17,8 @@ from app.models import Snapshot
 # 전역 설정
 # ──────────────────────────────────────────────────────────
 
-# OpenAI 클라이언트 초기화
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# 디렉터리 설정
 IMAGE_DIR = "tmp/snapshots"
 FULL_IMAGE_DIR = os.path.join("static", IMAGE_DIR)
 os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
@@ -29,6 +27,7 @@ TEXT_LOG_DIR = "data"
 os.makedirs(TEXT_LOG_DIR, exist_ok=True)
 
 router = APIRouter()
+
 
 # ──────────────────────────────────────────────────────────
 # Pydantic 스키마
@@ -43,19 +42,18 @@ class SummaryResponse(BaseModel):
     lecture_id: int
     summary: str
 
+
 # ──────────────────────────────────────────────────────────
 # 헬퍼: OpenAI Embeddings 호출
 # ──────────────────────────────────────────────────────────
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
-    """
-    OpenAI Embeddings API로 텍스트 리스트를 임베딩 벡터로 변환.
-    """
     resp = await client.embeddings.create(
         model="text-embedding-ada-002",
         input=texts
     )
     return [e.embedding for e in resp.data]
+
 
 # ──────────────────────────────────────────────────────────
 # 1) 스냅샷 저장 API
@@ -89,14 +87,14 @@ async def upload_snapshot(
     relative_url = f"/static/{IMAGE_DIR}/{filename}"
     absolute_url = f"https://project2025-backend.onrender.com{relative_url}"
 
-    # 3) 텍스트 로그 누적 저장
+    # 3) 텍스트 로그 **덮어쓰기**
     lecture_id = 1
     text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     try:
-        with open(text_log_path, "a", encoding="utf-8") as log_file:
+        with open(text_log_path, "w", encoding="utf-8") as log_file:
             log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
     except Exception:
-        pass
+        pass  # 로그 에러 무시
 
     # 4) DB에 저장
     snapshot = Snapshot(
@@ -117,6 +115,7 @@ async def upload_snapshot(
         "text": data.transcript,
         "image_url": absolute_url
     }
+
 
 # ──────────────────────────────────────────────────────────
 # 2) GPT 마크다운 요약 API
@@ -143,6 +142,7 @@ async def summarize_text_with_gpt(text: str) -> str:
     )
     return res.choices[0].message.content.strip()
 
+
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
 async def generate_markdown_summary(lecture_id: int = 1):
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
@@ -152,6 +152,7 @@ async def generate_markdown_summary(lecture_id: int = 1):
     markdown = await summarize_text_with_gpt(text)
     return SummaryResponse(lecture_id=lecture_id, summary=markdown)
 
+
 @router.get("/generate_question_summary", response_model=SummaryResponse)
 async def generate_question_summary(lecture_id: int = 1):
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
@@ -160,6 +161,7 @@ async def generate_question_summary(lecture_id: int = 1):
     text = open(path, "r", encoding="utf-8").read()
     summary = await summarize_text_with_gpt(text)
     return SummaryResponse(lecture_id=lecture_id, summary=summary)
+
 
 # ──────────────────────────────────────────────────────────
 # 3) 최종 주제별 요약 + 스냅샷 매핑 API
