@@ -53,7 +53,7 @@ class SummaryResponse(BaseModel):
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
     resp = await client.embeddings.create(
-        model="text-embedding-ada-002",
+        model="text-embedding-3-small",
         input=texts
     )
     return [e.embedding for e in resp.data]
