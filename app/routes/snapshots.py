@@ -105,7 +105,7 @@ async def summarize_text_with_gpt(text: str) -> str:
     system_msg = {
         "role": "system",
         "content": (
-            "당신은 ‘교수의 강의 마무리 리마인더’를 작성하는 역할입니다.\n"
+            "당신은 ‘교수의 강의 마무리 Reminder’를 작성하는 역할입니다.\n"
             "• 이번 강의에서 등장한 **핵심 키워드** 5개를 추출하고,\n"
             "• 각 키워드를 ### 헤딩으로, 1–2문장 설명을 bullet으로\n"
             "  마크다운 형식으로 정리하세요."
@@ -127,12 +127,11 @@ async def summarize_text_with_gpt(text: str) -> str:
         print(f"❌ GPT 요약 실패: {e}")
         return "[요약 실패] GPT 호출 중 오류가 발생했습니다."
 
-class MarkdownSummary(BaseModel):
+class SummaryResponse(BaseModel):
     lecture_id: int
-    markdown: str
+    summary: str
 
-
-@router.get("/generate_markdown_summary", response_model=MarkdownSummary)
+@router.get("/generate_markdown_summary", response_model=SummaryResponse)
 async def generate_markdown_summary(lecture_id: int = 1):
     text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
 
@@ -144,7 +143,7 @@ async def generate_markdown_summary(lecture_id: int = 1):
 
     markdown = await summarize_text_with_gpt(full_text)
 
-    return MarkdownSummary(lecture_id=lecture_id, markdown=markdown)
+    return SummaryResponse(lecture_id=lecture_id, summary=markdown)
 
 # 기존 요약 엔드포인트 유지 (텍스트 요약)
 @router.get("/generate_question_summary")
