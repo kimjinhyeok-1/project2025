@@ -40,7 +40,7 @@ async function uploadSnapshot({ transcript = "", screenshot_base64 = "", lecture
 
   try {
     const response = await axios.post(
-      `${BASE_URL}/snapshots?lecture_id=${lecture_id}`,
+      `${BASE_URL}/snapshots/snapshots?lecture_id=${lecture_id}`,
       {
         timestamp,
         transcript: cleanedTranscript,
