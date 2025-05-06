@@ -7,9 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-
 from openai import AsyncOpenAI
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.database import get_db
@@ -21,9 +19,6 @@ from app.models import Snapshot
 
 # OpenAI 클라이언트 초기화
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# 임베딩 모델 한 번만 로드
-MODEL = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
 # 디렉터리 설정
 IMAGE_DIR = "tmp/snapshots"
@@ -44,6 +39,24 @@ class SnapshotRequest(BaseModel):
     transcript: str
     screenshot_base64: str
 
+class SummaryResponse(BaseModel):
+    lecture_id: int
+    summary: str
+
+# ──────────────────────────────────────────────────────────
+# 헬퍼: OpenAI Embeddings 호출
+# ──────────────────────────────────────────────────────────
+
+async def embed_texts(texts: list[str]) -> list[list[float]]:
+    """
+    OpenAI Embeddings API로 텍스트 리스트를 임베딩 벡터로 변환.
+    """
+    resp = await client.embeddings.create(
+        model="text-embedding-ada-002",
+        input=texts
+    )
+    return [e.embedding for e in resp.data]
+
 # ──────────────────────────────────────────────────────────
 # 1) 스냅샷 저장 API
 # ──────────────────────────────────────────────────────────
@@ -63,7 +76,8 @@ async def upload_snapshot(
 
     # 2) 이미지 디코딩 & 저장
     try:
-        _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
+        _, encoded = data.screenshot_base64.split(",", 1) \
+            if "," in data.screenshot_base64 else ("", data.screenshot_base64)
         image_bytes = base64.b64decode(encoded)
         filename = f"{uuid.uuid4().hex}.png"
         save_path = os.path.join(FULL_IMAGE_DIR, filename)
@@ -82,7 +96,7 @@ async def upload_snapshot(
         with open(text_log_path, "a", encoding="utf-8") as log_file:
             log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
     except Exception:
-        pass  # 로그 실패해도 진행
+        pass
 
     # 4) DB에 저장
     snapshot = Snapshot(
@@ -105,7 +119,7 @@ async def upload_snapshot(
     }
 
 # ──────────────────────────────────────────────────────────
-# 2) GPT 요약 헬퍼
+# 2) GPT 마크다운 요약 API
 # ──────────────────────────────────────────────────────────
 
 async def summarize_text_with_gpt(text: str) -> str:
@@ -129,14 +143,6 @@ async def summarize_text_with_gpt(text: str) -> str:
     )
     return res.choices[0].message.content.strip()
 
-class SummaryResponse(BaseModel):
-    lecture_id: int
-    summary: str
-
-# ──────────────────────────────────────────────────────────
-# 3) 마크다운 요약 API
-# ──────────────────────────────────────────────────────────
-
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
 async def generate_markdown_summary(lecture_id: int = 1):
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
@@ -145,10 +151,6 @@ async def generate_markdown_summary(lecture_id: int = 1):
     text = open(path, "r", encoding="utf-8").read()
     markdown = await summarize_text_with_gpt(text)
     return SummaryResponse(lecture_id=lecture_id, summary=markdown)
-
-# ──────────────────────────────────────────────────────────
-# 4) 텍스트 요약 API (기존)
-# ──────────────────────────────────────────────────────────
 
 @router.get("/generate_question_summary", response_model=SummaryResponse)
 async def generate_question_summary(lecture_id: int = 1):
@@ -160,7 +162,7 @@ async def generate_question_summary(lecture_id: int = 1):
     return SummaryResponse(lecture_id=lecture_id, summary=summary)
 
 # ──────────────────────────────────────────────────────────
-# 5) 최종 주제별 요약 + 스냅샷 매핑 API
+# 3) 최종 주제별 요약 + 스냅샷 매핑 API
 # ──────────────────────────────────────────────────────────
 
 @router.get("/lecture_summary")
@@ -168,26 +170,29 @@ async def get_lecture_summary(
     lecture_id: int = 1,
     db: AsyncSession = Depends(get_db)
 ):
-    # 1) 전체 텍스트 요약 (Markdown)
+    # 1) 전체 텍스트 읽기 & GPT 마크다운 요약
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="텍스트 파일 없음")
     full_text = open(path, "r", encoding="utf-8").read()
     markdown = await summarize_text_with_gpt(full_text)
 
-    # 2) Markdown으로부터 주제(+요약) 추출
-    topics = []
+    # 2) Markdown에서 주제+요약 추출
+    topics: list[dict] = []
     current_topic = ""
     for line in markdown.splitlines():
         if line.startswith("### "):
             current_topic = line.replace("### ", "").strip()
         elif line.startswith("-") and current_topic:
-            topics.append({"topic": current_topic, "summary": line.replace("-", "").strip()})
+            topics.append({
+                "topic": current_topic,
+                "summary": line.replace("-", "").strip()
+            })
             current_topic = ""
 
     # 3) DB에서 스냅샷 불러오기
-    result = await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))
-    snaps = result.scalars().all()
+    q = await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))
+    snaps = q.scalars().all()
     if not snaps:
         raise HTTPException(status_code=404, detail="스냅샷 없음")
 
@@ -197,10 +202,11 @@ async def get_lecture_summary(
         for s in snaps
     ]
 
-    # 4) 임베딩 + 유사도 매핑
-    topic_embs = MODEL.encode([t["topic"] for t in topics])
-    snap_embs = MODEL.encode(texts)
+    # 4) OpenAI Embeddings API로 임베딩 생성
+    topic_embs = await embed_texts([t["topic"] for t in topics])
+    snap_embs  = await embed_texts(texts)
 
+    # 5) 유사도 계산 후 Top-3 매핑
     output = []
     for i, tp in enumerate(topics):
         sims = cosine_similarity([topic_embs[i]], snap_embs)[0]
