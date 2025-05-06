@@ -48,9 +48,12 @@ class SummaryResponse(BaseModel):
 # ──────────────────────────────────────────────────────────
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
+    clean_texts = [t for t in texts if t and t.strip()]
+    if not clean_texts:
+        raise HTTPException(status_code=400, detail="빈 텍스트로 임베딩 요청 불가")
     resp = await client.embeddings.create(
         model="text-embedding-ada-002",
-        input=texts
+        input=clean_texts
     )
     return [e.embedding for e in resp.data]
 
@@ -64,7 +67,6 @@ async def upload_snapshot(
     data: SnapshotRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    # 1) timestamp 파싱
     try:
         dt = datetime.strptime(data.timestamp, "%Y-%m-%d %H:%M:%S")
     except ValueError:
@@ -72,10 +74,8 @@ async def upload_snapshot(
 
     date_group = dt.strftime("%Y-%m-%d")
 
-    # 2) 이미지 디코딩 & 저장
     try:
-        _, encoded = data.screenshot_base64.split(",", 1) \
-            if "," in data.screenshot_base64 else ("", data.screenshot_base64)
+        _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
         image_bytes = base64.b64decode(encoded)
         filename = f"{uuid.uuid4().hex}.png"
         save_path = os.path.join(FULL_IMAGE_DIR, filename)
@@ -87,16 +87,14 @@ async def upload_snapshot(
     relative_url = f"/static/{IMAGE_DIR}/{filename}"
     absolute_url = f"https://project2025-backend.onrender.com{relative_url}"
 
-    # 3) 텍스트 로그 **덮어쓰기**
     lecture_id = 1
     text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     try:
         with open(text_log_path, "w", encoding="utf-8") as log_file:
             log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
     except Exception:
-        pass  # 로그 에러 무시
+        pass
 
-    # 4) DB에 저장
     snapshot = Snapshot(
         lecture_id=lecture_id,
         date=date_group,
@@ -118,23 +116,19 @@ async def upload_snapshot(
 
 
 # ──────────────────────────────────────────────────────────
-# 2) GPT 마크다운 요약 API
+# 2) GPT 요약 (Markdown 형식)
 # ──────────────────────────────────────────────────────────
 
 async def summarize_text_with_gpt(text: str) -> str:
     system_msg = {
-    "role": "system",
-    "content": (
-        """
-        너는 수업 마지막에 보여줄 요약 카드를 만드는 조교야. 
-        학생들이 오늘 수업을 이해하기 쉽도록 오늘 배운 핵심 개념 5개를 Markdown 형식으로 정리해줘.  
-        형식은 반드시 아래처럼 써:
-
-        ## 개념명 (예: Overloading, Void 타입)
-
-        - 간단한 한 줄 설명 (학생이 바로 이해 가능하게)
-
-        개념명은 번역체 대신 정확한 개발 용어로 써줘. 설명은 한 문장만."""
+        "role": "system",
+        "content": (
+            "너는 수업 마지막에 보여줄 요약 카드를 만드는 조교야. "
+            "학생들이 오늘 수업을 이해하기 쉽도록 오늘 배운 핵심 개념 5개를 Markdown 형식으로 정리해줘.  "
+            "형식은 반드시 아래처럼 써:\n\n"
+            "### 개념명 (예: Overloading, Void 타입)\n\n"
+            "- 간단한 한 줄 설명 (학생이 바로 이해 가능하게)\n\n"
+            "개념명은 번역체 대신 정확한 개발 용어로 써줘. 설명은 한 문장만."
         )
     }
     user_msg = {
@@ -160,18 +154,8 @@ async def generate_markdown_summary(lecture_id: int = 1):
     return SummaryResponse(lecture_id=lecture_id, summary=markdown)
 
 
-@router.get("/generate_question_summary", response_model=SummaryResponse)
-async def generate_question_summary(lecture_id: int = 1):
-    path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
-    if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="요약할 텍스트 없음")
-    text = open(path, "r", encoding="utf-8").read()
-    summary = await summarize_text_with_gpt(text)
-    return SummaryResponse(lecture_id=lecture_id, summary=summary)
-
-
 # ──────────────────────────────────────────────────────────
-# 3) 최종 주제별 요약 + 스냅샷 매핑 API
+# 3) 마크다운 요약 + 스냅샷 매핑
 # ──────────────────────────────────────────────────────────
 
 @router.get("/lecture_summary")
@@ -179,19 +163,18 @@ async def get_lecture_summary(
     lecture_id: int = 1,
     db: AsyncSession = Depends(get_db)
 ):
-    # 1) 전체 텍스트 읽기 & GPT 마크다운 요약
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="텍스트 파일 없음")
+
     full_text = open(path, "r", encoding="utf-8").read()
     markdown = await summarize_text_with_gpt(full_text)
 
-    # 2) Markdown에서 주제+요약 추출
     topics: list[dict] = []
     current_topic = ""
     for line in markdown.splitlines():
-        if line.startswith("### "):
-            current_topic = line.replace("### ", "").strip()
+        if line.startswith("## "):
+            current_topic = line.replace("## ", "").strip()
         elif line.startswith("-") and current_topic:
             topics.append({
                 "topic": current_topic,
@@ -199,31 +182,35 @@ async def get_lecture_summary(
             })
             current_topic = ""
 
-    # 3) DB에서 스냅샷 불러오기
+    valid_topics = [t["topic"] for t in topics if t.get("topic") and t["topic"].strip()]
+    if not valid_topics:
+        raise HTTPException(status_code=400, detail="요약된 토픽이 없습니다.")
+
     q = await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))
     snaps = q.scalars().all()
     if not snaps:
         raise HTTPException(status_code=404, detail="스냅샷 없음")
 
-    texts = [s.text for s in snaps]
+    texts = [s.text for s in snaps if s.text and s.text.strip()]
+    if not texts:
+        raise HTTPException(status_code=400, detail="스냅샷 텍스트가 유효하지 않습니다.")
+
     data = [
         {"text": s.text, "image_url": f"https://project2025-backend.onrender.com{s.image_path}"}
         for s in snaps
     ]
 
-    # 4) OpenAI Embeddings API로 임베딩 생성
-    topic_embs = await embed_texts([t["topic"] for t in topics])
-    snap_embs  = await embed_texts(texts)
+    topic_embs = await embed_texts(valid_topics)
+    snap_embs = await embed_texts(texts)
 
-    # 5) 유사도 계산 후 Top-3 매핑
     output = []
-    for i, tp in enumerate(topics):
+    for i, tp in enumerate(valid_topics):
         sims = cosine_similarity([topic_embs[i]], snap_embs)[0]
         top_idx = sims.argsort()[-3:][::-1]
         highlights = [data[j] for j in top_idx]
         output.append({
-            "topic": tp["topic"],
-            "summary": tp["summary"],
+            "topic": tp,
+            "summary": topics[i]["summary"],
             "highlights": highlights
         })
 
