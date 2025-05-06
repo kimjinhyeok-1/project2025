@@ -1,7 +1,7 @@
 <template>
   <div id="wrapper" class="d-flex">
     <!-- Sidebar -->
-    <ul class="navbar-nav sidebar sidebar-light accordion" id="studentSidebar" style="background-color: rgb(84, 153, 165);">
+    <ul class="navbar-nav sidebar sidebar-light accordion" id="studentSidebar" style="background-color: rgb(43, 132, 183);">
       <router-link class="sidebar-brand d-flex align-items-center justify-content-center" to="/student">
         <div class="sidebar-brand-icon">
           <i class="fas fa-user-graduate"></i>
