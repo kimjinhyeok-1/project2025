@@ -1,7 +1,7 @@
 <template>
   <div id="wrapper" class="d-flex">
     <!-- Sidebar -->
-    <ul class="navbar-nav bg-info sidebar sidebar-light accordion" id="studentSidebar">
+    <ul class="navbar-nav sidebar sidebar-light accordion" id="studentSidebar" style="background-color: rgb(84, 153, 165);">
       <router-link class="sidebar-brand d-flex align-items-center justify-content-center" to="/student">
         <div class="sidebar-brand-icon">
           <i class="fas fa-user-graduate"></i>
@@ -77,4 +77,8 @@
   font-size: 1.2rem;
   font-weight: 600;
 }
+.sidebar-brand-icon i {
+  color: rgba(255, 255, 255, 0.8); /* 부드러운 흰색 */
+}
+
 </style>
