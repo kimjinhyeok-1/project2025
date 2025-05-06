@@ -166,7 +166,7 @@ async def summarize_text_with_gpt(text: str) -> str:
         "content": f"강의 로그:\n```text\n{truncated}\n```"
     }
     res = await client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         messages=[system_msg, user_msg],
         temperature=0.5,
         max_tokens=1200,
@@ -196,7 +196,7 @@ async def summarize_text_with_gpt_reminder(text: str) -> str:
         "content": f"강의 로그:\n```text\n{truncated}\n```"
     }
     res = await client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         messages=[system_msg, user_msg],
         temperature=0.5,
         max_tokens=1200,
