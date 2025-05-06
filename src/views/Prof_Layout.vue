@@ -14,32 +14,32 @@
       <li class="nav-item">
         <router-link class="nav-link" to="/professor/qna">
           <i class="fas fa-question-circle"></i>
-          <span> Q & A</span>
+          <span> 학생들의 질문</span>
         </router-link>
       </li>
       <li class="nav-item">
         <router-link class="nav-link" to="/professor/lesson">
           <i class="fas fa-chalkboard"></i>
-          <span> LECTURE START</span>
+          <span> 수업 시작</span>
         </router-link>
       </li>
       <li class="nav-item">
         <router-link class="nav-link" to="/professor/review">
           <i class="fas fa-book-open"></i>
-          <span> LECTURE REVIEW</span>
+          <span> 수업 요약</span>
         </router-link>
       </li>
       <li class="nav-item">
         <router-link class="nav-link" to="/professor/assignments">
           <i class="fas fa-tasks"></i>
-          <span> ASSIGNMENT</span>
+          <span> 과제</span>
         </router-link>
       </li>
       <!-- ✅ 새 메뉴 추가 -->
       <li class="nav-item">
         <router-link class="nav-link" to="/professor/realtime-question">
           <i class="fas fa-microphone"></i>
-          <span> REALTIME QUESTION</span>
+          <span> 실시간 질문</span>
         </router-link>
       </li>
     </ul>
