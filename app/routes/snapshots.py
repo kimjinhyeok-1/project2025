@@ -2,6 +2,7 @@ import os
 import base64
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel
@@ -45,20 +46,16 @@ class SnapshotRequest(BaseModel):
 
 class SummaryResponse(BaseModel):
     lecture_id: int
-    summary: str
+    summary: Optional[str]
 
 # ──────────────────────────────────────────────────────────
-# 헬퍼: 텍스트 토큰 슬라이싱
+# 헬퍼 함수
 # ──────────────────────────────────────────────────────────
 
 def truncate_by_token(text: str, max_tokens: int = 3500) -> str:
     enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
     tokens = enc.encode(text)
     return enc.decode(tokens[:max_tokens])
-
-# ──────────────────────────────────────────────────────────
-# 헬퍼: OpenAI Embeddings 호출
-# ──────────────────────────────────────────────────────────
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
     resp = await client.embeddings.create(
@@ -74,7 +71,7 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(
     db: AsyncSession = Depends(get_db),
-    body: dict = Body(None)  # ✅ 빈 바디 또는 {}를 받아도 에러 방지
+    body: dict = Body(None)
 ):
     lecture = Lecture()
     db.add(lecture)
@@ -92,7 +89,7 @@ async def create_lecture(
 @router.post("/snapshots")
 async def upload_snapshot(
     data: SnapshotRequest,
-    lecture_id: int = Query(..., description="lecture_id from /lectures"),
+    lecture_id: int = Query(...),
     db: AsyncSession = Depends(get_db)
 ):
     try:
@@ -118,7 +115,7 @@ async def upload_snapshot(
 
     text_log_path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     try:
-        with open(text_log_path, "w", encoding="utf-8") as log_file:
+        with open(text_log_path, "a", encoding="utf-8") as log_file:
             log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
     except:
         pass
@@ -143,60 +140,43 @@ async def upload_snapshot(
     }
 
 # ──────────────────────────────────────────────────────────
-# 2) GPT 요약 함수
+# 2) 요약 함수
 # ──────────────────────────────────────────────────────────
 
 async def summarize_text_with_gpt(text: str) -> str:
     truncated = truncate_by_token(text)
-    system_msg = {
-        "role": "system",
-        "content": (
-            "당신은 대학 강의의 내용을 요약하는 AI입니다.\n\n"
-            "목표:\n"
-            "1. 수업 내용을 학생들이 다시 볼 수 있도록 마크다운 형식으로 정리합니다.\n"
-            "2. 주제별로 '### 주제명'을 사용하고, 그 아래에 해당 주제의 설명을 '-' 형식으로 정리합니다.\n"
-            "3. 분량은 3~5개의 주제로 구성되도록 조절하세요.\n"
-            "4. 가능한 경우 주제의 순서는 수업 흐름을 반영하세요.\n"
-            "5. 용어는 JAVA 관련 용어로 사용하세요."
-        )
-    }
-    user_msg = {
-        "role": "user",
-        "content": f"강의 로그:\n```text\n{truncated}\n```"
-    }
+    messages = [
+        {"role": "system", "content": (
+            "당신은 강의 요약 전문가입니다. \n"
+            "- 강의 내용을 주제별로 정리하세요.\n"
+            "- '### 주제' 제목을 사용하고 그 아래 '-'로 요약합니다.\n"
+            "- JAVA 중심 용어를 반영하세요."
+        )},
+        {"role": "user", "content": f"강의 내용:\n```\n{truncated}\n```"}
+    ]
     res = await client.chat.completions.create(
         model="gpt-4o",
-        messages=[system_msg, user_msg],
+        messages=messages,
         temperature=0.5,
-        max_tokens=1200,
+        max_tokens=1200
     )
     return res.choices[0].message.content.strip()
 
 async def summarize_text_with_gpt_reminder(text: str) -> str:
     truncated = truncate_by_token(text)
-    system_msg = {
-        "role": "system",
-        "content": (
-            "당신은 대학교 강의의 마무리 리마인더를 작성하는 AI 비서입니다. "
-            "교수자가 수업을 마치기 전에 학생들에게 강의의 핵심 내용을 간략히 정리해 주려고 합니다.\n\n"
-            "요구 사항:\n"
-            "1. 강의의 핵심 키워드 3개를 선정하고, 각 키워드별로 간단한 요약 설명을 제공합니다.\n"
-            "2. 출력 형식은 다음과 같습니다:\n"
-            "### 키워드1\n"
-            "- 간결한 요약 설명\n"
-            "3. 가능하다면 Java 개념과 관련된 용어를 반영하세요.\n"
-            "4. 추론하지 말고 받은 텍스트를 기반으로 설명을 작성하세요."
-        )
-    }
-    user_msg = {
-        "role": "user",
-        "content": f"강의 로그:\n```text\n{truncated}\n```"
-    }
+    messages = [
+        {"role": "system", "content": (
+            "당신은 강의 마무리 리마인더를 작성합니다.\n"
+            "- 핵심 키워드 3개를 정하고 각각 간결히 요약하세요.\n"
+            "- JAVA 용어 사용을 우선하세요."
+        )},
+        {"role": "user", "content": f"강의 내용:\n```\n{truncated}\n```"}
+    ]
     res = await client.chat.completions.create(
         model="gpt-4o",
-        messages=[system_msg, user_msg],
+        messages=messages,
         temperature=0.5,
-        max_tokens=1200,
+        max_tokens=1200
     )
     return res.choices[0].message.content.strip()
 
@@ -219,7 +199,7 @@ async def generate_question_summary(lecture_id: int = Query(...)):
     return SummaryResponse(lecture_id=lecture_id, summary=summ)
 
 # ──────────────────────────────────────────────────────────
-# 3) 최종 요약 + 이미지 매핑 API
+# 3) 요약 + 이미지 매핑 API
 # ──────────────────────────────────────────────────────────
 
 @router.get("/lecture_summary")
@@ -253,7 +233,7 @@ async def get_lecture_summary(
     data = [{"text": s.text, "image_url": f"https://project2025-backend.onrender.com{s.image_path}"} for s in snaps]
 
     topic_embs = await embed_texts([t["topic"] for t in topics])
-    snap_embs  = await embed_texts(texts)
+    snap_embs = await embed_texts(texts)
 
     output = []
     for i, tp in enumerate(topics):
