@@ -29,7 +29,7 @@
           aria-controls="collapseLesson"
         >
           <i class="fas fa-chalkboard"></i>
-          <span>수업</span>
+          <span> 수업</span>
         </a>
         <div id="collapseLesson" class="collapse" data-parent="#accordionSidebar">
           <div class="bg-white py-2 collapse-inner rounded">

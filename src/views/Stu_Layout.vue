@@ -57,7 +57,7 @@
       <li class="nav-item">
         <router-link class="nav-link" to="/student/assignment">
           <i class="fas fa-book"></i>
-          <span> ASSIGNMENT</span>
+          <span> 과제</span>
         </router-link>
       </li>
     </ul>
@@ -73,6 +73,7 @@
 
 <style scoped>
 .sidebar .nav-link span {
+  color: rgba(255, 255, 255, 0.8);
   font-size: 1.2rem;
   font-weight: 600;
 }
