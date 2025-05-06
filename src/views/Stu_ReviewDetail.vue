@@ -2,8 +2,12 @@
     <div class="container mt-5">
       <h2>📄 수업 복습 상세보기</h2>
   
-      <div v-if="loading" class="text-muted mt-3">요약을 불러오는 중입니다...</div>
+      <!-- 로딩 중 -->
+      <div v-if="loading" class="text-muted mt-3">
+        요약을 불러오는 중입니다...
+      </div>
   
+      <!-- 요약 데이터 있음 -->
       <div v-else-if="summaryData.length">
         <div
           v-for="(topic, index) in summaryData"
@@ -31,8 +35,9 @@
         </button>
       </div>
   
+      <!-- 요약 없음 -->
       <div v-else class="alert alert-warning mt-3">
-        ❗ 요약 정보를 불러올 수 없습니다.
+        📂 수업 요약이 아직 생성되지 않았거나, 해당 lecture_id에 대한 요약 파일이 존재하지 않습니다.
       </div>
     </div>
   </template>
