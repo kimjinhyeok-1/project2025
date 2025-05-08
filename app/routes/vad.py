@@ -7,6 +7,7 @@ from app.database import get_db_context
 from app.models import GeneratedQuestion, QuestionFeedback
 from sqlalchemy.future import select
 import numpy as np
+import asyncio
 
 router = APIRouter()
 
@@ -34,7 +35,7 @@ async def dummy_text_route():
     )
 
 # ──────────────────────────────────────────────────────────────
-# 텍스트 업로드 → 문단 분리 → 예상 질문 생성 → DB 저장
+# 텍스트 업로드 → 문단 분리 → 질문 생성 병렬 처리 → DB 저장
 # ──────────────────────────────────────────────────────────────
 @router.post("/upload_text_chunk")
 async def upload_text_chunk(body: TextChunkRequest):
@@ -48,28 +49,18 @@ async def upload_text_chunk(body: TextChunkRequest):
             raise HTTPException(status_code=400, detail="문장 분리 실패")
 
         embeddings = get_sentence_embeddings(sentences)
+        paragraphs = group_sentences_into_paragraphs(sentences, embeddings)
 
-        # 문단 단위로 묶기
-        paragraphs = []
-        current_paragraph = [sentences[0]]
-        for i in range(1, len(sentences)):
-            if cosine_similarity(embeddings[i - 1], embeddings[i]) >= SIMILARITY_THRESHOLD:
-                current_paragraph.append(sentences[i])
-            else:
-                paragraphs.append(" ".join(current_paragraph))
-                current_paragraph = [sentences[i]]
-        if current_paragraph:
-            paragraphs.append(" ".join(current_paragraph))
+        # 병렬 질문 생성
+        questions_list = await asyncio.gather(*[
+            asyncio.to_thread(generate_expected_questions, para)
+            for para in paragraphs
+        ])
 
-        # 질문 생성 & DB 저장
-        results = []
-        orm_objects = []
-        for paragraph in paragraphs:
-            questions = generate_expected_questions(paragraph)
-            results.append({"paragraph": paragraph, "questions": questions})
-            orm_objects.append(
-                GeneratedQuestion(paragraph=paragraph, questions=questions)
-            )
+        results, orm_objects = [], []
+        for para, questions in zip(paragraphs, questions_list):
+            results.append({"paragraph": para, "questions": questions})
+            orm_objects.append(GeneratedQuestion(paragraph=para, questions=questions))
 
         async with get_db_context() as db:
             db.add_all(orm_objects)
@@ -88,9 +79,6 @@ async def upload_text_chunk(body: TextChunkRequest):
 # ──────────────────────────────────────────────────────────────
 @router.get("/questions")
 async def get_all_questions():
-    """
-    학생 페이지에서 생성된 문단·질문 전체를 읽기 전용으로 반환
-    """
     try:
         async with get_db_context() as db:
             result = await db.execute(
@@ -109,7 +97,7 @@ async def get_all_questions():
         raise HTTPException(status_code=500, detail="서버 오류")
 
 # ──────────────────────────────────────────────────────────────
-# 학생 “모른다” 피드백 저장
+# 학생 피드백 저장
 # ──────────────────────────────────────────────────────────────
 @router.post("/feedback")
 async def submit_feedback(body: FeedbackRequest):
@@ -139,3 +127,18 @@ def split_text_into_sentences(text: str) -> list[str]:
 def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
     denom = np.linalg.norm(vec1) * np.linalg.norm(vec2)
     return 0.0 if denom == 0 else float(np.dot(vec1, vec2) / denom)
+
+def group_sentences_into_paragraphs(sentences: list[str], embeddings: list[np.ndarray]) -> list[str]:
+    if not sentences:
+        return []
+    paragraphs = [sentences[0]]
+    result = []
+    for i in range(1, len(sentences)):
+        if cosine_similarity(embeddings[i - 1], embeddings[i]) >= SIMILARITY_THRESHOLD:
+            paragraphs.append(sentences[i])
+        else:
+            result.append(" ".join(paragraphs))
+            paragraphs = [sentences[i]]
+    if paragraphs:
+        result.append(" ".join(paragraphs))
+    return result
