@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sklearn.metrics.pairwise import cosine_similarity
 
+from app.utils.gpt import summarize_text_with_gpt  # ✅ 요약 함수 직접 참조
 from openai import AsyncOpenAI
 from app.database import get_db
 from app.models import Lecture, Snapshot, LectureSummary
