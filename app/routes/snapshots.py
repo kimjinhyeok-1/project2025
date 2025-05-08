@@ -3,7 +3,7 @@ import base64
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import text
+from sqlalchemy import text, delete
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from openai import AsyncOpenAI
 from app.database import get_db
-from app.models import Lecture, Snapshot
+from app.models import Lecture, Snapshot, LectureSummary
 
 import tiktoken
 
@@ -76,7 +76,6 @@ async def create_lecture(
     await db.execute(text(
         "SELECT setval('lectures_id_seq', COALESCE((SELECT MAX(id) FROM lectures), 0), true)"
     ))
-
     lecture = Lecture()
     db.add(lecture)
     await db.commit()
@@ -85,7 +84,6 @@ async def create_lecture(
         lecture_id=lecture.id,
         created_at=lecture.created_at
     )
-
 
 # ──────────────────────────────────────────────────────────
 # 1) 스냅샷 저장 API
@@ -105,8 +103,7 @@ async def upload_snapshot(
     date_group = dt.strftime("%Y-%m-%d")
 
     try:
-        _, encoded = data.screenshot_base64.split(",", 1) \
-            if "," in data.screenshot_base64 else ("", data.screenshot_base64)
+        _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
         image_bytes = base64.b64decode(encoded)
         filename = f"{uuid.uuid4().hex}.png"
         save_path = os.path.join(FULL_IMAGE_DIR, filename)
@@ -145,29 +142,15 @@ async def upload_snapshot(
     }
 
 # ──────────────────────────────────────────────────────────
-# 2) 요약 함수
+# 2) 리마인더 요약 API
 # ──────────────────────────────────────────────────────────
 
-async def summarize_text_with_gpt(text: str) -> str:
-    truncated = truncate_by_token(text)
-    messages = [
-        {"role": "system", "content": (
-            "당신은 강의 요약 전문가입니다. \n"
-            "- 강의 내용을 주제별로 정리하세요.\n"
-            "- '### 주제' 제목을 사용하고 그 아래 '-'로 요약합니다.\n"
-            "- JAVA 중심 용어를 반영하세요."
-        )},
-        {"role": "user", "content": f"강의 내용:\n```\n{truncated}\n```"}
-    ]
-    res = await client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        temperature=0.5,
-        max_tokens=1200
-    )
-    return res.choices[0].message.content.strip()
-
-async def summarize_text_with_gpt_reminder(text: str) -> str:
+@router.get("/generate_markdown_summary", response_model=SummaryResponse)
+async def generate_markdown_summary(lecture_id: int = Query(...)):
+    path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
+    if not os.path.exists(path):
+        raise HTTPException(404, "요약할 텍스트 없음")
+    text = open(path, "r", encoding="utf-8").read()
     truncated = truncate_by_token(text)
     messages = [
         {"role": "system", "content": (
@@ -183,28 +166,10 @@ async def summarize_text_with_gpt_reminder(text: str) -> str:
         temperature=0.5,
         max_tokens=1200
     )
-    return res.choices[0].message.content.strip()
-
-@router.get("/generate_markdown_summary", response_model=SummaryResponse)
-async def generate_markdown_summary(lecture_id: int = Query(...)):
-    path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
-    if not os.path.exists(path):
-        raise HTTPException(404, "요약할 텍스트 없음")
-    text = open(path, "r", encoding="utf-8").read()
-    md = await summarize_text_with_gpt_reminder(text)
-    return SummaryResponse(lecture_id=lecture_id, summary=md)
-
-@router.get("/generate_question_summary", response_model=SummaryResponse)
-async def generate_question_summary(lecture_id: int = Query(...)):
-    path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
-    if not os.path.exists(path):
-        raise HTTPException(404, "요약할 텍스트 없음")
-    text = open(path, "r", encoding="utf-8").read()
-    summ = await summarize_text_with_gpt(text)
-    return SummaryResponse(lecture_id=lecture_id, summary=summ)
+    return SummaryResponse(lecture_id=lecture_id, summary=res.choices[0].message.content.strip())
 
 # ──────────────────────────────────────────────────────────
-# 3) 요약 + 이미지 매핑 API
+# 3) 전체 요약 + 이미지 매핑 API
 # ──────────────────────────────────────────────────────────
 
 @router.get("/lecture_summary")
@@ -215,6 +180,11 @@ async def get_lecture_summary(
     path = os.path.join(TEXT_LOG_DIR, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "텍스트 파일 없음")
+
+    # 1. 기존 요약 삭제
+    await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
+
+    # 2. 요약 생성
     full_text = open(path, "r", encoding="utf-8").read()
     markdown = await summarize_text_with_gpt(full_text)
 
@@ -224,19 +194,18 @@ async def get_lecture_summary(
         lines = block.strip().splitlines()
         if not lines:
             continue
-        topic_title = lines[0]
-        summary_lines = [line for line in lines[1:] if line.strip().startswith("-")]
-        summary = " ".join(line[1:].strip() for line in summary_lines)
-        topics.append({"topic": topic_title, "summary": summary})
+        title = lines[0]
+        summary = " ".join(line[1:].strip() for line in lines[1:] if line.strip().startswith("-"))
+        topics.append({"topic": title, "summary": summary})
 
+    # 3. 스냅샷 가져오기 및 임베딩 계산
     q = await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))
     snaps = q.scalars().all()
     if not snaps:
         raise HTTPException(404, "스냅샷 없음")
 
     texts = [s.text for s in snaps]
-    data = [{"text": s.text, "image_url": f"https://project2025-backend.onrender.com{s.image_path}"} for s in snaps]
-
+    urls = [f"https://project2025-backend.onrender.com{s.image_path}" for s in snaps]
     topic_embs = await embed_texts([t["topic"] for t in topics])
     snap_embs = await embed_texts(texts)
 
@@ -244,11 +213,22 @@ async def get_lecture_summary(
     for i, tp in enumerate(topics):
         sims = cosine_similarity([topic_embs[i]], snap_embs)[0]
         top_idx = sims.argsort()[-3:][::-1]
-        highlights = [data[j] for j in top_idx]
+        top_imgs = [urls[j] for j in top_idx]
+
+        db.add(LectureSummary(
+            lecture_id=lecture_id,
+            topic=tp["topic"],
+            summary=tp["summary"],
+            image_url_1=top_imgs[0] if len(top_imgs) > 0 else None,
+            image_url_2=top_imgs[1] if len(top_imgs) > 1 else None,
+            image_url_3=top_imgs[2] if len(top_imgs) > 2 else None,
+        ))
+
         output.append({
             "topic": tp["topic"],
             "summary": tp["summary"],
-            "highlights": highlights
+            "highlights": [{"text": texts[j], "image_url": urls[j]} for j in top_idx]
         })
 
+    await db.commit()
     return output
