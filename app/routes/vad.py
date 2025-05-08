@@ -11,13 +11,15 @@ import asyncio
 
 router = APIRouter()
 
-SIMILARITY_THRESHOLD = 0.75  # 문단 구분 임계값 (완화됨)
-MIN_PARAGRAPH_LENGTH = 20   # 문단 최소 길이 (문자 기준)
-MIN_PARAGRAPH_SENTENCES = 2 # 문단 최소 문장 수
-MAX_PARAGRAPH_LENGTH = 3    # 최대 문장 수로 강제 병합
+# ── 하이퍼파라미터 ──────────────────────────────────────────
+SIMILARITY_THRESHOLD = 0.75  # 문단 유사도 임계값
+MAX_PARAGRAPH_LENGTH   = 5   # 한 문단에 허용할 최대 문장 수
+MIN_PARAGRAPH_LENGTH   = 20  # 문단 최소 길이(문자)
+MIN_PARAGRAPH_SENTENCES = 2  # 문단 최소 문장 수
+MAX_PARALLEL_CALLS      = 3  # GPT 동시 호출 상한
 
 # ──────────────────────────────────────────────────────────────
-# Pydantic 요청 스키마
+# 요청 스키마
 # ──────────────────────────────────────────────────────────────
 class TextChunkRequest(BaseModel):
     text: str
@@ -33,126 +35,103 @@ class FeedbackRequest(BaseModel):
 @router.options("/upload_text_chunk")
 @router.get("/upload_text_chunk")
 async def dummy_text_route():
-    return JSONResponse(
-        content={"message": "This endpoint only accepts POST requests."}
-    )
+    return JSONResponse({"message": "This endpoint only accepts POST requests."})
 
 # ──────────────────────────────────────────────────────────────
-# 텍스트 업로드 → 문단 분리 → 질문 생성 병렬 처리 → DB 저장
+# 핵심 엔드포인트: 텍스트 → 문단 → 질문 생성 → DB 저장
 # ──────────────────────────────────────────────────────────────
 @router.post("/upload_text_chunk")
 async def upload_text_chunk(body: TextChunkRequest):
-    try:
-        text = body.text.strip()
-        if not text:
-            raise HTTPException(status_code=400, detail="텍스트가 비어있습니다.")
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="텍스트가 비어있습니다.")
 
-        sentences = split_text_into_sentences(text)
-        if not sentences:
-            raise HTTPException(status_code=400, detail="문장 분리 실패")
+    # 1️⃣ 문장 분리
+    sentences = split_text_into_sentences(text)
+    if not sentences:
+        raise HTTPException(status_code=400, detail="문장 분리 실패")
 
-        embeddings = get_sentence_embeddings(sentences)
-        paragraphs_raw = group_sentences_into_paragraphs(sentences, embeddings)
+    # 2️⃣ 임베딩 & 문단 묶기
+    embeddings = get_sentence_embeddings(sentences)
+    raw_paragraphs = group_sentences_into_paragraphs(sentences, embeddings)
 
-        # 필터링: 너무 짧은 문단 제외 (길이 또는 문장 수 기준)
-        paragraphs = [p for p in paragraphs_raw if is_valid_paragraph(p)]
+    # 3️⃣ 의미 없는 문단 필터링 (OR 조건)
+    paragraphs = [p for p in raw_paragraphs if is_valid_paragraph(p)]
+    if not paragraphs:
+        return {"results": []}  # 빈 응답이라도 200 OK 반환
 
-        # 병렬 질문 생성
-        questions_list = await asyncio.gather(*[
-            asyncio.to_thread(generate_expected_questions, para)
-            for para in paragraphs
-        ])
+    # 4️⃣ 병렬 GPT 호출 (동시 수 3개 제한)
+    sem = asyncio.Semaphore(MAX_PARALLEL_CALLS)
 
-        results, orm_objects = [], []
-        for para, questions in zip(paragraphs, questions_list):
-            results.append({"paragraph": para, "questions": questions})
-            orm_objects.append(GeneratedQuestion(paragraph=para, questions=questions))
+    async def ask_gpt(para: str):
+        async with sem:
+            return await asyncio.to_thread(generate_expected_questions, para)
 
-        async with get_db_context() as db:
-            db.add_all(orm_objects)
+    questions_list = await asyncio.gather(*(ask_gpt(p) for p in paragraphs))
+
+    # 5️⃣ 결과 정리 & DB 저장 (빈 질문 제외)
+    results, orm_objs = [], []
+    for para, qs in zip(paragraphs, questions_list):
+        if not qs:
+            continue
+        results.append({"paragraph": para, "questions": qs})
+        orm_objs.append(GeneratedQuestion(paragraph=para, questions=qs))
+
+    async with get_db_context() as db:
+        if orm_objs:
+            db.add_all(orm_objs)
             await db.commit()
 
-        return {"results": results}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print("❌ 처리 중 오류:", e)
-        raise HTTPException(status_code=500, detail="서버 오류")
+    return {"results": results}
 
 # ──────────────────────────────────────────────────────────────
-# 학생용 질문 조회 API
+# 질문 전체 조회 (학생용)
 # ──────────────────────────────────────────────────────────────
 @router.get("/questions")
 async def get_all_questions():
-    try:
-        async with get_db_context() as db:
-            result = await db.execute(
-                select(GeneratedQuestion).order_by(GeneratedQuestion.created_at)
-            )
-            rows = result.scalars().all()
-
-        return {
-            "results": [
-                {"paragraph": q.paragraph, "questions": q.questions}
-                for q in rows
-            ]
-        }
-    except Exception as e:
-        print("❌ 질문 조회 실패:", e)
-        raise HTTPException(status_code=500, detail="서버 오류")
+    async with get_db_context() as db:
+        result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.created_at))
+        rows = result.scalars().all()
+    return {"results": [{"paragraph": r.paragraph, "questions": r.questions} for r in rows]}
 
 # ──────────────────────────────────────────────────────────────
 # 학생 피드백 저장
 # ──────────────────────────────────────────────────────────────
 @router.post("/feedback")
 async def submit_feedback(body: FeedbackRequest):
-    try:
-        async with get_db_context() as db:
-            db.add(
-                QuestionFeedback(
-                    user_id=body.user_id,
-                    question_text=body.question_text,
-                    knows=body.knows,
-                )
-            )
-            await db.commit()
-        return {"message": "Feedback 저장 완료"}
-
-    except Exception as e:
-        print("❌ Feedback 저장 실패:", e)
-        raise HTTPException(status_code=500, detail="서버 오류")
+    async with get_db_context() as db:
+        db.add(QuestionFeedback(user_id=body.user_id, question_text=body.question_text, knows=body.knows))
+        await db.commit()
+    return {"message": "Feedback 저장 완료"}
 
 # ──────────────────────────────────────────────────────────────
 # 유틸 함수
 # ──────────────────────────────────────────────────────────────
-def split_text_into_sentences(text: str) -> list[str]:
-    import re
-    return [s.strip() for s in re.split(r"(?<=[.?!])\s+", text) if s.strip()]
+import re
 
-def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
-    denom = np.linalg.norm(vec1) * np.linalg.norm(vec2)
-    return 0.0 if denom == 0 else float(np.dot(vec1, vec2) / denom)
+def split_text_into_sentences(text: str) -> list[str]:
+    """마침표/물음표/느낌표 + 개행을 문장 경계로 인식"""
+    return [s.strip() for s in re.split(r"(?<=[.?!])\s+|\n", text) if s.strip()]
+
+def cosine_similarity(v1: np.ndarray, v2: np.ndarray) -> float:
+    denom = np.linalg.norm(v1) * np.linalg.norm(v2)
+    return 0.0 if denom == 0 else float(np.dot(v1, v2) / denom)
 
 def is_valid_paragraph(text: str) -> bool:
-    sentence_count = len(split_text_into_sentences(text))
-    return sentence_count >= MIN_PARAGRAPH_SENTENCES or len(text.strip()) >= MIN_PARAGRAPH_LENGTH
+    """문장≥2개 OR 길이≥20자면 유효"""
+    return len(split_text_into_sentences(text)) >= MIN_PARAGRAPH_SENTENCES or len(text.strip()) >= MIN_PARAGRAPH_LENGTH
 
-def group_sentences_into_paragraphs(sentences: list[str], embeddings: list[np.ndarray]) -> list[str]:
+def group_sentences_into_paragraphs(sentences: list[str], embeds: list[np.ndarray]) -> list[str]:
     if not sentences:
         return []
-    paragraphs = [sentences[0]]
-    result = []
-    count = 1
+    para_buf, result, count = [sentences[0]], [], 1
     for i in range(1, len(sentences)):
-        sim = cosine_similarity(embeddings[i - 1], embeddings[i])
-        if sim >= SIMILARITY_THRESHOLD or count < MAX_PARAGRAPH_LENGTH:
-            paragraphs.append(sentences[i])
+        sim = cosine_similarity(embeds[i-1], embeds[i])
+        if sim >= SIMILARITY_THRESHOLD and count < MAX_PARAGRAPH_LENGTH:
+            para_buf.append(sentences[i])
             count += 1
         else:
-            result.append(" ".join(paragraphs))
-            paragraphs = [sentences[i]]
-            count = 1
-    if paragraphs:
-        result.append(" ".join(paragraphs))
+            result.append(" ".join(para_buf))
+            para_buf, count = [sentences[i]], 1
+    result.append(" ".join(para_buf))
     return result
