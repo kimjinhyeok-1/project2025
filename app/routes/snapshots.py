@@ -3,7 +3,7 @@ import base64
 import uuid
 from datetime import datetime
 from typing import Optional
-
+from sqlalchemy import text
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
