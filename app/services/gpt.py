@@ -1,58 +1,57 @@
 import os
+import traceback
 from openai import OpenAI
 from dotenv import load_dotenv
-import traceback
 
 # ✅ 환경 변수 로딩
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = os.getenv("OPENAI_QUESTION_ASSISTANT_ID")
 
 if not OPENAI_API_KEY:
     raise EnvironmentError("❌ OPENAI_API_KEY가 .env에 설정되어 있지 않습니다.")
+if not ASSISTANT_ID:
+    raise EnvironmentError("❌ OPENAI_QUESTION_ASSISTANT_ID가 .env에 설정되어 있지 않습니다.")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# ✅ 예상 질문 생성 함수
-def generate_expected_questions(summary_text: str, num_questions: int = 3) -> list:
-    if not summary_text.strip() or "음성이 감지되지 않았습니다" in summary_text:
-        return ["음성이 인식되지 않았거나 내용이 비었습니다."]
-
-    prompt = (
-        "당신은 학생들을 돕는 AI입니다.\n"
-        "다음 강의 내용을 읽고, 학생들이 궁금해할 만한 질문을 만들어주세요.\n\n"
-        f"[강의 요약]\n{summary_text}\n\n"
-        f"{num_questions}개의 질문을 자연스럽고 구체적으로 리스트 형식으로 작성해주세요.\n"
-        "예: - 질문 1\n- 질문 2\n..."
-    )
-
+# ✅ 질문 생성 함수 (Assistant API 기반, thread 재사용 없음)
+def generate_expected_questions(summary_text: str) -> list[str]:
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=500
+        summary = summary_text.strip()
+        if not summary or "음성이 감지되지 않았습니다" in summary:
+            return ["음성이 인식되지 않았거나 내용이 비었습니다."]
+
+        # 1️⃣ Thread 생성 (매번 새로)
+        thread = client.beta.threads.create()
+
+        # 2️⃣ 사용자 메시지 등록
+        client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=summary
         )
 
-        if not response or not response.choices:
-            print("⚠️ OpenAI 응답이 비어 있습니다.")
-            return ["질문 생성을 실패했습니다."]
+        # 3️⃣ Run 실행 및 완료 대기 (자동 polling)
+        client.beta.threads.runs.create_and_poll(
+            thread_id=thread.id,
+            assistant_id=ASSISTANT_ID
+        )
 
-        content = response.choices[0].message.content.strip()
-        if not content:
-            print("⚠️ OpenAI 응답 내용이 없습니다.")
-            return ["질문 생성을 실패했습니다."]
+        # 4️⃣ 응답 메시지 확인
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        content = messages.data[0].content[0].text.value.strip()
 
+        # 5️⃣ 질문 정제 (- 질문 1\n- 질문 2 형태)
         questions = [
-            q.strip("-•0123456789. ").strip()
-            for q in content.split("\n") if q.strip()
+            q.strip("-•0123456789. )").strip()
+            for q in content.split("\n")
+            if q.strip()
         ]
 
-        if not questions:
-            return ["질문 생성을 실패했습니다."]
+        return questions if questions else ["질문 생성을 실패했습니다."]
 
-        return questions
-
-    except Exception as e:
-        print("❌ GPT 예상 질문 생성 실패")
+    except Exception:
+        print("❌ Assistant API 질문 생성 실패:")
         traceback.print_exc()
         return ["질문 생성을 실패했습니다."]

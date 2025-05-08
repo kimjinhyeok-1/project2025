@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from app.services.gpt import generate_expected_questions
+from app.services.gpt import generate_expected_questions  # Assistant API 기반 함수
 from app.services.embedding import get_sentence_embeddings
 from app.database import get_db_context
 from app.models import GeneratedQuestion, QuestionFeedback
