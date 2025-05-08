@@ -112,45 +112,6 @@ class Snapshot(Base):
     lecture = relationship("Lecture", back_populates="snapshots")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 강의자료 텍스트 요약 & 임베딩
-# ─────────────────────────────────────────────────────────────────────────────
-class LectureMaterial(Base):
-    __tablename__ = "pdf_summary"
-
-    id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String, unique=True, index=True)
-    file_path = Column(String)
-    content = Column(Text)
-    embedding = Column(Text)   # TODO: pgvector(Vector(1536)) 고려
-
-    embeddings = relationship(
-        "Embedding", back_populates="material", cascade="all, delete-orphan"
-    )
-
-class Embedding(Base):
-    __tablename__ = "embedding"
-
-    id = Column(Integer, primary_key=True, index=True)
-    material_id = Column(Integer, ForeignKey("pdf_summary.id"))
-    chunk_index = Column(Integer)
-    content = Column(Text)
-    embedding = Column(Text)   # TODO: pgvector(Vector(1536)) 고려
-
-    material = relationship("LectureMaterial", back_populates="embeddings")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 퀴즈 (보기 배열을 JSONB로 저장)
-# ─────────────────────────────────────────────────────────────────────────────
-class Quiz(Base):
-    __tablename__ = "quiz"
-
-    id = Column(Integer, primary_key=True, index=True)
-    question = Column(String)
-    options = Column(JSONType)          # ["보기1","보기2",...]
-    answer = Column(String)
-    material_id = Column(Integer, ForeignKey("pdf_summary.id"))
-
-# ─────────────────────────────────────────────────────────────────────────────
 # 과제 관련 테이블
 # ─────────────────────────────────────────────────────────────────────────────
 class Assignment(Base):

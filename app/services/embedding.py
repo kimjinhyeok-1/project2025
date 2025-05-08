@@ -17,7 +17,7 @@ def get_sentence_embeddings(sentences: list) -> list:
 
     try:
         response = client.embeddings.create(
-            model="text-embedding-ada-002",
+            model="text-embedding-3-small",
             input=texts
         )
         embeddings = [e.embedding for e in response.data]

@@ -2,20 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.routes import ( 
-    upload, quiz, ask_rag, chat_history,
-    recording, snapshots, assignment, question, ask_assistant, ex_question
+    chat_history, recording, snapshots, assignment, question, ask_assistant, ex_question
 )
 from app.auth import router as auth_router
 from app.database import Base, engine, get_db_context
 from app.routes.lecture import router as lecture_router
 from app.routes import vad
-from app.routes.ask_rag import cached_embeddings, faiss_index, embedding_id_map
 
 from sqlalchemy import select
-from app.models import Embedding
 import json
 import numpy as np
-import faiss
 
 from dotenv import load_dotenv
 import os
@@ -51,44 +47,7 @@ async def init_models():
 async def on_startup():
     await init_models()
 
-    try:
-        async with get_db_context() as db:
-            result = await db.execute(select(Embedding))
-            cached_embeddings.clear()
-            embedding_id_map.clear()
-
-            embeddings = result.scalars().all()
-            if not embeddings:
-                print("❗ FAISS 초기화: 임베딩 없음")
-                return
-
-            cached_embeddings.extend(embeddings)
-
-            vectors = []
-            for e in embeddings:
-                try:
-                    vec = json.loads(e.embedding)
-                    vectors.append(vec)
-                except Exception as ve:
-                    print(f"⚠️ 임베딩 파싱 실패 (id={e.id}): {ve}")
-
-            if not vectors:
-                print("❗ FAISS 초기화 실패: 벡터 없음")
-                return
-
-            vectors_np = np.array(vectors).astype("float32")
-            dimension = len(vectors_np[0])
-            index = faiss.IndexFlatL2(dimension)
-            index.add(vectors_np)
-
-            faiss_index["index"] = index
-            embedding_id_map.extend([e.id for e in embeddings])
-
-            print(f"✅ FAISS 인덱스 초기화 완료: {len(vectors)}개 벡터")
-
-    except Exception as e:
-        print(f"🔥 FAISS 초기화 중 예외 발생: {e}")
-# ✅ 여기 추가!
+# ✅ Permissions-Policy 헤더
 @app.middleware("http")
 async def add_permissions_policy_header(request, call_next):
     response = await call_next(request)
@@ -96,10 +55,8 @@ async def add_permissions_policy_header(request, call_next):
     return response
 
 # 라우터 등록
-app.include_router(upload.router)
+
 app.include_router(chat_history.router)
-app.include_router(quiz.router)
-app.include_router(ask_rag.router, prefix="/api")
 app.include_router(recording.router, prefix="/recordings")
 app.include_router(snapshots.router, prefix="/snapshots", tags=["Snapshots"])
 app.include_router(auth_router)
