@@ -11,7 +11,10 @@ import asyncio
 
 router = APIRouter()
 
-SIMILARITY_THRESHOLD = 0.8  # 문단 구분 임계값
+SIMILARITY_THRESHOLD = 0.75  # 문단 구분 임계값 (완화됨)
+MIN_PARAGRAPH_LENGTH = 20   # 문단 최소 길이 (문자 기준)
+MIN_PARAGRAPH_SENTENCES = 2 # 문단 최소 문장 수
+MAX_PARAGRAPH_LENGTH = 3    # 최대 문장 수로 강제 병합
 
 # ──────────────────────────────────────────────────────────────
 # Pydantic 요청 스키마
@@ -49,7 +52,10 @@ async def upload_text_chunk(body: TextChunkRequest):
             raise HTTPException(status_code=400, detail="문장 분리 실패")
 
         embeddings = get_sentence_embeddings(sentences)
-        paragraphs = group_sentences_into_paragraphs(sentences, embeddings)
+        paragraphs_raw = group_sentences_into_paragraphs(sentences, embeddings)
+
+        # 필터링: 너무 짧은 문단 제외 (길이 또는 문장 수 기준)
+        paragraphs = [p for p in paragraphs_raw if is_valid_paragraph(p)]
 
         # 병렬 질문 생성
         questions_list = await asyncio.gather(*[
@@ -128,17 +134,25 @@ def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
     denom = np.linalg.norm(vec1) * np.linalg.norm(vec2)
     return 0.0 if denom == 0 else float(np.dot(vec1, vec2) / denom)
 
+def is_valid_paragraph(text: str) -> bool:
+    sentence_count = len(split_text_into_sentences(text))
+    return sentence_count >= MIN_PARAGRAPH_SENTENCES or len(text.strip()) >= MIN_PARAGRAPH_LENGTH
+
 def group_sentences_into_paragraphs(sentences: list[str], embeddings: list[np.ndarray]) -> list[str]:
     if not sentences:
         return []
     paragraphs = [sentences[0]]
     result = []
+    count = 1
     for i in range(1, len(sentences)):
-        if cosine_similarity(embeddings[i - 1], embeddings[i]) >= SIMILARITY_THRESHOLD:
+        sim = cosine_similarity(embeddings[i - 1], embeddings[i])
+        if sim >= SIMILARITY_THRESHOLD or count < MAX_PARAGRAPH_LENGTH:
             paragraphs.append(sentences[i])
+            count += 1
         else:
             result.append(" ".join(paragraphs))
             paragraphs = [sentences[i]]
+            count = 1
     if paragraphs:
         result.append(" ".join(paragraphs))
     return result
