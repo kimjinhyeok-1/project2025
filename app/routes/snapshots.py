@@ -73,10 +73,10 @@ async def create_lecture(
     db: AsyncSession = Depends(get_db),
     body: dict = Body(None)
 ):
-     await db.execute(text(
+    await db.execute(text(
         "SELECT setval('lectures_id_seq', COALESCE((SELECT MAX(id) FROM lectures), 0), false)"
     ))
-    
+
     lecture = Lecture()
     db.add(lecture)
     await db.commit()
@@ -85,6 +85,7 @@ async def create_lecture(
         lecture_id=lecture.id,
         created_at=lecture.created_at
     )
+
 
 # ──────────────────────────────────────────────────────────
 # 1) 스냅샷 저장 API
