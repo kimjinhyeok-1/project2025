@@ -73,6 +73,10 @@ async def create_lecture(
     db: AsyncSession = Depends(get_db),
     body: dict = Body(None)
 ):
+     await db.execute(text(
+        "SELECT setval('lectures_id_seq', COALESCE((SELECT MAX(id) FROM lectures), 0), false)"
+    ))
+    
     lecture = Lecture()
     db.add(lecture)
     await db.commit()
