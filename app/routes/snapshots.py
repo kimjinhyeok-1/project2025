@@ -54,7 +54,7 @@ class SummaryResponse(BaseModel):
 # ──────────────────────────────────────────────────────────
 
 def truncate_by_token(text: str, max_tokens: int = 3500) -> str:
-    enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    enc = tiktoken.encoding_for_model("gpt-4o")
     tokens = enc.encode(text)
     return enc.decode(tokens[:max_tokens])
 
