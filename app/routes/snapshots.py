@@ -1,7 +1,3 @@
-"""
-router_lecture.py  - 2025-05-10 리팩터링 + setval 보완 버전
-주요 변경점은 각 섹션별 주석(# ★ MOD) 참고
-"""
 import os
 import base64
 import uuid
