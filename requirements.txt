@@ -24,4 +24,4 @@ torchvision==0.21.0+cpu
 git+https://github.com/openai/whisper.git
 aiohttp
 aiofiles
-**pydantic-settings>=2.0.0**
+pydantic-settings>=2.0.0
