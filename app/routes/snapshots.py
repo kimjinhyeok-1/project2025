@@ -279,4 +279,61 @@ async def generate_lecture_summary(
     output = []
     for i, tp in enumerate(topics):
         sims = cosine_similarity([topic_embs[i]], snap_embs)[0]
-        top_idx = sims.argsort()[-3:][::-
+        top_idx = sims.argsort()[-3:][::-1]
+        top_imgs = [urls[j] for j in top_idx]
+
+        db.add(
+            LectureSummary(
+                lecture_id=lecture_id,
+                topic=tp["topic"],
+                summary=tp["summary"],
+                image_url_1=top_imgs[0] if len(top_imgs) > 0 else None,
+                image_url_2=top_imgs[1] if len(top_imgs) > 1 else None,
+                image_url_3=top_imgs[2] if len(top_imgs) > 2 else None,
+            )
+        )
+
+        output.append(
+            {
+                "topic": tp["topic"],
+                "summary": tp["summary"],
+                "highlights": [
+                    {"text": texts[j], "image_url": urls[j]} for j in top_idx
+                ],
+            }
+        )
+
+    await db.commit()
+    return output
+
+
+# ───────────────────────────────
+# 7) 저장된 요약 조회 API
+# ───────────────────────────────
+
+@router.get("/lecture_summary", response_model=List[LectureSummaryResponse])
+async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(LectureSummary).where(LectureSummary.lecture_id == lecture_id)
+    )
+    summaries = result.scalars().all()
+    if not summaries:
+        raise HTTPException(404, "저장된 요약 없음")
+
+    output = []
+    for s in summaries:
+        highlights = []
+        if s.image_url_1:
+            highlights.append({"image_url": s.image_url_1})
+        if s.image_url_2:
+            highlights.append({"image_url": s.image_url_2})
+        if s.image_url_3:
+            highlights.append({"image_url": s.image_url_3})
+
+        output.append({
+            "topic": s.topic,
+            "summary": s.summary,
+            "highlights": highlights
+        })
+
+    return output
