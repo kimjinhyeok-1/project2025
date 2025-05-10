@@ -6,7 +6,8 @@ from typing import Optional, List
 
 import aiofiles  # ★ MOD - 비동기 I/O
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
-from pydantic import BaseModel, BaseSettings, Field
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings
 from sqlalchemy import text, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
