@@ -13,7 +13,7 @@ import re
 router = APIRouter()
 
 # ── 하이퍼파라미터 ──────────────────────────────────────────
-SIMILARITY_THRESHOLD      = 0.5    # 문단 유사도 임계값
+SIMILARITY_THRESHOLD      = 0.3    # 문단 유사도 임계값
 MAX_PARAGRAPH_LENGTH      = 5      # 한 문단 허용 최대 문장 수
 MIN_PARAGRAPH_LENGTH      = 20     # 문단 최소 글자 수
 MIN_PARAGRAPH_SENTENCES   = 2      # 문단 최소 문장 수
