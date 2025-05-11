@@ -188,21 +188,6 @@ class Summary(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Thread 메시지 저장 (지속 대화 컨텍스트)
-# ─────────────────────────────────────────────────────────────────────────────
-class ThreadMessage(Base):
-    __tablename__ = "thread_messages"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    thread_id = Column(String, nullable=False)
-    role = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=func.now())
-
-    user = relationship("User")
-
-# ─────────────────────────────────────────────────────────────────────────────
 # 강의 요약 저장 (주제 + 이미지 매핑 포함)
 # ─────────────────────────────────────────────────────────────────────────────
 class LectureSummary(Base):
