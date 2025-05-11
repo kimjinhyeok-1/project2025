@@ -101,15 +101,22 @@ export default {
 
     async sendTextChunk(textChunk) {
       try {
+        const payload = { text: textChunk };
+        console.log('📤 전송할 데이터:', payload);
+
         const response = await fetch(`https://project2025-backend.onrender.com/vad/upload_text_chunk`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ text: textChunk }),
+          body: JSON.stringify(payload),
         });
 
-        if (!response.ok) throw new Error('질문 생성 실패');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ 백엔드 응답 에러 본문:', errorText);
+          throw new Error('질문 생성 실패');
+        }
 
         const data = await response.json();
         if (data.results) {
