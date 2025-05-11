@@ -35,8 +35,11 @@ export default {
       recognition: null,
       recognitionStatus: '정지됨',
       results: [],
-      pendingChunks: [],
+      sentenceBuffer: '',
+      sentenceCount: 0,
       isSending: false,
+      SENTENCE_LIMIT: 3,
+      CHAR_LIMIT: 300,
     };
   },
   methods: {
@@ -46,9 +49,7 @@ export default {
         return;
       }
 
-      if (this.recognition && this.recognition.running) {
-        return; // 중복 시작 방지
-      }
+      if (this.recognition && this.recognition.running) return;
 
       this.recognition = new webkitSpeechRecognition();
       this.recognition.lang = 'ko-KR';
@@ -63,8 +64,18 @@ export default {
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript.trim();
           if (event.results[i].isFinal && transcript) {
-            this.pendingChunks.push(transcript);
-            this.flushTextQueue();
+            this.sentenceBuffer += transcript + ' ';
+            this.sentenceCount += 1;
+
+            if (
+              this.sentenceCount >= this.SENTENCE_LIMIT ||
+              this.sentenceBuffer.length >= this.CHAR_LIMIT
+            ) {
+              const paragraph = this.sentenceBuffer.trim();
+              this.sendTextChunk(paragraph);
+              this.sentenceBuffer = '';
+              this.sentenceCount = 0;
+            }
           }
         }
       };
@@ -75,40 +86,30 @@ export default {
 
       this.recognition.onend = () => {
         this.recognitionStatus = '정지됨';
+        // 남은 문장 버퍼 전송
+        if (this.sentenceBuffer.trim().length > 0) {
+          this.sendTextChunk(this.sentenceBuffer.trim());
+          this.sentenceBuffer = '';
+          this.sentenceCount = 0;
+        }
       };
 
       this.recognition.start();
     },
 
     stopRecognition() {
-      if (this.recognition) {
-        this.recognition.stop();
-      }
+      if (this.recognition) this.recognition.stop();
       this.recognitionStatus = '정지됨';
-    },
-
-    async flushTextQueue() {
-      if (this.isSending || this.pendingChunks.length === 0) return;
-      this.isSending = true;
-
-      while (this.pendingChunks.length > 0) {
-        const chunk = this.pendingChunks.shift();
-        await this.sendTextChunk(chunk);
-      }
-
-      this.isSending = false;
     },
 
     async sendTextChunk(textChunk) {
       try {
         const payload = { text: textChunk };
-        console.log('📤 전송할 데이터:', payload);
+        console.log('📤 전송할 문단:', payload);
 
-        const response = await fetch(`https://project2025-backend.onrender.com/vad/upload_text_chunk`, {
+        const response = await fetch('https://project2025-backend.onrender.com/vad/upload_text_chunk', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
 
