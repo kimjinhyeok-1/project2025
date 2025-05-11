@@ -1,22 +1,24 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from app.services.gpt import generate_expected_questions  # Assistant API 기반 함수
+from app.services.gpt import generate_expected_questions
 from app.services.embedding import get_sentence_embeddings
 from app.database import get_db_context
 from app.models import GeneratedQuestion, QuestionFeedback
 from sqlalchemy.future import select
 import numpy as np
 import asyncio
+import re
 
 router = APIRouter()
 
 # ── 하이퍼파라미터 ──────────────────────────────────────────
-SIMILARITY_THRESHOLD = 0.75  # 문단 유사도 임계값
-MAX_PARAGRAPH_LENGTH   = 5   # 한 문단에 허용할 최대 문장 수
-MIN_PARAGRAPH_LENGTH   = 20  # 문단 최소 길이(문자)
-MIN_PARAGRAPH_SENTENCES = 2  # 문단 최소 문장 수
-MAX_PARALLEL_CALLS      = 3  # GPT 동시 호출 상한
+SIMILARITY_THRESHOLD      = 0.5    # 문단 유사도 임계값
+MAX_PARAGRAPH_LENGTH      = 5      # 한 문단 허용 최대 문장 수
+MIN_PARAGRAPH_LENGTH      = 20     # 문단 최소 글자 수
+MIN_PARAGRAPH_SENTENCES   = 2      # 문단 최소 문장 수
+MERGE_THRESHOLD_CHARS     = 50     # 이보다 짧으면 병합 후보
+MAX_PARALLEL_CALLS        = 3      # GPT 동시 호출 상한
 
 # ──────────────────────────────────────────────────────────────
 # 요청 스키마
@@ -38,7 +40,7 @@ async def dummy_text_route():
     return JSONResponse({"message": "This endpoint only accepts POST requests."})
 
 # ──────────────────────────────────────────────────────────────
-# 핵심 엔드포인트: 텍스트 → 문단 → 질문 생성 → DB 저장
+# 핵심 엔드포인트
 # ──────────────────────────────────────────────────────────────
 @router.post("/upload_text_chunk")
 async def upload_text_chunk(body: TextChunkRequest):
@@ -52,24 +54,25 @@ async def upload_text_chunk(body: TextChunkRequest):
         raise HTTPException(status_code=400, detail="문장 분리 실패")
 
     # 2️⃣ 임베딩 & 문단 묶기
-    embeddings = get_sentence_embeddings(sentences)
+    embeddings     = get_sentence_embeddings(sentences)
     raw_paragraphs = group_sentences_into_paragraphs(sentences, embeddings)
 
-    # 3️⃣ 의미 없는 문단 필터링 (OR 조건)
+    # 3️⃣ 의미 없는 문단 필터링
     paragraphs = [p for p in raw_paragraphs if is_valid_paragraph(p)]
     if not paragraphs:
-        return {"results": []}  # 빈 응답이라도 200 OK 반환
+        return {"results": []}
 
-    # 4️⃣ 병렬 GPT 호출 (동시 수 3개 제한)
+    # 4️⃣ 짧은 문단 자동 병합 (유사도 기준 포함)
+    paragraphs = merge_short_paragraphs(paragraphs)
+
+    # 5️⃣ 병렬 GPT 호출
     sem = asyncio.Semaphore(MAX_PARALLEL_CALLS)
-
     async def ask_gpt(para: str):
         async with sem:
             return await asyncio.to_thread(generate_expected_questions, para)
-
     questions_list = await asyncio.gather(*(ask_gpt(p) for p in paragraphs))
 
-    # 5️⃣ 결과 정리 & DB 저장 (빈 질문 제외)
+    # 6️⃣ DB 저장 및 결과 반환
     results, orm_objs = [], []
     for para, qs in zip(paragraphs, questions_list):
         if not qs:
@@ -85,7 +88,7 @@ async def upload_text_chunk(body: TextChunkRequest):
     return {"results": results}
 
 # ──────────────────────────────────────────────────────────────
-# 질문 전체 조회 (학생용)
+# 전체 질문 조회
 # ──────────────────────────────────────────────────────────────
 @router.get("/questions")
 async def get_all_questions():
@@ -95,22 +98,23 @@ async def get_all_questions():
     return {"results": [{"paragraph": r.paragraph, "questions": r.questions} for r in rows]}
 
 # ──────────────────────────────────────────────────────────────
-# 학생 피드백 저장 (필요없음)
+# 학생 피드백 저장
 # ──────────────────────────────────────────────────────────────
 @router.post("/feedback")
 async def submit_feedback(body: FeedbackRequest):
     async with get_db_context() as db:
-        db.add(QuestionFeedback(user_id=body.user_id, question_text=body.question_text, knows=body.knows))
+        db.add(QuestionFeedback(
+            user_id=body.user_id,
+            question_text=body.question_text,
+            knows=body.knows
+        ))
         await db.commit()
     return {"message": "Feedback 저장 완료"}
 
 # ──────────────────────────────────────────────────────────────
 # 유틸 함수
 # ──────────────────────────────────────────────────────────────
-import re
-
 def split_text_into_sentences(text: str) -> list[str]:
-    """마침표/물음표/느낌표 + 개행을 문장 경계로 인식"""
     return [s.strip() for s in re.split(r"(?<=[.?!])\s+|\n", text) if s.strip()]
 
 def cosine_similarity(v1: np.ndarray, v2: np.ndarray) -> float:
@@ -118,8 +122,10 @@ def cosine_similarity(v1: np.ndarray, v2: np.ndarray) -> float:
     return 0.0 if denom == 0 else float(np.dot(v1, v2) / denom)
 
 def is_valid_paragraph(text: str) -> bool:
-    """문장≥2개 OR 길이≥20자면 유효"""
-    return len(split_text_into_sentences(text)) >= MIN_PARAGRAPH_SENTENCES or len(text.strip()) >= MIN_PARAGRAPH_LENGTH
+    return (
+        len(split_text_into_sentences(text)) >= MIN_PARAGRAPH_SENTENCES or
+        len(text.strip()) >= MIN_PARAGRAPH_LENGTH
+    )
 
 def group_sentences_into_paragraphs(sentences: list[str], embeds: list[np.ndarray]) -> list[str]:
     if not sentences:
@@ -128,10 +134,35 @@ def group_sentences_into_paragraphs(sentences: list[str], embeds: list[np.ndarra
     for i in range(1, len(sentences)):
         sim = cosine_similarity(embeds[i-1], embeds[i])
         if sim >= SIMILARITY_THRESHOLD and count < MAX_PARAGRAPH_LENGTH:
-            para_buf.append(sentences[i])
-            count += 1
+            para_buf.append(sentences[i]); count += 1
         else:
             result.append(" ".join(para_buf))
             para_buf, count = [sentences[i]], 1
     result.append(" ".join(para_buf))
     return result
+
+def merge_short_paragraphs(paragraphs: list[str]) -> list[str]:
+    merged = []
+    merged_embeds: list[np.ndarray] = []
+
+    for p in paragraphs:
+        # 현재 문단 임베딩
+        p_embed = get_sentence_embeddings([p])[0]
+
+        if merged and len(p) < MERGE_THRESHOLD_CHARS:
+            # 앞 문단과 의미 유사도 계산
+            last_embed = merged_embeds[-1]
+            if cosine_similarity(last_embed, p_embed) >= SIMILARITY_THRESHOLD:
+                # 유사하면 병합
+                merged[-1] += ' ' + p
+                # 병합된 텍스트로 embedding 업데이트
+                merged_embeds[-1] = get_sentence_embeddings([merged[-1]])[0]
+            else:
+                # 비유사하면 새 문단
+                merged.append(p)
+                merged_embeds.append(p_embed)
+        else:
+            merged.append(p)
+            merged_embeds.append(p_embed)
+
+    return merged
