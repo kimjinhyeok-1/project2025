@@ -95,40 +95,43 @@ export default {
 
       this.recognition.onerror = (event) => {
         console.error('음성 인식 오류:', event.error);
+        this.recognitionStatus = '오류 발생';
       };
 
       this.recognition.onend = () => {
         this.recognitionStatus = '정지됨';
-        if (this.sentenceBuffer.trim().length > 0) {
-          this.sendTextChunk(this.sentenceBuffer.trim());
-          this.sentenceBuffer = '';
-          this.sentenceCount = 0;
-        }
       };
 
       this.recognition.start();
     },
 
     stopRecognition() {
-      if (this.recognition) this.recognition.stop();
-      this.recognitionStatus = '정지됨';
+      if (this.recognition) {
+        this.recognition.stop();
+      }
     },
 
     async sendTextChunk(textChunk) {
       try {
-        const payload = { text: textChunk };
-        console.log('📤 전송할 문단:', payload);
+        const lectureId = this.$route.query.lecture_id;
+        if (!lectureId) {
+          alert("lecture_id가 URL에 존재하지 않습니다.");
+          return;
+        }
 
-        const response = await fetch('https://project2025-backend.onrender.com/vad/upload_text_chunk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const payload = { text: textChunk };
+        console.log("📤 전송할 문단:", payload);
+
+        const response = await fetch(`https://project2025-backend.onrender.com/vad/upload_text_chunk?lecture_id=${lectureId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('❌ 백엔드 응답 에러 본문:', errorText);
-          throw new Error('질문 생성 실패');
+          console.error("❌ 백엔드 응답 에러 본문:", errorText);
+          throw new Error("질문 생성 실패");
         }
 
         const data = await response.json();
@@ -136,28 +139,21 @@ export default {
           this.results.push(...data.results);
         }
       } catch (error) {
-        console.error('❌ 질문 생성 오류:', error);
-        alert('질문 생성에 실패했습니다.');
+        console.error("❌ 질문 생성 오류:", error);
+        alert("질문 생성에 실패했습니다.");
       }
     },
 
     async fetchRandomQuestions() {
       try {
         const res = await fetch('https://project2025-backend.onrender.com/questions/random_sample?count=2');
+        if (!res.ok) throw new Error("불러오기 실패");
         const data = await res.json();
-        this.randomSamples = data.questions || [];
-      } catch (error) {
-        console.error("❌ 랜덤 질문 샘플 요청 실패:", error);
+        this.randomSamples = data.questions;
+      } catch (err) {
+        console.error("❌ 랜덤 질문 불러오기 실패:", err);
       }
-    }
+    },
   },
 };
 </script>
-
-<style scoped>
-.lecture-container {
-  max-width: 900px;
-  margin: auto;
-  padding: 30px;
-}
-</style>
