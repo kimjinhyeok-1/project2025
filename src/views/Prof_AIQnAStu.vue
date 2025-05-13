@@ -1,7 +1,7 @@
 <template>
   <div class="lecture-container text-center mt-5">
     <h2>🎤 실시간 질문 시연 (VAD 단위)</h2>
-    <p class="text-muted">음성 인식 버튼을 누르면 학생의 음성을 바탕으로 문단 및 질문이 자동 생성됩니다.</p>
+    <p class="text-muted">음성 인식 버튼을 누르면 교수자의의 음성을 바탕으로 문단 및 질문이 자동 생성됩니다.</p>
 
     <div class="btn-group mt-4">
       <button @click="startRecognition" class="btn btn-primary m-2">🎙️ 음성 인식 시작</button>
