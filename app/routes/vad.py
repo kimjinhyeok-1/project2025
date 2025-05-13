@@ -10,11 +10,11 @@ import numpy as np
 import asyncio
 import re
 from collections import defaultdict
-import random  # 🔹 랜덤 질문 추출용
+import random
 
 router = APIRouter()
 
-# 버퍼: lecture_id 기준 문장 누적용
+# 버퍼: lecture_id 기준 문장 누적용 (기본값 9999)
 paragraph_buffers: dict[int, list[str]] = defaultdict(list)
 
 # 하이퍼파라미터
@@ -34,7 +34,10 @@ async def dummy_text_route():
     return JSONResponse({"message": "This endpoint only accepts POST requests."})
 
 @router.post("/upload_text_chunk")
-async def upload_text_chunk(body: TextChunkRequest, lecture_id: int = Query(...)):
+async def upload_text_chunk(
+    body: TextChunkRequest,
+    lecture_id: int = Query(9999, description="선택적 lecture_id, 기본값 9999")  # ✅ lecture_id optional
+):
     text = body.text.strip()
     if not text:
         raise HTTPException(400, detail="텍스트가 비어있습니다.")
@@ -43,31 +46,26 @@ async def upload_text_chunk(body: TextChunkRequest, lecture_id: int = Query(...)
     if not new_sentences:
         raise HTTPException(400, detail="문장 분리 실패")
 
-    # 🔁 기존 문장에 누적
     paragraph_buffers[lecture_id].extend(new_sentences)
     buffered = paragraph_buffers[lecture_id]
 
     if len(buffered) < MIN_PARAGRAPH_SENTENCES:
         return {"message": "문단 길이 부족 → 누적만 진행", "results": []}
 
-    # 임베딩 후 문단 그룹핑
     embeddings = get_sentence_embeddings(buffered)
     paragraphs = group_sentences_into_paragraphs(buffered, embeddings)
 
-    # 마지막 문단은 아직 미완성일 수 있으므로 제외
     confirmed = paragraphs[:-1] if len(paragraphs) > 1 else []
     paragraph_buffers[lecture_id] = split_text_into_sentences(paragraphs[-1]) if paragraphs else []
 
     results, orm_objs = [], []
 
-    # GPT 동시 호출 제한
     sem = asyncio.Semaphore(MAX_PARALLEL_CALLS)
 
     async def ask_gpt(para: str):
         async with sem:
             return await asyncio.to_thread(generate_expected_questions, para)
 
-    # GPT 질문 생성
     tasks = [ask_gpt(p) for p in confirmed if is_valid_paragraph(p)]
     questions_list = await asyncio.gather(*tasks)
 
@@ -77,7 +75,6 @@ async def upload_text_chunk(body: TextChunkRequest, lecture_id: int = Query(...)
         results.append({"paragraph": para, "questions": qs})
         orm_objs.append(GeneratedQuestion(paragraph=para, questions=qs))
 
-    # DB 저장
     if orm_objs:
         async with get_db_context() as db:
             db.add_all(orm_objs)
@@ -85,14 +82,9 @@ async def upload_text_chunk(body: TextChunkRequest, lecture_id: int = Query(...)
 
     return {"results": results}
 
-# ──────────────────────────────────────────────────────────────
-# 🔹 [추가] 최근 질문 중 2개 랜덤 추출 API
-# ──────────────────────────────────────────────────────────────
+# 🔹 랜덤 질문 추출 API
 @router.get("/questions/random_sample")
 async def get_random_sample_questions(count: int = 2):
-    """
-    최근 생성된 질문 중에서 무작위로 지정된 개수만큼 반환합니다.
-    """
     async with get_db_context() as db:
         result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.created_at.desc()))
         rows = result.scalars().all()
@@ -100,7 +92,6 @@ async def get_random_sample_questions(count: int = 2):
         if not rows:
             raise HTTPException(404, detail="예상 질문이 존재하지 않습니다.")
 
-        # 모든 질문 리스트로 추출
         all_questions = []
         for row in rows:
             all_questions.extend(row.questions)
