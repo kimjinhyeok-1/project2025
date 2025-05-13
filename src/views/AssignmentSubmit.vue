@@ -25,7 +25,12 @@
           />
         </div>
 
-        <button type="submit" class="btn btn-primary">제출하기</button>
+        <button type="submit" class="btn btn-primary me-2">제출하기</button>
+
+        <!-- 🧪 테스트용 피드백 보기 버튼 -->
+        <button type="button" class="btn btn-outline-secondary" @click="goToTestFeedback">
+          피드백 테스트 보기
+        </button>
       </form>
     </div>
   </div>
@@ -82,6 +87,11 @@ const handleSubmit = async () => {
     alert('❌ 과제 제출에 실패했습니다. 다시 시도해주세요.')
   }
   */
+}
+
+const goToTestFeedback = () => {
+  const fakeId = 123
+  router.push(`/student/feedback/${fakeId}`)
 }
 
 onMounted(async () => {
