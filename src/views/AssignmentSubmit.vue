@@ -33,10 +33,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 
 const route = useRoute()
+const router = useRouter()
 const assignmentId = route.params.id
 
 const assignment = ref(null)
@@ -55,13 +56,31 @@ const handleFileChange = (e) => {
 }
 
 const handleSubmit = async () => {
-  alert('제출 기능은 백엔드 위치가 정해지면 연결될 예정입니다!')
-  // 실제 백엔드 생기면 아래 코드 활성화
+  if (!selectedFile.value) {
+    alert('파일을 선택해주세요!')
+    return
+  }
+
+  // 아직 백엔드가 없으므로 임시로 처리
+  alert('✅ 과제가 성공적으로 제출되었습니다! AI 피드백 페이지로 이동합니다.')
+
+  // 가짜 제출 ID (예: 123)로 피드백 페이지로 이동
+  const fakeSubmissionId = 123
+  router.push(`/student/feedback/${fakeSubmissionId}`)
+
+  // 실제 백엔드가 생기면 아래 코드로 교체 예정
   /*
   const formData = new FormData()
   formData.append('file', selectedFile.value)
 
-  await axios.post(`https://project2025-backend.onrender.com/submit/${assignmentId}`, formData)
+  try {
+    const res = await axios.post(`https://project2025-backend.onrender.com/submit/${assignmentId}`, formData)
+    const submissionId = res.data.submissionId
+    router.push(`/student/feedback/${submissionId}`)
+  } catch (err) {
+    console.error('제출 실패:', err)
+    alert('❌ 과제 제출에 실패했습니다. 다시 시도해주세요.')
+  }
   */
 }
 

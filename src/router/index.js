@@ -23,6 +23,8 @@ import ProfessorAssignments from '../views/Prof_Assign.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
 import ProfessorRealtimeQuestion from '../views/Prof_AIQnAStu.vue'
+import AssignmentFeedback from '../views/AssignmentFeedback.vue'
+
 
 const routes = [
   {
@@ -77,6 +79,11 @@ const routes = [
         path: 'review/:id',
         name: 'StudentReviewDetail',
         component: StudentReviewDetail,
+      },
+      {
+        path: 'feedback/:id',
+        name: 'AssignmentFeedback',
+        component: AssignmentFeedback,
       }
     ],
   },
