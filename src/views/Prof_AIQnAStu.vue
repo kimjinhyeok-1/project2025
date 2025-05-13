@@ -1,7 +1,7 @@
 <template>
   <div class="lecture-container text-center mt-5">
     <h2>🎤 실시간 질문 시연 (VAD 단위)</h2>
-    <p class="text-muted">음성 인식 버튼을 누르면 교수자의의 음성을 바탕으로 문단 및 질문이 자동 생성됩니다.</p>
+    <p class="text-muted">음성 인식 버튼을 누르면 교수자의 음성을 바탕으로 문단 및 질문이 자동 생성됩니다.</p>
 
     <div class="btn-group mt-4">
       <button @click="startRecognition" class="btn btn-primary m-2">🎙️ 음성 인식 시작</button>
@@ -23,6 +23,15 @@
         </ul>
       </div>
     </div>
+
+    <div v-if="randomSamples.length" class="alert alert-info mt-5 text-start">
+      <h5>💡 참고로 이런 질문들도 생성된 적 있어요!</h5>
+      <ul class="list-group list-group-flush mt-2">
+        <li v-for="(q, i) in randomSamples" :key="i" class="list-group-item">
+          {{ q }}
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -35,12 +44,16 @@ export default {
       recognition: null,
       recognitionStatus: '정지됨',
       results: [],
+      randomSamples: [],
       sentenceBuffer: '',
       sentenceCount: 0,
       isSending: false,
       SENTENCE_LIMIT: 3,
       CHAR_LIMIT: 300,
     };
+  },
+  mounted() {
+    this.fetchRandomQuestions();
   },
   methods: {
     startRecognition() {
@@ -86,7 +99,6 @@ export default {
 
       this.recognition.onend = () => {
         this.recognitionStatus = '정지됨';
-        // 남은 문장 버퍼 전송
         if (this.sentenceBuffer.trim().length > 0) {
           this.sendTextChunk(this.sentenceBuffer.trim());
           this.sentenceBuffer = '';
@@ -128,6 +140,16 @@ export default {
         alert('질문 생성에 실패했습니다.');
       }
     },
+
+    async fetchRandomQuestions() {
+      try {
+        const res = await fetch('https://project2025-backend.onrender.com/questions/random_sample?count=2');
+        const data = await res.json();
+        this.randomSamples = data.questions || [];
+      } catch (error) {
+        console.error("❌ 랜덤 질문 샘플 요청 실패:", error);
+      }
+    }
   },
 };
 </script>
