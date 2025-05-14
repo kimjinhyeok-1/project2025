@@ -13,6 +13,13 @@
       <p class="text-muted">{{ assignment.description }}</p>
       <p><strong>마감일:</strong> {{ assignment.due }}</p>
 
+      <!-- ✅ 이미 제출된 경우 안내 및 버튼 -->
+      <div v-if="alreadySubmitted" class="alert alert-info d-flex justify-content-between align-items-center">
+        <span>이 과제는 이미 제출되었습니다.</span>
+        <button class="btn btn-outline-primary btn-sm" @click="goToFeedback">📄 피드백 다시 보기</button>
+      </div>
+
+      <!-- ✅ 제출 폼 -->
       <form @submit.prevent="handleSubmit">
         <div class="mb-3">
           <label for="file" class="form-label">파일 업로드 (PDF만 가능)</label>
@@ -25,12 +32,8 @@
           />
         </div>
 
-        <button type="submit" class="btn btn-primary me-2" :disabled="submitting">
+        <button type="submit" class="btn btn-primary" :disabled="submitting">
           {{ submitting ? '제출 중입니다...' : '제출하기' }}
-        </button>
-
-        <button type="button" class="btn btn-outline-secondary" @click="goToTestFeedback">
-          피드백 테스트 보기
         </button>
       </form>
     </div>
@@ -50,6 +53,7 @@ const assignment = ref(null)
 const loading = ref(true)
 const selectedFile = ref(null)
 const submitting = ref(false)
+const alreadySubmitted = ref(false)
 
 const handleFileChange = (e) => {
   const file = e.target.files[0]
@@ -64,13 +68,13 @@ const handleFileChange = (e) => {
 
 const handleSubmit = async () => {
   if (!selectedFile.value) {
-    alert('파일을 선택해주세요!')
+    alert('📎 제출할 PDF 파일을 선택해주세요!')
     return
   }
 
   const token = localStorage.getItem('access_token')
   if (!token) {
-    alert('로그인이 필요합니다.')
+    alert('🔐 로그인이 필요합니다.')
     return
   }
 
@@ -80,7 +84,7 @@ const handleSubmit = async () => {
   formData.append('file', selectedFile.value)
 
   try {
-    const res = await axios.post(
+    await axios.post(
       `https://project2025-backend.onrender.com/assignments/${assignmentId}/submit`,
       formData,
       {
@@ -91,34 +95,40 @@ const handleSubmit = async () => {
       }
     )
 
-    const feedbackText = res.data.feedback
-    alert('✅ 과제가 제출되었고 AI 피드백을 받았습니다!')
-
-    // 피드백 페이지로 이동 + state로 전달
-    router.push({
-      path: `/student/feedback/${assignmentId}`,
-      state: { feedback: feedbackText }
-    })
+    alert('✅ 과제가 성공적으로 제출되었고, AI 피드백이 생성되었습니다.')
+    router.push(`/student/feedback/${assignmentId}`)
   } catch (err) {
-    const msg = err.response?.data?.message || '서버 오류 발생'
-    alert(`❌ 제출 실패: ${msg}`)
+    const msg = err.response?.data?.detail || err.message || '서버 오류 발생'
+    if (msg.includes('마감일')) {
+      alert('⏳ 마감일이 지나야 제출이 가능합니다.')
+    } else {
+      alert(`❌ 제출 실패: ${msg}`)
+    }
     console.error('제출 에러:', err)
   } finally {
     submitting.value = false
   }
 }
 
-const goToTestFeedback = () => {
-  const fakeId = 123
-  router.push(`/student/feedback/${fakeId}`)
+const goToFeedback = () => {
+  router.push(`/student/feedback/${assignmentId}`)
 }
 
 onMounted(async () => {
   try {
-    const res = await axios.get(`https://project2025-backend.onrender.com/assignments/${assignmentId}`)
-    assignment.value = res.data
+    const token = localStorage.getItem('access_token')
+
+    const [assignmentRes, feedbackRes] = await Promise.all([
+      axios.get(`https://project2025-backend.onrender.com/assignments/${assignmentId}`),
+      axios.get(`https://project2025-backend.onrender.com/assignments/${assignmentId}/feedback`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => null) // 404는 무시
+    ])
+
+    assignment.value = assignmentRes.data
+    alreadySubmitted.value = !!feedbackRes?.data?.feedback
   } catch (err) {
-    console.error('과제 정보 불러오기 실패:', err)
+    console.error('데이터 불러오기 실패:', err)
   } finally {
     loading.value = false
   }
