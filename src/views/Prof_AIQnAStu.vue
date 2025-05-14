@@ -1,7 +1,7 @@
 <template>
   <div class="lecture-container text-center mt-5">
     <h2>🎤 실시간 질문 시연 (VAD 단위)</h2>
-    <p class="text-muted">음성 인식 버튼을 누르면 교수자의 음성을 바탕으로 문단 및 질문이 자동 생성됩니다.</p>
+    <p class="text-muted">교수자의 발화를 실시간으로 분석하여 문단 단위로 질문을 생성한다.</p>
 
     <div class="btn-group mt-4">
       <button @click="startRecognition" class="btn btn-primary m-2">🎙️ 음성 인식 시작</button>
@@ -23,15 +23,6 @@
         </ul>
       </div>
     </div>
-
-    <div v-if="randomSamples.length" class="alert alert-info mt-5 text-start">
-      <h5>💡 참고로 이런 질문들도 생성된 적 있어요!</h5>
-      <ul class="list-group list-group-flush mt-2">
-        <li v-for="(q, i) in randomSamples" :key="i" class="list-group-item">
-          {{ q }}
-        </li>
-      </ul>
-    </div>
   </div>
 </template>
 
@@ -44,16 +35,11 @@ export default {
       recognition: null,
       recognitionStatus: '정지됨',
       results: [],
-      randomSamples: [],
       sentenceBuffer: '',
       sentenceCount: 0,
-      isSending: false,
       SENTENCE_LIMIT: 3,
-      CHAR_LIMIT: 1000,
+      CHAR_LIMIT: 200,
     };
-  },
-  mounted() {
-    this.fetchRandomQuestions();
   },
   methods: {
     startRecognition() {
@@ -135,17 +121,6 @@ export default {
       } catch (error) {
         console.error("❌ 질문 생성 오류:", error);
         alert("질문 생성에 실패했습니다.");
-      }
-    },
-
-    async fetchRandomQuestions() {
-      try {
-        const res = await fetch('https://project2025-backend.onrender.com/questions/random_sample?count=2');
-        if (!res.ok) throw new Error("불러오기 실패");
-        const data = await res.json();
-        this.randomSamples = data.questions;
-      } catch (err) {
-        console.error("❌ 랜덤 질문 불러오기 실패:", err);
       }
     },
   },
