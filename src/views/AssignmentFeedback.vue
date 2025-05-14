@@ -33,9 +33,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
+const assignmentId = route.params.id
 const loading = ref(true)
 const parsedFeedback = ref([])
 
@@ -43,10 +45,9 @@ const goBack = () => {
   router.push('/student/assignment')
 }
 
-// 피드백 파싱 함수
+// 피드백 텍스트를 파싱해서 { title, content } 배열로 변환
 const parseFeedback = (text) => {
   if (!text) return []
-
   return text
     .split(/\n-\s+/)
     .filter(Boolean)
@@ -59,15 +60,24 @@ const parseFeedback = (text) => {
     })
 }
 
-onMounted(() => {
-  const feedbackRaw = route.state?.feedback
-
-  if (!feedbackRaw) {
+// 백엔드에서 피드백 가져오기
+const fetchFeedback = async () => {
+  const token = localStorage.getItem('access_token')
+  try {
+    const res = await axios.get(`https://project2025-backend.onrender.com/assignments/${assignmentId}/feedback`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+    const feedbackRaw = res.data.feedback
+    parsedFeedback.value = parseFeedback(feedbackRaw)
+  } catch (err) {
+    console.error('❌ 피드백 불러오기 실패:', err)
+    alert('피드백을 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.')
+  } finally {
     loading.value = false
-    return
   }
+}
 
-  parsedFeedback.value = parseFeedback(feedbackRaw)
-  loading.value = false
-})
+onMounted(fetchFeedback)
 </script>
