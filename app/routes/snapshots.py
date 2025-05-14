@@ -96,28 +96,23 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(db: AsyncSession = Depends(get_db)):
     """
-    시퀀스와 MAX(id) 동기화가 필요한 경우에만 setval 실행.
-    setval 호출은 *필수*라는 요구사항을 만족하면서도, 동시성 경합을 최소화한다.
+    테이블 최대 id와 시퀀스를 항상 동기화하여,
+    새로 생성되는 lecture의 id가 MAX(id)+1이 되도록 강제 설정.
     """
     async with db.begin():  # 트랜잭션 시작
-        # 1️⃣ 현재 시퀀스 값 조회
-        result = await db.execute(text("SELECT last_value FROM lectures_id_seq"))
-        seq_val: int = result.scalar_one_or_none() or 0
-
-        # 2️⃣ 테이블 최대 id 조회
+        # 1️⃣ 테이블 최대 id 조회
         result = await db.execute(text("SELECT COALESCE(MAX(id), 0) FROM lectures"))
         max_id: int = result.scalar_one() or 0
 
-        # 3️⃣ 불일치 시에만 setval 실행
-        if max_id > seq_val:
-            await db.execute(
-                text("SELECT setval('lectures_id_seq', :new_val, true)").bindparams(new_val=max_id)
-            )
+        # 2️⃣ 시퀀스 강제 재설정 (무조건 setval)
+        await db.execute(
+            text("SELECT setval('lectures_id_seq', :new_val, true)").bindparams(new_val=max_id)
+        )
 
-        # 4️⃣ 새 레코드 INSERT
+        # 3️⃣ 새 레코드 INSERT
         lecture = Lecture()
         db.add(lecture)
-        # 트랜잭션 컨텍스트를 벗어나면 자동 commit
+        # 트랜잭션 종료 시 자동 commit
 
     # 새로 삽입된 레코드 리프레시
     await db.refresh(lecture)
