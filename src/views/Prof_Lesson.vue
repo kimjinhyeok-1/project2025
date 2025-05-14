@@ -15,10 +15,7 @@
       </button>
     </div>
 
-    <div
-      v-if="summaryResult"
-      class="alert alert-success mt-4 markdown-body"
-    >
+    <div v-if="summaryResult" class="alert alert-success mt-4 markdown-body">
       <h5>📘 수업 요약 결과:</h5>
       <div v-html="renderedSummary"></div>
     </div>
@@ -28,8 +25,8 @@
 <script>
 import axios from "axios";
 import recordingManager from "@/managers/RecordingManager";
-import { testOptionsRequest } from "@/api/snapshotService";
 import { marked } from "marked";
+import { testOptionsRequest, generateLectureSummary } from "@/api/snapshotService";
 
 export default {
   name: "ProfessorLesson",
@@ -49,18 +46,16 @@ export default {
       try {
         const res = await axios.post(
           "https://project2025-backend.onrender.com/snapshots/lectures",
-          {}, // ✅ 빈 JSON 바디 명시
+          {},
           {
             headers: {
-              "Content-Type": "application/json" // ✅ 명시적 JSON 타입
-            }
+              "Content-Type": "application/json",
+            },
           }
         );
 
         const { lecture_id } = res.data;
         localStorage.setItem("lecture_id", lecture_id);
-
-        // ✅ 녹음 매니저에도 설정
         recordingManager.setLectureId(lecture_id);
 
         console.log("🎓 수업 세션 시작:", lecture_id);
@@ -83,6 +78,7 @@ export default {
       } else {
         recordingManager.stopRecording();
         this.isRecording = recordingManager.getState().isRecording;
+        await generateLectureSummary();
         await this.requestLectureSummary();
       }
       this.isRecording = recordingManager.getState().isRecording;
@@ -130,13 +126,11 @@ export default {
   padding: 30px;
 }
 
-/* ✅ 마크다운 렌더링 시 왼쪽 정렬 적용 */
 .markdown-body {
   text-align: left;
   white-space: normal;
 }
 
-/* ✅ 마크다운 스타일 보정 */
 .markdown-body h3 {
   font-size: 1.2rem;
   font-weight: bold;
