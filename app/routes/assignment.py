@@ -8,6 +8,7 @@ import uuid
 import aiofiles
 import asyncio
 import fitz  # PyMuPDF
+
 from app.models import Assignment, AssignmentSubmission, User
 from app.schemas import AssignmentOut
 from app.database import get_db
@@ -62,16 +63,16 @@ async def create_assignment(
     await db.refresh(new_assignment)
     return new_assignment
 
-# ✅ 과제 전체 목록 조회
+# ✅ 과제 목록 조회
 @router.get("/", response_model=list[AssignmentOut], tags=["Assignments"])
 async def get_assignments(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Assignment))
     assignments = result.scalars().all()
     for assignment in assignments:
-        assignment.sample_answer = None  # 공개 방지
+        assignment.sample_answer = None
     return assignments
 
-# ✅ 특정 과제 상세 조회
+# ✅ 과제 상세 조회
 @router.get("/{assignment_id}", response_model=AssignmentOut, tags=["Assignments"])
 async def get_assignment(assignment_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
@@ -125,7 +126,7 @@ async def delete_assignment(assignment_id: int, db: AsyncSession = Depends(get_d
     await db.commit()
     return {"message": f"과제(ID={assignment_id})가 성공적으로 삭제되었습니다."}
 
-# ✅ 과제 제출 및 피드백 생성
+# ✅ 과제 제출 + GPT 피드백 + 사용자 상태 업데이트
 @router.post("/assignments/{assignment_id}/submit", tags=["Assignments"])
 async def submit_assignment(
     assignment_id: int,
@@ -155,7 +156,6 @@ async def submit_assignment(
 
     pdf_text = extract_text_from_pdf(contents)
 
-    # GPT 피드백 생성
     try:
         feedback = await generate_assignment_feedback(assignment.description, pdf_text)
     except Exception:
@@ -165,7 +165,6 @@ async def submit_assignment(
         except Exception:
             raise HTTPException(status_code=500, detail="GPT 피드백 생성에 실패했습니다.")
 
-    # 기존 제출 여부 확인
     result = await db.execute(
         select(AssignmentSubmission).where(
             AssignmentSubmission.assignment_id == assignment.id,
@@ -188,5 +187,9 @@ async def submit_assignment(
         )
         db.add(new_submission)
 
+    # ✅ 유저 상태 업데이트
+    current_user.has_submitted_assignment = True
+
     await db.commit()
+
     return {"message": "제출 및 피드백 생성 완료", "feedback": feedback}

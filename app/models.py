@@ -34,6 +34,9 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=False, default="student")
     is_admin = Column(Boolean, default=False)
+    
+    # ✅ 과제 제출 여부 추가
+    has_submitted_assignment = Column(Boolean, default=False)
 
     questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
     submissions = relationship("AssignmentSubmission", back_populates="student", cascade="all, delete-orphan")
