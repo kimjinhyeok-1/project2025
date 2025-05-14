@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from app.services.gpt import generate_expected_questions
 from app.database import get_db_context
 from app.models import GeneratedQuestion
+import asyncio
 import re
 
 router = APIRouter()
