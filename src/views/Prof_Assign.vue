@@ -37,7 +37,6 @@
     </transition>
 
     <!-- 로딩 -->
-    <!-- 로딩 -->
     <div v-if="loading" class="d-flex align-items-center justify-content-center my-5">
       <strong role="status">불러오는 중...  </strong>
       <div class="spinner-border ms-3" aria-hidden="true"></div>
@@ -55,12 +54,6 @@
           <h5>{{ assignment.title }}</h5>
           <p class="text-muted">{{ assignment.description }}</p>
           <p>📅 마감일: {{ assignment.deadline }}</p>
-          <router-link
-            :to="`/professor/assignments/${assignment.id}/submissions`"
-            class="btn btn-outline-primary"
-          >
-            제출 현황 보기
-          </router-link>
         </div>
       </div>
     </div>
