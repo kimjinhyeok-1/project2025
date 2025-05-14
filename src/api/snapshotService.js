@@ -14,7 +14,6 @@ async function createLecture() {
     const response = await axios.post(`${BASE_URL}/snapshots/lectures`, {}, { withCredentials: true });
     const lecture_id = response.data.lecture_id;
 
-    // ✅ localStorage에 저장
     localStorage.setItem("lecture_id", lecture_id.toString());
     console.log("✅ 강의 세션 시작:", lecture_id);
     return lecture_id;
@@ -74,7 +73,25 @@ async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
   }
 }
 
-// 🔹 요약 목록 조회
+// 🔹 전체 요약 생성 요청 (→ DB 저장 포함)
+async function generateLectureSummary() {
+  const lecture_id = localStorage.getItem("lecture_id");
+  if (!lecture_id) {
+    console.error("❌ lecture_id 없음. 세션을 먼저 시작하세요.");
+    return;
+  }
+
+  try {
+    const response = await axios.post(`${BASE_URL}/snapshots/lecture_summary?lecture_id=${lecture_id}`, {}, { withCredentials: true });
+    console.log("📘 전체 요약 생성 완료:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ 전체 요약 생성 실패:", error.response?.data || error.message || error);
+    throw error;
+  }
+}
+
+// 🔹 저장된 요약 목록 조회
 async function getSummaries() {
   const lecture_id = localStorage.getItem("lecture_id");
   if (!lecture_id) {
@@ -92,9 +109,11 @@ async function getSummaries() {
   }
 }
 
+// 🔹 내보내기
 export {
   createLecture,
   captureScreenshot,
   uploadSnapshot,
+  generateLectureSummary,  // 🔥 추가됨
   getSummaries
 };
