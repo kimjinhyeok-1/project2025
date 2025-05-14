@@ -12,7 +12,7 @@ import fitz  # PyMuPDF
 from app.models import Assignment, AssignmentSubmission, User
 from app.schemas import AssignmentOut
 from app.database import get_db
-from app.auth import verify_professor, get_current_user_id as get_current_user
+from app.auth import verify_professor, get_current_user
 from app.utils.gpt_feedback import generate_assignment_feedback
 
 router = APIRouter()
