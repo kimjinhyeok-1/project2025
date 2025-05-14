@@ -113,16 +113,10 @@ export default {
 
     async sendTextChunk(textChunk) {
       try {
-        const lectureId = this.$route.query.lecture_id;
-        if (!lectureId) {
-          alert("lecture_id가 URL에 존재하지 않습니다.");
-          return;
-        }
-
         const payload = { text: textChunk };
         console.log("📤 전송할 문단:", payload);
 
-        const response = await fetch(`https://project2025-backend.onrender.com/vad/upload_text_chunk?lecture_id=${lectureId}`, {
+        const response = await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
