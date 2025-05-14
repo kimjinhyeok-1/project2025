@@ -8,7 +8,23 @@ function getFormattedTimestamp() {
   return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
 }
 
-// 스크린샷 캡처
+// 🔹 강의 세션 생성 API
+async function createLecture() {
+  try {
+    const response = await axios.post(`${BASE_URL}/lectures`, {}, { withCredentials: true });
+    const lecture_id = response.data.lecture_id;
+
+    // ✅ localStorage에 저장
+    localStorage.setItem("lecture_id", lecture_id.toString());
+    console.log("✅ 강의 세션 시작:", lecture_id);
+    return lecture_id;
+  } catch (error) {
+    console.error("❌ 강의 세션 생성 실패:", error.response?.data || error.message || error);
+    throw error;
+  }
+}
+
+// 🔹 스크린샷 캡처
 async function captureScreenshot(displayStream) {
   if (!displayStream) return "";
   try {
@@ -28,19 +44,20 @@ async function captureScreenshot(displayStream) {
   }
 }
 
-// 스냅샷 업로드
-async function uploadSnapshot({ transcript = "", screenshot_base64 = "", lecture_id }) {
-  const cleanedTranscript = transcript.trim();
-  const timestamp = getFormattedTimestamp();
-
+// 🔹 스냅샷 업로드
+async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
+  const lecture_id = localStorage.getItem("lecture_id");
   if (!lecture_id) {
     console.error("❌ lecture_id 없음. 세션을 먼저 시작하세요.");
     return;
   }
 
+  const cleanedTranscript = transcript.trim();
+  const timestamp = getFormattedTimestamp();
+
   try {
     const response = await axios.post(
-      `${BASE_URL}/snapshots/snapshots?lecture_id=${lecture_id}`,
+      `${BASE_URL}/snapshots?lecture_id=${lecture_id}`,
       {
         timestamp,
         transcript: cleanedTranscript,
@@ -57,7 +74,7 @@ async function uploadSnapshot({ transcript = "", screenshot_base64 = "", lecture
   }
 }
 
-// 요약 목록 조회
+// 🔹 요약 목록 조회
 async function getSummaries() {
   const lecture_id = localStorage.getItem("lecture_id");
   if (!lecture_id) {
@@ -66,16 +83,17 @@ async function getSummaries() {
   }
 
   try {
-    const response = await axios.get(`${BASE_URL}/snapshots/lecture_summary?lecture_id=${lecture_id}`);
+    const response = await axios.get(`${BASE_URL}/lecture_summary?lecture_id=${lecture_id}`);
     console.log("📥 요약 목록 수신 완료:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ 요약 목록 요청 실패:", error);
+    console.error("❌ 요약 목록 요청 실패:", error.response?.data || error.message || error);
     throw error;
   }
 }
 
 export {
+  createLecture,
   captureScreenshot,
   uploadSnapshot,
   getSummaries
