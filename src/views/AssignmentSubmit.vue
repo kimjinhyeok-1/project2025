@@ -25,9 +25,10 @@
           />
         </div>
 
-        <button type="submit" class="btn btn-primary me-2">제출하기</button>
+        <button type="submit" class="btn btn-primary me-2" :disabled="submitting">
+          {{ submitting ? '제출 중입니다...' : '제출하기' }}
+        </button>
 
-        <!-- 🧪 테스트용 피드백 보기 버튼 -->
         <button type="button" class="btn btn-outline-secondary" @click="goToTestFeedback">
           피드백 테스트 보기
         </button>
@@ -48,6 +49,7 @@ const assignmentId = route.params.id
 const assignment = ref(null)
 const loading = ref(true)
 const selectedFile = ref(null)
+const submitting = ref(false)
 
 const handleFileChange = (e) => {
   const file = e.target.files[0]
@@ -66,27 +68,44 @@ const handleSubmit = async () => {
     return
   }
 
-  // 아직 백엔드가 없으므로 임시로 처리
-  alert('✅ 과제가 성공적으로 제출되었습니다! AI 피드백 페이지로 이동합니다.')
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    alert('로그인이 필요합니다.')
+    return
+  }
 
-  // 가짜 제출 ID (예: 123)로 피드백 페이지로 이동
-  const fakeSubmissionId = 123
-  router.push(`/student/feedback/${fakeSubmissionId}`)
+  submitting.value = true
 
-  // 실제 백엔드가 생기면 아래 코드로 교체 예정
-  /*
   const formData = new FormData()
   formData.append('file', selectedFile.value)
 
   try {
-    const res = await axios.post(`https://project2025-backend.onrender.com/submit/${assignmentId}`, formData)
-    const submissionId = res.data.submissionId
-    router.push(`/student/feedback/${submissionId}`)
+    const res = await axios.post(
+      `https://project2025-backend.onrender.com/assignments/${assignmentId}/submit`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    )
+
+    const feedbackText = res.data.feedback
+    alert('✅ 과제가 제출되었고 AI 피드백을 받았습니다!')
+
+    // 피드백 페이지로 이동 + state로 전달
+    router.push({
+      path: `/student/feedback/${assignmentId}`,
+      state: { feedback: feedbackText }
+    })
   } catch (err) {
-    console.error('제출 실패:', err)
-    alert('❌ 과제 제출에 실패했습니다. 다시 시도해주세요.')
+    const msg = err.response?.data?.message || '서버 오류 발생'
+    alert(`❌ 제출 실패: ${msg}`)
+    console.error('제출 에러:', err)
+  } finally {
+    submitting.value = false
   }
-  */
 }
 
 const goToTestFeedback = () => {

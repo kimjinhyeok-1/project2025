@@ -5,27 +5,22 @@
       <p class="mt-2">AI 피드백을 기다리는 중입니다...</p>
     </div>
 
-    <div v-else-if="!feedback" class="alert alert-warning">
-      아직 피드백을 받을 수 없습니다. 나중에 다시 시도해주세요.
+    <div v-else-if="!parsedFeedback.length" class="alert alert-warning">
+      피드백 데이터를 불러올 수 없습니다.
     </div>
 
     <div v-else>
-      <h2 class="mb-3">📋 피드백 결과: {{ feedback.assignmentTitle }}</h2>
-      <p><strong>제출 파일:</strong> {{ feedback.filename }}</p>
-      <p><strong>제출 시간:</strong> {{ feedback.submittedAt }}</p>
+      <h2 class="mb-3">📋 AI 피드백 결과</h2>
 
-      <div class="mt-4">
-        <h4>🧠 AI 피드백 요약</h4>
-        <p class="text-muted">{{ feedback.summary }}</p>
-      </div>
-
-      <div class="mt-4">
-        <h4>🔍 상세 피드백</h4>
-        <ul class="list-group">
-          <li class="list-group-item" v-for="(item, index) in feedback.details" :key="index">
-            {{ item }}
-          </li>
-        </ul>
+      <div class="row row-cols-1 row-cols-md-2 g-4 mt-2">
+        <div class="col" v-for="(item, index) in parsedFeedback" :key="index">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">{{ item.title }}</h5>
+              <p class="card-text">{{ item.content }}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="mt-4">
@@ -41,31 +36,38 @@ import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
-const submissionId = route.params.id
-
-const feedback = ref(null)
 const loading = ref(true)
+const parsedFeedback = ref([])
 
 const goBack = () => {
   router.push('/student/assignment')
 }
 
+// 피드백 파싱 함수
+const parseFeedback = (text) => {
+  if (!text) return []
+
+  return text
+    .split(/\n-\s+/)
+    .filter(Boolean)
+    .map((section) => {
+      const [title, ...rest] = section.split(':')
+      return {
+        title: title.trim(),
+        content: rest.join(':').trim()
+      }
+    })
+}
+
 onMounted(() => {
-  // 백엔드가 없으므로 임시 데이터로 대체
-  console.log('피드백 ID:', submissionId)
-  setTimeout(() => {
-    feedback.value = {
-      assignmentTitle: '기말 프로젝트 보고서',
-      filename: 'final_project.pdf',
-      submittedAt: '2025-05-12 14:33',
-      summary: '보고서의 구조는 전반적으로 명확하나 결론 부분의 설득력이 부족합니다.',
-      details: [
-        '서론은 명확하고 간결합니다.',
-        '본론 2장의 논거가 더 보강되면 좋습니다.',
-        '결론에 핵심 주장 요약이 빠져 있습니다.'
-      ]
-    }
+  const feedbackRaw = route.state?.feedback
+
+  if (!feedbackRaw) {
     loading.value = false
-  }, 1000)
+    return
+  }
+
+  parsedFeedback.value = parseFeedback(feedbackRaw)
+  loading.value = false
 })
 </script>
