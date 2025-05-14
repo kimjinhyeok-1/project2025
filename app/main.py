@@ -6,8 +6,7 @@ from app.routes import (
     chat_history,
     recording,
     snapshots,
-    assignment,     # ✅ 제출 및 피드백만 사용하는 과제 라우터 (유지)
-    question,       # ✅ 일반 질문-답변 라우터 (유지)
+    assignment,     # ✅ 제출 및 피드백만 사용하는 과제 라우터 (유지) 
     ex_question,    # ✅ 예제 질문 생성 관련 라우터 (유지)
     vad             # ✅ 음성 감지 라우터 (유지)
 )
@@ -64,7 +63,6 @@ app.include_router(snapshots.router, prefix="/snapshots", tags=["Snapshots"])
 app.include_router(auth_router)
 app.include_router(lecture_router)
 app.include_router(assignment.router, prefix="/assignments", tags=["Assignments"])
-app.include_router(question.router)
 app.include_router(ex_question.router, prefix="/questions", tags=["Questions"])
 app.include_router(vad.router, prefix="/vad", tags=["VAD"])
 
