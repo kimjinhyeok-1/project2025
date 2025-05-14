@@ -127,7 +127,7 @@ async def delete_assignment(assignment_id: int, db: AsyncSession = Depends(get_d
     return {"message": f"과제(ID={assignment_id})가 성공적으로 삭제되었습니다."}
 
 # ✅ 과제 제출 + GPT 피드백 + 사용자 상태 업데이트
-@router.post("{assignment_id}/submit", tags=["Assignments"])
+@router.post("/{assignment_id}/submit", tags=["Assignments"])
 async def submit_assignment(
     assignment_id: int,
     file: UploadFile = File(...),
