@@ -49,7 +49,7 @@ export default {
       sentenceCount: 0,
       isSending: false,
       SENTENCE_LIMIT: 3,
-      CHAR_LIMIT: 300,
+      CHAR_LIMIT: 1000,
     };
   },
   mounted() {
