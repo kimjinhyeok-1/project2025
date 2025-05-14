@@ -193,3 +193,31 @@ async def submit_assignment(
     await db.commit()
 
     return {"message": "제출 및 피드백 생성 완료", "feedback": feedback}
+
+
+@router.get("/{assignment_id}/feedback", tags=["Assignments"])
+async def get_assignment_feedback(
+    assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(AssignmentSubmission).where(
+            AssignmentSubmission.assignment_id == assignment_id,
+            AssignmentSubmission.student_id == current_user.id
+        )
+    )
+    submission = result.scalar_one_or_none()
+
+    if not submission:
+        raise HTTPException(status_code=404, detail="해당 과제에 대한 제출 기록이 없습니다.")
+
+    if not submission.gpt_feedback:
+        raise HTTPException(status_code=404, detail="GPT 피드백이 아직 생성되지 않았습니다.")
+
+    return {
+        "assignment_id": assignment_id,
+        "student_id": current_user.id,
+        "feedback": submission.gpt_feedback,
+        "created_at": submission.gpt_feedback_created_at,
+    }
