@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from app.services.gpt import generate_expected_questions
@@ -10,37 +10,33 @@ import numpy as np
 import asyncio
 import re
 from collections import defaultdict
-import random
 
 router = APIRouter()
 
-# ░ 문단 누적 버퍼 (lecture_id 없이도 작동하도록 기본 키 사용) ░
-DEFAULT_LECTURE_ID = 9999
+# 문단 누적 버퍼 (lecture_id는 고정값 9999 사용)
+FIXED_LECTURE_ID = 9999
 paragraph_buffers: dict[int, list[str]] = defaultdict(list)
 
-# ░ 하이퍼파라미터 ░
+# 하이퍼파라미터
 SIMILARITY_THRESHOLD = 0.75
 MAX_PARAGRAPH_LENGTH = 5
 MIN_PARAGRAPH_LENGTH = 20
 MIN_PARAGRAPH_SENTENCES = 2
 MAX_PARALLEL_CALLS = 3
 
-# ░ 요청 스키마 ░
+# 요청 스키마
 class TextChunkRequest(BaseModel):
     text: str
 
-# ░ OPTIONS/GET Dummy Route (프리플라이트 대응용) ░
+# OPTIONS/GET Dummy Route
 @router.options("/upload_text_chunk")
 @router.get("/upload_text_chunk")
 async def dummy_text_route():
     return JSONResponse({"message": "This endpoint only accepts POST requests."})
 
-# ░ 실시간 질문 생성 API ░
+# 실시간 질문 생성 API
 @router.post("/upload_text_chunk")
-async def upload_text_chunk(
-    body: TextChunkRequest,
-    lecture_id: int = Query(DEFAULT_LECTURE_ID, description="선택적 lecture_id, 기본값 9999")
-):
+async def upload_text_chunk(body: TextChunkRequest):
     text = body.text.strip()
     if not text:
         raise HTTPException(400, detail="텍스트가 비어있습니다.")
@@ -49,19 +45,18 @@ async def upload_text_chunk(
     if not new_sentences:
         raise HTTPException(400, detail="문장 분리 실패")
 
-    # 문단 버퍼 누적
-    paragraph_buffers[lecture_id].extend(new_sentences)
-    buffered = paragraph_buffers[lecture_id]
+    # lecture_id는 항상 9999 사용
+    paragraph_buffers[FIXED_LECTURE_ID].extend(new_sentences)
+    buffered = paragraph_buffers[FIXED_LECTURE_ID]
 
     if len(buffered) < MIN_PARAGRAPH_SENTENCES:
         return {"message": "문단 길이 부족 → 누적만 진행", "results": []}
 
-    # 문단 구성
     embeddings = get_sentence_embeddings(buffered)
     paragraphs = group_sentences_into_paragraphs(buffered, embeddings)
 
     confirmed = paragraphs[:-1] if len(paragraphs) > 1 else []
-    paragraph_buffers[lecture_id] = split_text_into_sentences(paragraphs[-1]) if paragraphs else []
+    paragraph_buffers[FIXED_LECTURE_ID] = split_text_into_sentences(paragraphs[-1]) if paragraphs else []
 
     results, orm_objs = [], []
     sem = asyncio.Semaphore(MAX_PARALLEL_CALLS)
@@ -86,31 +81,7 @@ async def upload_text_chunk(
 
     return {"results": results}
 
-# ░ 랜덤 질문 추출 API ░
-@router.get("/questions/random_sample")
-async def get_random_sample_questions(count: int = 2):
-    async with get_db_context() as db:
-        result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.created_at.desc()))
-        rows = result.scalars().all()
-
-        if not rows:
-            raise HTTPException(404, detail="예상 질문이 존재하지 않습니다.")
-
-        all_questions = []
-        for row in rows:
-            all_questions.extend(row.questions)
-
-        if len(all_questions) == 0:
-            raise HTTPException(404, detail="생성된 질문이 없습니다.")
-
-        sample_count = min(count, len(all_questions))
-        random_questions = random.sample(all_questions, sample_count)
-
-        return {
-            "questions": random_questions
-        }
-
-# ░ 유틸 함수 ░
+# 유틸 함수
 def split_text_into_sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.?!])\s+|\n", text) if s.strip()]
 
