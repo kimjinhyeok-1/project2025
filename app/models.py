@@ -34,11 +34,9 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=False, default="student")
     is_admin = Column(Boolean, default=False)
-    assistant_thread_id = Column(String, nullable=True)
 
     questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
-    assignment_questions = relationship("AssignmentQuestion", back_populates="user", cascade="all, delete-orphan")
-    assignment_threads = relationship("AssignmentThread", back_populates="user", cascade="all, delete-orphan")
+    submissions = relationship("AssignmentSubmission", back_populates="student", cascade="all, delete-orphan")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 일반 Q&A 기록
@@ -116,24 +114,7 @@ class Assignment(Base):
     attached_file_path = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
-    questions = relationship("AssignmentQuestion", back_populates="assignment", cascade="all, delete-orphan")
     submissions = relationship("AssignmentSubmission", back_populates="assignment", cascade="all, delete-orphan")
-    threads = relationship("AssignmentThread", back_populates="assignment", cascade="all, delete-orphan")
-
-class AssignmentQuestion(Base):
-    __tablename__ = "assignment_questions"
-
-    id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
-    question_text = Column(Text, nullable=True)
-    code_snippet = Column(Text, nullable=True)
-    gpt_answer = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=func.now())
-
-    assignment = relationship("Assignment", back_populates="questions")
-    user = relationship("User", back_populates="assignment_questions")
 
 class AssignmentSubmission(Base):
     __tablename__ = "assignment_submissions"
@@ -146,22 +127,9 @@ class AssignmentSubmission(Base):
     submitted_at = Column(DateTime, default=func.now())
     gpt_feedback = Column(Text, nullable=True)
     gpt_feedback_created_at = Column(DateTime, nullable=True)
-    assistant_thread_id = Column(String, nullable=True)
 
     assignment = relationship("Assignment", back_populates="submissions")
-    student = relationship("User")
-
-class AssignmentThread(Base):
-    __tablename__ = "assignment_threads"
-
-    id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
-    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    thread_id = Column(String, nullable=False)
-    created_at = Column(DateTime, default=func.now())
-
-    assignment = relationship("Assignment", back_populates="threads")
-    user = relationship("User", back_populates="assignment_threads")
+    student = relationship("User", back_populates="submissions")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 학생 피드백 (모른다 / 안다)
