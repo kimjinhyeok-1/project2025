@@ -38,7 +38,7 @@ export default {
       sentenceBuffer: '',
       sentenceCount: 0,
       SENTENCE_LIMIT: 3,
-      CHAR_LIMIT: 200,
+      CHAR_LIMIT: 1000,
     };
   },
   methods: {
