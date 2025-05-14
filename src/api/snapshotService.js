@@ -11,7 +11,7 @@ function getFormattedTimestamp() {
 // 🔹 강의 세션 생성 API
 async function createLecture() {
   try {
-    const response = await axios.post(`${BASE_URL}/lectures`, {}, { withCredentials: true });
+    const response = await axios.post(`${BASE_URL}/snapshots/lectures`, {}, { withCredentials: true });
     const lecture_id = response.data.lecture_id;
 
     // ✅ localStorage에 저장
@@ -57,7 +57,7 @@ async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
 
   try {
     const response = await axios.post(
-      `${BASE_URL}/snapshots?lecture_id=${lecture_id}`,
+      `${BASE_URL}/snapshots/snapshots?lecture_id=${lecture_id}`,
       {
         timestamp,
         transcript: cleanedTranscript,
@@ -83,7 +83,7 @@ async function getSummaries() {
   }
 
   try {
-    const response = await axios.get(`${BASE_URL}/lecture_summary?lecture_id=${lecture_id}`);
+    const response = await axios.get(`${BASE_URL}/snapshots/lecture_summary?lecture_id=${lecture_id}`);
     console.log("📥 요약 목록 수신 완료:", response.data);
     return response.data;
   } catch (error) {
