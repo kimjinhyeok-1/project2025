@@ -14,29 +14,32 @@ import random
 
 router = APIRouter()
 
-# 버퍼: lecture_id 기준 문장 누적용 (기본값 9999)
+# ░ 문단 누적 버퍼 (lecture_id 없이도 작동하도록 기본 키 사용) ░
+DEFAULT_LECTURE_ID = 9999
 paragraph_buffers: dict[int, list[str]] = defaultdict(list)
 
-# 하이퍼파라미터
+# ░ 하이퍼파라미터 ░
 SIMILARITY_THRESHOLD = 0.75
 MAX_PARAGRAPH_LENGTH = 5
 MIN_PARAGRAPH_LENGTH = 20
 MIN_PARAGRAPH_SENTENCES = 2
 MAX_PARALLEL_CALLS = 3
 
-# 요청 스키마
+# ░ 요청 스키마 ░
 class TextChunkRequest(BaseModel):
     text: str
 
+# ░ OPTIONS/GET Dummy Route (프리플라이트 대응용) ░
 @router.options("/upload_text_chunk")
 @router.get("/upload_text_chunk")
 async def dummy_text_route():
     return JSONResponse({"message": "This endpoint only accepts POST requests."})
 
+# ░ 실시간 질문 생성 API ░
 @router.post("/upload_text_chunk")
 async def upload_text_chunk(
     body: TextChunkRequest,
-    lecture_id: int = Query(9999, description="선택적 lecture_id, 기본값 9999")  # ✅ lecture_id optional
+    lecture_id: int = Query(DEFAULT_LECTURE_ID, description="선택적 lecture_id, 기본값 9999")
 ):
     text = body.text.strip()
     if not text:
@@ -46,12 +49,14 @@ async def upload_text_chunk(
     if not new_sentences:
         raise HTTPException(400, detail="문장 분리 실패")
 
+    # 문단 버퍼 누적
     paragraph_buffers[lecture_id].extend(new_sentences)
     buffered = paragraph_buffers[lecture_id]
 
     if len(buffered) < MIN_PARAGRAPH_SENTENCES:
         return {"message": "문단 길이 부족 → 누적만 진행", "results": []}
 
+    # 문단 구성
     embeddings = get_sentence_embeddings(buffered)
     paragraphs = group_sentences_into_paragraphs(buffered, embeddings)
 
@@ -59,7 +64,6 @@ async def upload_text_chunk(
     paragraph_buffers[lecture_id] = split_text_into_sentences(paragraphs[-1]) if paragraphs else []
 
     results, orm_objs = [], []
-
     sem = asyncio.Semaphore(MAX_PARALLEL_CALLS)
 
     async def ask_gpt(para: str):
@@ -82,7 +86,7 @@ async def upload_text_chunk(
 
     return {"results": results}
 
-# 🔹 랜덤 질문 추출 API
+# ░ 랜덤 질문 추출 API ░
 @router.get("/questions/random_sample")
 async def get_random_sample_questions(count: int = 2):
     async with get_db_context() as db:
@@ -106,8 +110,7 @@ async def get_random_sample_questions(count: int = 2):
             "questions": random_questions
         }
 
-# ────────────── 유틸 함수 ─────────────────
-
+# ░ 유틸 함수 ░
 def split_text_into_sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.?!])\s+|\n", text) if s.strip()]
 
