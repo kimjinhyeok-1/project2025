@@ -260,11 +260,10 @@ async def generate_lecture_summary(
     texts = [s.text for s in snaps]
     urls = [f"{settings.base_url}{s.image_path}" for s in snaps]
 
-    # ★ MOD – 임베딩 한 번에 처리
     combined_inputs = [t["topic"] for t in topics] + texts
     embeddings = await embed_texts(combined_inputs)
     topic_embs = embeddings[: len(topics)]
-    snap_embs = embeddings[len(topics) :]
+    snap_embs = embeddings[len(topics):]
 
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
 
@@ -272,16 +271,18 @@ async def generate_lecture_summary(
     for i, tp in enumerate(topics):
         sims = cosine_similarity([topic_embs[i]], snap_embs)[0]
         top_idx = sims.argsort()[-3:][::-1]
-        top_imgs = [urls[j] for j in top_idx]
 
         db.add(
             LectureSummary(
                 lecture_id=lecture_id,
                 topic=tp["topic"],
                 summary=tp["summary"],
-                image_url_1=top_imgs[0] if len(top_imgs) > 0 else None,
-                image_url_2=top_imgs[1] if len(top_imgs) > 1 else None,
-                image_url_3=top_imgs[2] if len(top_imgs) > 2 else None,
+                image_url_1=urls[top_idx[0]] if len(top_idx) > 0 else None,
+                image_text_1=texts[top_idx[0]] if len(top_idx) > 0 else None,
+                image_url_2=urls[top_idx[1]] if len(top_idx) > 1 else None,
+                image_text_2=texts[top_idx[1]] if len(top_idx) > 1 else None,
+                image_url_3=urls[top_idx[2]] if len(top_idx) > 2 else None,
+                image_text_3=texts[top_idx[2]] if len(top_idx) > 2 else None,
             )
         )
 
@@ -297,7 +298,6 @@ async def generate_lecture_summary(
 
     await db.commit()
     return output
-
 
 # ───────────────────────────────
 # 7) 저장된 요약 조회 API
@@ -316,11 +316,11 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
     for s in summaries:
         highlights = []
         if s.image_url_1:
-            highlights.append({"image_url": s.image_url_1})
+            highlights.append({"image_url": s.image_url_1, "text": s.image_text_1})
         if s.image_url_2:
-            highlights.append({"image_url": s.image_url_2})
+            highlights.append({"image_url": s.image_url_2, "text": s.image_text_2})
         if s.image_url_3:
-            highlights.append({"image_url": s.image_url_3})
+            highlights.append({"image_url": s.image_url_3, "text": s.image_text_3})
 
         output.append({
             "topic": s.topic,

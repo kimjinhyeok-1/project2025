@@ -168,7 +168,14 @@ class LectureSummary(Base):
     lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
     topic = Column(String, nullable=False)
     summary = Column(Text, nullable=False)
+
     image_url_1 = Column(String, nullable=True)
+    image_text_1 = Column(Text, nullable=True)
+
     image_url_2 = Column(String, nullable=True)
+    image_text_2 = Column(Text, nullable=True)
+
     image_url_3 = Column(String, nullable=True)
+    image_text_3 = Column(Text, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
