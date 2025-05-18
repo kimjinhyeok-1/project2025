@@ -3,7 +3,7 @@ import base64
 import uuid
 from datetime import datetime
 from typing import Optional, List
-
+from collections import defaultdict
 import aiofiles  # ★ MOD - 비동기 I/O
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel, Field
