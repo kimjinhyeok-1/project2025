@@ -226,16 +226,21 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 async def generate_lecture_summary(
     lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)
 ):
+    import numpy as np
+
+    # 1. 전체 로그 읽기
     path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "텍스트 파일 없음")
 
     async with aiofiles.open(path, "r", encoding="utf-8") as f:
         full_text = await f.read()
+    log_lines = full_text.splitlines()
 
+    # 2. 요약 추출
     markdown = await summarize_text_with_gpt(full_text)
-
     topic_blocks = markdown.split("### ")[1:]
+
     topics = []
     for block in topic_blocks:
         lines = block.strip().splitlines()
@@ -247,54 +252,97 @@ async def generate_lecture_summary(
         )
         topics.append({"topic": title, "summary": summary})
 
+    if not topics:
+        raise HTTPException(400, "요약 토픽 없음")
+
+    # 3. snapshot 불러오기
     snaps = (
-        (
-            await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))
-        )
+        (await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id)))
         .scalars()
         .all()
     )
     if not snaps:
         raise HTTPException(404, "스냅샷 없음")
 
-    texts = [s.text for s in snaps]
-    urls = [f"{settings.base_url}{s.image_path}" for s in snaps]
+    snap_texts = [s.text for s in snaps]
+    snap_times = [datetime.strptime(f"{s.date} {s.time}", "%Y-%m-%d %H:%M:%S") for s in snaps]
+    snap_urls = [f"{settings.base_url}{s.image_path}" for s in snaps]
 
-    combined_inputs = [t["topic"] for t in topics] + texts
+    # 4. topic 분포 기반 시간 구간 분할
+    total_lines = len(log_lines)
+    lines_per_topic = total_lines // len(topics)
+    snap_index_by_topic = defaultdict(list)
+
+    snap_line_times = []
+    for s in snaps:
+        dt = datetime.strptime(f"{s.date} {s.time}", "%Y-%m-%d %H:%M:%S")
+        snap_line_times.append(dt)
+
+    log_time_indices = np.linspace(0, total_lines, len(topics)+1, dtype=int)
+
+    for i, s in enumerate(snaps):
+        snap_text = s.text
+        for t_idx in range(len(topics)):
+            lower = log_time_indices[t_idx]
+            upper = log_time_indices[t_idx + 1]
+            if lower <= i < upper:
+                snap_index_by_topic[t_idx].append(i)
+                break
+
+    # 5. 임베딩
+    combined_inputs = [t["topic"] for t in topics] + snap_texts
     embeddings = await embed_texts(combined_inputs)
     topic_embs = embeddings[: len(topics)]
     snap_embs = embeddings[len(topics):]
 
+    # 6. DB 이전 요약 삭제
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
 
+    # 7. topic별 스냅샷 선택
     output = []
+    used_indices = set()
+
     for i, tp in enumerate(topics):
-        sims = cosine_similarity([topic_embs[i]], snap_embs)[0]
-        top_idx = sims.argsort()[-3:][::-1]
+        candidate_indices = snap_index_by_topic[i]
+        if not candidate_indices:
+            candidate_indices = list(range(len(snaps)))  # fallback
 
-        db.add(
-            LectureSummary(
-                lecture_id=lecture_id,
-                topic=tp["topic"],
-                summary=tp["summary"],
-                image_url_1=urls[top_idx[0]] if len(top_idx) > 0 else None,
-                image_text_1=texts[top_idx[0]] if len(top_idx) > 0 else None,
-                image_url_2=urls[top_idx[1]] if len(top_idx) > 1 else None,
-                image_text_2=texts[top_idx[1]] if len(top_idx) > 1 else None,
-                image_url_3=urls[top_idx[2]] if len(top_idx) > 2 else None,
-                image_text_3=texts[top_idx[2]] if len(top_idx) > 2 else None,
-            )
-        )
+        sims = cosine_similarity([topic_embs[i]], [snap_embs[j] for j in candidate_indices])[0]
+        idx_ranked = np.argsort(sims)[::-1]
 
-        output.append(
-            {
-                "topic": tp["topic"],
-                "summary": tp["summary"],
-                "highlights": [
-                    {"text": texts[j], "image_url": urls[j]} for j in top_idx
-                ],
-            }
-        )
+        selected = []
+        for r in idx_ranked:
+            real_idx = candidate_indices[r]
+            if real_idx not in used_indices:
+                selected.append(real_idx)
+                used_indices.add(real_idx)
+            if len(selected) >= 3:
+                break
+
+        def get(idx):
+            return (snap_urls[idx], snap_texts[idx]) if idx < len(snap_urls) else (None, None)
+
+        u1, t1 = get(selected[0]) if len(selected) > 0 else (None, None)
+        u2, t2 = get(selected[1]) if len(selected) > 1 else (None, None)
+        u3, t3 = get(selected[2]) if len(selected) > 2 else (None, None)
+
+        db.add(LectureSummary(
+            lecture_id=lecture_id,
+            topic=tp["topic"],
+            summary=tp["summary"],
+            image_url_1=u1, image_text_1=t1,
+            image_url_2=u2, image_text_2=t2,
+            image_url_3=u3, image_text_3=t3,
+        ))
+
+        highlights = [{"text": t1, "image_url": u1}, {"text": t2, "image_url": u2}, {"text": t3, "image_url": u3}]
+        highlights = [h for h in highlights if h["text"] and h["image_url"]]
+
+        output.append({
+            "topic": tp["topic"],
+            "summary": tp["summary"],
+            "highlights": highlights
+        })
 
     await db.commit()
     return output
