@@ -6,12 +6,20 @@ from app.database import get_db_context
 from app.models import GeneratedQuestion
 import asyncio
 import re
+from sqlalchemy import select
 
 router = APIRouter()
 
 # 요청 스키마
 class TextChunkRequest(BaseModel):
     text: str
+
+@router.get("/questions")
+async def get_all_questions():
+    async with get_db_context() as db:
+        result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.created_at))
+        rows = result.scalars().all()
+    return {"results": [{"paragraph": r.paragraph, "questions": r.questions} for r in rows]}
 
 # OPTIONS/GET Dummy Route
 @router.options("/upload_text_chunk")
