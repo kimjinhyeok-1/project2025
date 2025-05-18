@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text, delete
@@ -24,7 +25,7 @@ router = APIRouter()
 # Settings & Paths
 # ────────────────
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     base_url: str = Field(..., env="BASE_URL")
     image_dir: str = "tmp/snapshots"
     text_log_dir: str = "data"
@@ -33,7 +34,10 @@ class Settings(BaseModel):
     class Config:
         env_file = ".env"
 
-settings = Settings()
+def get_settings():
+    return Settings()
+
+settings = get_settings()
 FULL_IMAGE_DIR = os.path.join("static", settings.image_dir)
 os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
 os.makedirs(settings.text_log_dir, exist_ok=True)
@@ -149,7 +153,7 @@ async def upload_snapshot(
     }
 
 # ───────────────────────────────
-# 3. GET /generate_markdown_summary (리마인더 요약)
+# 3. GET /generate_markdown_summary
 # ───────────────────────────────
 
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
@@ -165,11 +169,7 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
     messages = [
         {
             "role": "system",
-            "content": (
-                "당신은 강의 마무리 리마인더를 작성합니다.\n"
-                "- 핵심 키워드 3개를 정하고 각각 간결하게 요약하세요.\n"
-                "- JAVA 용어 사용을 우선하세요."
-            ),
+            "content": "당신은 강의 마무리 리마인더를 작성합니다.\n- 핵심 키워드 3개를 정하고 각각 간결하게 요약하세요.\n- JAVA 용어 사용을 우선하세요."
         },
         {"role": "user", "content": f"강의 내용:\n```\n{truncated}\n```"},
     ]
@@ -184,17 +184,16 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         max_tokens=1200,
     )
     return SummaryResponse(
-        lecture_id=lecture_id, summary=res.choices[0].message.content.strip()
+        lecture_id=lecture_id,
+        summary=res.choices[0].message.content.strip(),
     )
 
 # ───────────────────────────────
-# 4. POST /lecture_summary (전체 요약 생성 및 저장)
+# 4. POST /lecture_summary
 # ───────────────────────────────
 
 @router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
-async def generate_lecture_summary(
-    lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)
-):
+async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)):
     path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "텍스트 로그 없음")
@@ -291,7 +290,7 @@ async def generate_lecture_summary(
     return output
 
 # ───────────────────────────────
-# 5. GET /lecture_summary (저장된 요약 조회)
+# 5. GET /lecture_summary
 # ───────────────────────────────
 
 @router.get("/lecture_summary", response_model=List[LectureSummaryResponse])
