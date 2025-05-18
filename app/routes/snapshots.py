@@ -1,29 +1,31 @@
-import os
-import base64
-import uuid
-from datetime import datetime
-from typing import Optional, List
-from collections import defaultdict
-import aiofiles  # ★ MOD - 비동기 I/O
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
-from sqlalchemy import text, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import text, delete
+from typing import Optional, List
+from datetime import datetime
+import os
+import aiofiles
+import uuid
+import base64
+import numpy as np
+from collections import defaultdict
 from sklearn.metrics.pairwise import cosine_similarity
 import tiktoken
 
-from app.utils.gpt import summarize_text_with_gpt
 from app.database import get_db
 from app.models import Lecture, Snapshot, LectureSummary
+from app.utils.gpt import summarize_text_with_gpt
 
-# ───────────────────────────────
-# 0) 환경 설정 (ENV → Settings)
-# ───────────────────────────────
+router = APIRouter()
 
-class Settings(BaseSettings):
-    base_url: str = Field(..., env="BASE_URL")             # 예: https://project2025-backend.onrender.com
+# ────────────────
+# Settings & Paths
+# ────────────────
+
+class Settings(BaseModel):
+    base_url: str = Field(..., env="BASE_URL")
     image_dir: str = "tmp/snapshots"
     text_log_dir: str = "data"
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
@@ -31,56 +33,44 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
 
-
-settings = Settings()  # 환경 변수 로드
-
+settings = Settings()
 FULL_IMAGE_DIR = os.path.join("static", settings.image_dir)
 os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
 os.makedirs(settings.text_log_dir, exist_ok=True)
+_ENCODER = tiktoken.encoding_for_model("gpt-4o")
 
-router = APIRouter()
-
-# ───────────────────────────────
-# 1) Pydantic 스키마
-# ───────────────────────────────
+# ────────────────
+# Pydantic Models
+# ────────────────
 
 class LectureSessionResponse(BaseModel):
     lecture_id: int
     created_at: datetime
-
 
 class SnapshotRequest(BaseModel):
     timestamp: str
     transcript: str
     screenshot_base64: str
 
-
 class SummaryResponse(BaseModel):
     lecture_id: int
     summary: Optional[str]
-
 
 class LectureSummaryResponse(BaseModel):
     topic: str
     summary: str
     highlights: List[dict]
 
-# ───────────────────────────────
-# 2) 헬퍼 함수
-# ───────────────────────────────
-
-# ★ MOD – 인코더 전역 캐싱
-_ENCODER = tiktoken.encoding_for_model("gpt-4o")
+# ────────────────
+# Helper Functions
+# ────────────────
 
 def truncate_by_token(text: str, max_tokens: int = 3500) -> str:
     tokens = _ENCODER.encode(text)
     return _ENCODER.decode(tokens[:max_tokens])
 
-
 async def embed_texts(texts: list[str]) -> list[list[float]]:
-    """OpenAI 임베딩 API를 한 번만 호출하여 모든 벡터 반환"""
     from openai import AsyncOpenAI
-
     client = AsyncOpenAI(api_key=settings.openai_api_key)
     resp = await client.embeddings.create(
         model="text-embedding-3-small",
@@ -88,39 +78,23 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     )
     return [e.embedding for e in resp.data]
 
-
 # ───────────────────────────────
-# 3) 세션 생성 API
+# 1. POST /lectures (세션 생성)
 # ───────────────────────────────
 
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(db: AsyncSession = Depends(get_db)):
-    """
-    테이블 최대 id와 시퀀스를 항상 동기화하여,
-    새로 생성되는 lecture의 id가 MAX(id)+1이 되도록 강제 설정.
-    """
-    async with db.begin():  # 트랜잭션 시작
-        # 1️⃣ 테이블 최대 id 조회
+    async with db.begin():
         result = await db.execute(text("SELECT COALESCE(MAX(id), 0) FROM lectures"))
         max_id: int = result.scalar_one() or 0
-
-        # 2️⃣ 시퀀스 강제 재설정 (무조건 setval)
-        await db.execute(
-            text("SELECT setval('lectures_id_seq', :new_val, true)").bindparams(new_val=max_id)
-        )
-
-        # 3️⃣ 새 레코드 INSERT
+        await db.execute(text("SELECT setval('lectures_id_seq', :new_val, true)").bindparams(new_val=max_id))
         lecture = Lecture()
         db.add(lecture)
-        # 트랜잭션 종료 시 자동 commit
-
-    # 새로 삽입된 레코드 리프레시
     await db.refresh(lecture)
     return LectureSessionResponse(lecture_id=lecture.id, created_at=lecture.created_at)
 
-
 # ───────────────────────────────
-# 4) 스냅샷 저장 API
+# 2. POST /snapshots (스냅샷 저장)
 # ───────────────────────────────
 
 @router.post("/snapshots")
@@ -134,7 +108,6 @@ async def upload_snapshot(
     except ValueError:
         raise HTTPException(400, "timestamp 형식 오류 (YYYY-MM-DD HH:MM:SS)")
 
-    # 이미지 디코딩 & 저장 (비동기)
     try:
         _, encoded = (
             data.screenshot_base64.split(",", 1)
@@ -152,12 +125,10 @@ async def upload_snapshot(
     rel_url = f"/static/{settings.image_dir}/{filename}"
     abs_url = f"{settings.base_url}{rel_url}"
 
-    # 텍스트 로그 비동기 append
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     async with aiofiles.open(log_path, "a", encoding="utf-8") as log_file:
         await log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
 
-    # DB Insert
     snapshot = Snapshot(
         lecture_id=lecture_id,
         date=dt.strftime("%Y-%m-%d"),
@@ -177,9 +148,8 @@ async def upload_snapshot(
         "image_url": abs_url,
     }
 
-
 # ───────────────────────────────
-# 5) 리마인더 요약 API
+# 3. GET /generate_markdown_summary (리마인더 요약)
 # ───────────────────────────────
 
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
@@ -217,30 +187,24 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         lecture_id=lecture_id, summary=res.choices[0].message.content.strip()
     )
 
-
 # ───────────────────────────────
-# 6) 전체 요약 생성 & 저장 API
+# 4. POST /lecture_summary (전체 요약 생성 및 저장)
 # ───────────────────────────────
 
 @router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def generate_lecture_summary(
     lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)
 ):
-    import numpy as np
-
-    # 1. 전체 로그 읽기
     path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
-        raise HTTPException(404, "텍스트 파일 없음")
+        raise HTTPException(404, "텍스트 로그 없음")
 
     async with aiofiles.open(path, "r", encoding="utf-8") as f:
         full_text = await f.read()
     log_lines = full_text.splitlines()
 
-    # 2. 요약 추출
     markdown = await summarize_text_with_gpt(full_text)
     topic_blocks = markdown.split("### ")[1:]
-
     topics = []
     for block in topic_blocks:
         lines = block.strip().splitlines()
@@ -255,7 +219,6 @@ async def generate_lecture_summary(
     if not topics:
         raise HTTPException(400, "요약 토픽 없음")
 
-    # 3. snapshot 불러오기
     snaps = (
         (await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id)))
         .scalars()
@@ -265,48 +228,28 @@ async def generate_lecture_summary(
         raise HTTPException(404, "스냅샷 없음")
 
     snap_texts = [s.text for s in snaps]
-    snap_times = [datetime.strptime(f"{s.date} {s.time}", "%Y-%m-%d %H:%M:%S") for s in snaps]
     snap_urls = [f"{settings.base_url}{s.image_path}" for s in snaps]
-
-    # 4. topic 분포 기반 시간 구간 분할
     total_lines = len(log_lines)
-    lines_per_topic = total_lines // len(topics)
-    snap_index_by_topic = defaultdict(list)
-
-    snap_line_times = []
-    for s in snaps:
-        dt = datetime.strptime(f"{s.date} {s.time}", "%Y-%m-%d %H:%M:%S")
-        snap_line_times.append(dt)
-
     log_time_indices = np.linspace(0, total_lines, len(topics)+1, dtype=int)
 
-    for i, s in enumerate(snaps):
-        snap_text = s.text
+    snap_index_by_topic = defaultdict(list)
+    for i in range(len(snaps)):
         for t_idx in range(len(topics)):
-            lower = log_time_indices[t_idx]
-            upper = log_time_indices[t_idx + 1]
-            if lower <= i < upper:
+            if log_time_indices[t_idx] <= i < log_time_indices[t_idx + 1]:
                 snap_index_by_topic[t_idx].append(i)
                 break
 
-    # 5. 임베딩
     combined_inputs = [t["topic"] for t in topics] + snap_texts
     embeddings = await embed_texts(combined_inputs)
     topic_embs = embeddings[: len(topics)]
     snap_embs = embeddings[len(topics):]
 
-    # 6. DB 이전 요약 삭제
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
 
-    # 7. topic별 스냅샷 선택
     output = []
     used_indices = set()
-
     for i, tp in enumerate(topics):
-        candidate_indices = snap_index_by_topic[i]
-        if not candidate_indices:
-            candidate_indices = list(range(len(snaps)))  # fallback
-
+        candidate_indices = snap_index_by_topic[i] or list(range(len(snaps)))
         sims = cosine_similarity([topic_embs[i]], [snap_embs[j] for j in candidate_indices])[0]
         idx_ranked = np.argsort(sims)[::-1]
 
@@ -320,7 +263,7 @@ async def generate_lecture_summary(
                 break
 
         def get(idx):
-            return (snap_urls[idx], snap_texts[idx]) if idx < len(snap_urls) else (None, None)
+            return (snap_urls[idx], snap_texts[idx]) if idx < len(snaps) else (None, None)
 
         u1, t1 = get(selected[0]) if len(selected) > 0 else (None, None)
         u2, t2 = get(selected[1]) if len(selected) > 1 else (None, None)
@@ -348,7 +291,7 @@ async def generate_lecture_summary(
     return output
 
 # ───────────────────────────────
-# 7) 저장된 요약 조회 API
+# 5. GET /lecture_summary (저장된 요약 조회)
 # ───────────────────────────────
 
 @router.get("/lecture_summary", response_model=List[LectureSummaryResponse])
