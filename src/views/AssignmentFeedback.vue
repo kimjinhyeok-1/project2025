@@ -1,8 +1,8 @@
 <template>
-  <div class="container mt-5">
+  <div class="container py-5">
     <div v-if="loading" class="text-center">
       <div class="spinner-border" role="status"></div>
-      <p class="mt-2">AI 피드백을 기다리는 중입니다...</p>
+      <p class="mt-3 text-muted">AI 피드백을 기다리는 중입니다...</p>
     </div>
 
     <div v-else-if="!parsedFeedback.length" class="alert alert-warning">
@@ -10,21 +10,21 @@
     </div>
 
     <div v-else>
-      <h2 class="mb-3">📋 AI 피드백 결과</h2>
+      <h2 class="mb-4 fw-bold">📋 AI 피드백 결과</h2>
 
-      <div class="row row-cols-1 row-cols-md-2 g-4 mt-2">
-        <div class="col" v-for="(item, index) in parsedFeedback" :key="index">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title">{{ item.title }}</h5>
-              <p class="card-text">{{ item.content }}</p>
-            </div>
-          </div>
+      <div class="feedback-text">
+        <div
+          v-for="(item, index) in parsedFeedback"
+          :key="index"
+          class="mb-4"
+        >
+          <h5 class="fw-semibold text-primary mb-2">{{ item.title }}</h5>
+          <p v-html="formatContent(item.content)" class="text-dark lh-lg mb-0"></p>
         </div>
       </div>
 
-      <div class="mt-4">
-        <button class="btn btn-secondary" @click="goBack">돌아가기</button>
+      <div class="mt-5">
+        <button class="btn btn-secondary" @click="goBack">← 돌아가기</button>
       </div>
     </div>
   </div>
@@ -42,7 +42,15 @@ const loading = ref(true)
 const parsedFeedback = ref([])
 
 const goBack = () => {
-  router.push('/student/assignment') // 또는 window.history.back()
+  router.push('/student/assignment')
+}
+
+// 피드백 텍스트에서 줄바꿈과 번호 강조 처리
+const formatContent = (text) => {
+  return text
+    .replace(/\n\d+\.\s/g, '<br><strong>$&</strong>') // 줄바꿈된 번호 강조
+    .replace(/\n/g, '<br>')                            // 일반 줄바꿈 처리
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **굵게**
 }
 
 const parseFeedback = (text) => {
