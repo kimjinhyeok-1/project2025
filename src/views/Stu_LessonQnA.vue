@@ -49,7 +49,7 @@
   const fetchQuestions = async () => {
     loading.value = true
     try {
-      const response = await fetch('https://project2025-backend.onrender.com/vad/questions')
+      const response = await fetch('https://project2025-backend.onrender.com/vad/upload_text_chunk')
       if (!response.ok) throw new Error('질문 불러오기 실패')
   
       const data = await response.json()
