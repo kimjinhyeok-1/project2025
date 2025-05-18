@@ -36,8 +36,6 @@ export default {
       recognitionStatus: '정지됨',
       results: [],
       sentenceBuffer: '',
-      sentenceCount: 0,
-      SENTENCE_LIMIT: 3,
       CHAR_LIMIT: 1000,
     };
   },
@@ -64,16 +62,11 @@ export default {
           const transcript = event.results[i][0].transcript.trim();
           if (event.results[i].isFinal && transcript) {
             this.sentenceBuffer += transcript + ' ';
-            this.sentenceCount += 1;
 
-            if (
-              this.sentenceCount >= this.SENTENCE_LIMIT ||
-              this.sentenceBuffer.length >= this.CHAR_LIMIT
-            ) {
+            if (this.sentenceBuffer.length >= this.CHAR_LIMIT) {
               const paragraph = this.sentenceBuffer.trim();
               this.sendTextChunk(paragraph);
               this.sentenceBuffer = '';
-              this.sentenceCount = 0;
             }
           }
         }
