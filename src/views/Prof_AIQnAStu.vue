@@ -7,7 +7,6 @@
       <span class="status">현재 상태: <strong>{{ recognitionStatus }}</strong></span>
     </div>
 
-    <!-- ✅ 렌더링 테스트용 -->
     <p>✅ Prof_AIQnAStu.vue 정상 렌더링됨</p>
 
     <div class="log-box mt-3">
@@ -31,32 +30,24 @@ import recordingManager from "@/managers/RecordingManager";
 export default {
   data() {
     return {
-      recognitionStatus: '수업 중',
+      recognitionStatus: "수업 중",
       questions: [],
-      latestTranscript: '',
-      lastTriggeredText: '',
-      transcriptCallback: null,
-      pollingInterval: null
+      latestTranscript: "",
+      lastTriggeredText: "",
+      transcriptCallback: null
     };
   },
   mounted() {
     console.log("🟢 Prof_AIQnAStu.vue mounted");
 
-    // STT 텍스트 받아오기 위한 구독
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
     console.log("📡 Subscribed to transcript updates.");
-
-    // 5초마다 질문 생성 트리거 + 새 질문 목록 갱신
-    this.pollingInterval = setInterval(async () => {
-      await this.triggerAndUpdateQuestions();
-    }, 5000);
   },
   beforeUnmount() {
     if (this.transcriptCallback) {
       recordingManager.unsubscribeFromTranscript(this.transcriptCallback);
     }
-    clearInterval(this.pollingInterval);
   },
   methods: {
     async handleTranscript(transcript) {
@@ -72,38 +63,36 @@ export default {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lecture_id: lectureId, text: transcript })
         });
-
         console.log("✅ 텍스트 업로드 완료");
-        this.lastTriggeredText = transcript;
-      } catch (err) {
-        console.error("❌ 텍스트 업로드 실패:", err);
-      }
-    },
 
-    async triggerAndUpdateQuestions() {
-      try {
-        const lectureId = localStorage.getItem("lecture_id");
-        if (!lectureId) {
-          console.warn("⚠️ lecture_id 없음");
-          return;
+        if (transcript.includes("질문")) {
+          console.log("🧠 '질문' 키워드 감지 → GPT 질문 생성 호출");
+
+          const res = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lecture_id: lectureId })
+          });
+
+          const data = await res.json();
+          console.log("🧠 질문 생성 응답:", data);
+
+          if (Array.isArray(data.questions)) {
+            this.questions = data.questions.map((q, index) => ({
+              id: Date.now() + index,
+              text: q,
+              created_at: new Date(),
+              likes: 0,
+              type: "ai"
+            }));
+          } else {
+            console.warn("❗ 질문 배열이 없음:", data.detail || data);
+          }
+
+          this.lastTriggeredText = transcript;
         }
-
-        const res = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lecture_id: lectureId })
-        });
-
-        const data = await res.json();
-        console.log("🧠 질문 생성 응답:", data);
-
-        if (Array.isArray(data.questions)) {
-          this.questions = data.questions;
-        } else {
-          console.warn("❗ 'questions' 배열이 응답에 없음:", data.detail || data);
-        }
       } catch (err) {
-        console.error("❌ 질문 생성 요청 실패:", err);
+        console.error("❌ 질문 처리 실패:", err);
       }
     }
   }
@@ -111,23 +100,43 @@ export default {
 </script>
 
 <style scoped>
-.qna-wrapper { max-width: 800px; margin: 0 auto; padding: 2rem; }
-.title { font-weight: bold; }
-.control-buttons { margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
-.status { font-size: 0.9rem; }
-
-.question-list { margin-top: 1rem; }
+.qna-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+.title {
+  font-weight: bold;
+}
+.control-buttons {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.status {
+  font-size: 0.9rem;
+}
+.question-list {
+  margin-top: 1rem;
+}
 .question-tile {
-  background: white; border: 1px solid #dee2e6;
-  border-radius: 0.5rem; padding: 1rem; margin-bottom: 0.75rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
 }
 .question-tile .meta {
-  font-size: 0.85rem; color: #6c757d; margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 0.5rem;
 }
 .no-question {
-  color: #6c757d; text-align: center; margin-top: 2rem;
+  color: #6c757d;
+  text-align: center;
+  margin-top: 2rem;
 }
-
 .log-box {
   background: #f8f9fa;
   padding: 1rem;
