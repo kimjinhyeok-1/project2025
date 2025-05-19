@@ -30,7 +30,7 @@ class StudentQuestionRequest(BaseModel):
     text: str
 
 # 예상 질문 생성
-@router.post("/vad/trigger_question_generation")
+@router.post("/trigger_question_generation")
 async def trigger_question_generation(_: QuestionTriggerRequest):
     if not text_buffer:
         raise HTTPException(400, detail="누적된 텍스트가 없습니다.")
@@ -53,7 +53,7 @@ async def trigger_question_generation(_: QuestionTriggerRequest):
     return {"message": "질문 생성 완료", "paragraph": full_text, "questions": questions}
 
 # 실시간 텍스트 누적
-@router.post("/vad/upload_text_chunk")
+@router.post("/upload_text_chunk")
 async def upload_text_chunk(body: TextChunkRequest):
     text = body.text.strip()
     if not text:
@@ -62,7 +62,7 @@ async def upload_text_chunk(body: TextChunkRequest):
     return {"message": "텍스트 누적 완료"}
 
 # 전체 질문 조회 (학생 Recent 탭용)
-@router.get("/vad/questions")
+@router.get("/questions")
 async def get_all_questions():
     async with get_db_context() as db:
         result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.created_at.desc()))
@@ -88,7 +88,7 @@ async def get_all_questions():
     return {"results": sorted(results, key=lambda x: x["created_at"], reverse=True)}
 
 # 직접 질문 작성 API
-@router.post("/vad/student_question")
+@router.post("/student_question")
 async def add_student_question(body: StudentQuestionRequest):
     obj = StudentQuestion(
         user_id=body.user_id,
@@ -102,7 +102,7 @@ async def add_student_question(body: StudentQuestionRequest):
     return {"message": "저장 완료", "text": obj.text, "created_at": obj.created_at}
 
 # 피드백 저장
-@router.post("/vad/feedback")
+@router.post("/feedback")
 async def save_feedback(body: FeedbackRequest):
     obj = Feedback(
         user_id=body.user_id,
@@ -116,7 +116,7 @@ async def save_feedback(body: FeedbackRequest):
     return {"message": "피드백 저장 완료"}
 
 # 인기 질문 (모름 비율 상위 2개)
-@router.get("/vad/questions/popular_summary")
+@router.get("/questions/popular_summary")
 async def get_popular_summary():
     async with get_db_context() as db:
         result = await db.execute(
