@@ -17,7 +17,7 @@
 
     <div class="tab-group">
       <button :class="{ active: tab === 'recent' }" @click="tab = 'recent'">Recent</button>
-      <button :class="{ active: tab === 'popular' }" @click="tab = 'popular'">Popular</button>
+      <!-- popular_summary API가 없으므로 버튼 제거하거나 비활성화 -->
     </div>
 
     <div v-if="questions.length" class="question-list">
@@ -47,7 +47,7 @@ export default {
   computed: {
     filteredQuestions() {
       return [...this.questions].sort((a, b) =>
-        this.tab === 'popular' ? b.likes - a.likes : new Date(b.created_at) - new Date(a.created_at)
+        new Date(b.created_at) - new Date(a.created_at)
       );
     }
   },
@@ -73,45 +73,55 @@ export default {
   methods: {
     async fetchQuestions() {
       try {
-        const url = this.tab === 'recent'
-          ? 'https://project2025-backend.onrender.com/vad/questions'
-          : 'https://project2025-backend.onrender.com/vad/questions/popular_summary';
-
-        const res = await fetch(url);
+        const res = await fetch('https://project2025-backend.onrender.com/vad/questions');
         const data = await res.json();
+        console.log("📥 백엔드 질문 목록 응답:", data);
 
-        this.questions = this.tab === 'recent'
-          ? data.results
-          : data.results.map(q => ({
-              text: `${q.text} (${q.unknown_percent}%)`,
-              created_at: new Date()
-            }));
+        if (!data.results || !Array.isArray(data.results)) {
+          console.warn("❗ 예상치 못한 데이터 구조:", data);
+          this.questions = [];
+          return;
+        }
+
+        this.questions = data.results.map(q => ({
+          id: q.id,
+          text: q.text,
+          created_at: q.created_at,
+          likes: q.likes || 0,
+          type: q.type || 'ai'
+        }));
       } catch (err) {
-        console.error('❌ 질문 목록 불러오기 실패:', err);
+        console.error("❌ 질문 목록 불러오기 실패:", err);
       }
     },
+
     async handleTranscript(transcript) {
       console.log("📝 받은 텍스트:", transcript);
       this.latestTranscript = transcript;
 
       try {
-        await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
+        const uploadRes = await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: transcript })
         });
+        const uploadData = await uploadRes.json();
+        console.log("📤 텍스트 업로드 결과:", uploadData);
 
         if (transcript.includes("질문")) {
           console.log("🧠 '질문' 트리거 감지 → GPT 질문 생성 요청");
 
-          await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
+          const gptRes = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({})
           });
 
+          const gptData = await gptRes.json();
+          console.log("📦 GPT 질문 응답:", gptData);
+
           this.lastTriggeredText = transcript;
-          await this.fetchQuestions();
+          await this.fetchQuestions(); // 갱신
         }
       } catch (err) {
         console.error("❌ 질문 생성 중 오류 발생:", err);
