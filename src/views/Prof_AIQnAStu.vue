@@ -1,3 +1,35 @@
+<template>
+  <div class="qna-wrapper">
+    <h2 class="title">🎤 실시간 질문 생성 (교수용)</h2>
+    <p class="text-muted">"질문"이라는 단어가 감지되면 누적 내용을 기반으로 GPT 질문이 생성됩니다.</p>
+
+    <div class="control-buttons">
+      <span class="status">현재 상태: <strong>{{ recognitionStatus }}</strong></span>
+    </div>
+
+    <!-- ✅ 렌더링 테스트용 -->
+    <p>✅ Prof_AIQnAStu.vue 정상 렌더링됨</p>
+
+    <div class="log-box mt-3">
+      <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
+      <p v-if="lastTriggeredText"><strong>🧠 최근 질문 트리거:</strong> "{{ lastTriggeredText }}"</p>
+    </div>
+
+    <div class="tab-group">
+      <button :class="{ active: tab === 'recent' }" @click="tab = 'recent'">Recent</button>
+      <button :class="{ active: tab === 'popular' }" @click="tab = 'popular'">Popular</button>
+    </div>
+
+    <div v-if="questions.length" class="question-list">
+      <div v-for="q in filteredQuestions" :key="q.id" class="question-tile">
+        <div class="text">{{ q.text }}</div>
+        <div class="meta">👍 {{ q.likes || 0 }} · Anonymous</div>
+      </div>
+    </div>
+    <div v-else class="no-question">아직 질문이 없습니다.</div>
+  </div>
+</template>
+
 <script>
 import recordingManager from "@/managers/RecordingManager";
 
@@ -20,13 +52,17 @@ export default {
     }
   },
   mounted() {
+    console.log("🟢 Prof_AIQnAStu.vue mounted");
     this.fetchQuestions();
+
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
+    console.log("📡 Subscribed to transcript updates.");
   },
   beforeUnmount() {
     if (this.transcriptCallback) {
       recordingManager.unsubscribeFromTranscript(this.transcriptCallback);
+      console.log("❌ Unsubscribed from transcript updates.");
     }
   },
   watch: {
@@ -55,8 +91,8 @@ export default {
       }
     },
     async handleTranscript(transcript) {
+      console.log("📝 받은 텍스트:", transcript);
       this.latestTranscript = transcript;
-      console.log("🎙️ 받은 텍스트:", transcript);
 
       try {
         await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
