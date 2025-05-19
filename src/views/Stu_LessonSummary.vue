@@ -100,14 +100,19 @@ export default {
   margin: auto;
   padding: 30px;
 }
+
 .review-item {
   background-color: #f8f9fa;
   border-radius: 12px;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
-  transition: background-color 0.2s ease;
-  text-align: left; /* ✅ 왼쪽 정렬 */
+  transition: all 0.2s ease; /* ✅ 배경 + 그림자 + 이동 효과 포함 */
+  text-align: left; /* ✅ 왼쪽 정렬 유지 */
 }
+
 .review-item:hover {
   background-color: #e9ecef;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* ✅ 그림자 강조 */
+  transform: translateY(-2px); /* ✅ 살짝 떠오르는 효과 */
 }
 </style>
+
