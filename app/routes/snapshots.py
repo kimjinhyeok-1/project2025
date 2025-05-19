@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text, delete
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 import os
 import aiofiles
@@ -14,7 +14,6 @@ import numpy as np
 from collections import defaultdict
 from sklearn.metrics.pairwise import cosine_similarity
 import tiktoken
-
 from app.database import get_db
 from app.models import Lecture, Snapshot, LectureSummary
 from app.utils.gpt import summarize_text_with_gpt
@@ -327,18 +326,25 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
 # 6. ✅ GET /snapshots/lecture_summaries (전체)
 # ───────────────────────────────
 
-@router.get("/snapshots/lecture_summaries", response_model=List[LectureSummaryListItem])
-async def get_all_lecture_summaries(db: AsyncSession = Depends(get_db)):
+@router.get(
+    "/snapshots/lecture_summaries",
+    response_model=Dict[int, List[LectureSummaryListItem]]
+)
+async def get_all_lecture_summaries_grouped(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LectureSummary))
     summaries = result.scalars().all()
 
     if not summaries:
         raise HTTPException(status_code=404, detail="저장된 요약 없음")
 
-    return [
-        LectureSummaryListItem(
-            lecture_id=s.lecture_id,
-            topic=s.topic,
-            created_at=s.created_at
-        ) for s in summaries
-    ]
+    grouped: dict[int, list] = {}
+    for s in summaries:
+        grouped.setdefault(s.lecture_id, []).append(
+            LectureSummaryListItem(
+                lecture_id=s.lecture_id,
+                topic=s.topic,
+                created_at=s.created_at
+            )
+        )
+
+    return grouped
