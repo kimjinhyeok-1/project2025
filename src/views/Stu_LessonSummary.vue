@@ -46,32 +46,31 @@ export default {
     async fetchSummaries() {
       const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summary";
       const results = [];
-      const maxLectureId = 30;
+      const validLectureIds = [2, 3, 4]; // ✅ 실제 존재하는 ID만 사용
 
-      for (let id = 1; id <= maxLectureId; id++) {
+      for (let id of validLectureIds) {
         try {
           const res = await axios.get(`${baseUrl}?lecture_id=${id}`);
-          if (res.data && res.data.length > 0) {
-            const item = res.data[0];
+          const summaries = res.data;
 
-            // ✅ 디버깅 콘솔 로그 추가
-            console.log(`📦 [lecture_id=${id}] topic:`, item.topic);
-            console.log(`📅 [lecture_id=${id}] created_at:`, item.created_at);
-
-            const date = this.convertToKoreanDate(item.created_at);
-
-            console.log(`🧪 [lecture_id=${id}] 최종 변환된 날짜:`, date);
+          if (Array.isArray(summaries) && summaries.length > 0) {
+            const topic = summaries[0].topic;
+            const date = this.convertToKoreanDate(summaries[0].created_at);
 
             results.push({
               lecture_id: id,
-              topic: item.topic,
+              topic,
               dateLabel: date
                 ? `${date.getMonth() + 1}월 ${date.getDate()}일 수업 요약본`
                 : `날짜 미상 수업 요약본`,
             });
+
+            console.log(`✅ 요약 있음: lecture_id=${id}, topic=${topic}`);
+          } else {
+            console.warn(`⚠️ 요약 없음: lecture_id=${id}`);
           }
         } catch (err) {
-          console.warn(`❌ lecture_id=${id} 요약 요청 실패`, err.message);
+          console.warn(`❌ 요청 실패: lecture_id=${id}`, err.message);
         }
       }
 
@@ -80,18 +79,15 @@ export default {
     },
 
     convertToKoreanDate(rawDate) {
-      if (!rawDate) {
-        console.warn("⚠️ created_at이 비어 있음!");
-        return null;
-      }
+      if (!rawDate) return null;
 
       const parsed = new Date(rawDate);
       if (isNaN(parsed.getTime())) {
-        console.warn("⚠️ created_at 날짜 파싱 실패:", rawDate);
+        console.warn("❌ 날짜 파싱 실패:", rawDate);
         return null;
       }
 
-      return new Date(parsed.getTime() + 8 * 60 * 60 * 1000); // KST 보정
+      return new Date(parsed.getTime() + 8 * 60 * 60 * 1000);
     },
 
     goToDetail(id) {
