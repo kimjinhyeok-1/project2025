@@ -52,14 +52,14 @@ export default {
   },
   methods: {
     async fetchQuestions() {
-      const res = await fetch('https://project2025-backend.onrender.com/questions');
+      const res = await fetch('https://project2025-backend.onrender.com/vad/trigger_question_generation');
       const data = await res.json();
       this.questions = data.results || data;
     },
     async submitQuestion() {
       const text = this.newQuestion.trim();
       if (!text) return;
-      const res = await fetch('https://project2025-backend.onrender.com/questions', {
+      const res = await fetch('https://project2025-backend.onrender.com/vad/trigger_question_generation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, source: 'student' })
@@ -69,7 +69,7 @@ export default {
       this.newQuestion = '';
     },
     async likeQuestion(id) {
-      await fetch(`https://project2025-backend.onrender.com/questions/${id}/like`, {
+      await fetch(`https://project2025-backend.onrender.com/vad/trigger_question_generation/${id}/like`, {
         method: 'PATCH'
       });
       const q = this.questions.find(q => q.id === id);
