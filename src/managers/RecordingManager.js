@@ -1,4 +1,3 @@
-// 📁 managers/RecordingManager.js
 import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 
 class RecordingManager {
@@ -10,19 +9,10 @@ class RecordingManager {
     this.displayStream = null;
     this.recognition = null;
     this.listeners = [];
-    this.transcriptListeners = []; // ✅ 텍스트 구독 콜백 리스트 추가
+    this.transcriptListeners = [];
     this.lectureId = null;
 
-    this.triggerKeywords = [
-      "보면",
-      "보게 되면",
-      "이 부분",
-      "이걸 보면",
-      "코드",
-      "화면",
-      "여기",
-      "이쪽"
-    ];
+    this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
   }
 
   setLectureId(id) {
@@ -42,7 +32,6 @@ class RecordingManager {
     this.listeners.forEach((cb) => cb(this.isRecording));
   }
 
-  // ✅ 텍스트 리스너 등록/해제/알림
   subscribeToTranscript(cb) {
     this.transcriptListeners.push(cb);
   }
@@ -108,19 +97,31 @@ class RecordingManager {
       const transcript = raw.trim();
       console.log("🎤 인식된 문장:", transcript);
 
-      // ✅ 모든 구독자에게 텍스트 전달
       this.notifyTranscriptListeners(transcript);
+
+      if (!this.lectureId) {
+        console.warn("⛔ lecture_id가 설정되지 않아 업로드 중단");
+        return;
+      }
+
+      console.log("📤 텍스트 upload_text_chunk 전송 시도:", transcript);
+
+      try {
+        await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: transcript, lecture_id: this.lectureId })
+        });
+        console.log("✅ upload_text_chunk 업로드 완료");
+      } catch (err) {
+        console.error("❌ upload_text_chunk 업로드 실패:", err);
+      }
 
       const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
       let imageBase64 = "";
 
       if (hasKeyword) {
         imageBase64 = await captureScreenshot(this.displayStream);
-      }
-
-      if (!this.lectureId) {
-        console.warn("⛔ lecture_id가 설정되지 않아 업로드 중단");
-        return;
       }
 
       await uploadSnapshot({ transcript, screenshot_base64: imageBase64, lecture_id: this.lectureId });

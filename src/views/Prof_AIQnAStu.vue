@@ -15,13 +15,8 @@
       <p v-if="lastTriggeredText"><strong>🧠 최근 질문 트리거:</strong> "{{ lastTriggeredText }}"</p>
     </div>
 
-    <div class="tab-group">
-      <button :class="{ active: tab === 'recent' }" @click="tab = 'recent'">Recent</button>
-      <!-- popular_summary API가 없으므로 버튼 제거하거나 비활성화 -->
-    </div>
-
     <div v-if="questions.length" class="question-list">
-      <div v-for="q in filteredQuestions" :key="q.id" class="question-tile">
+      <div v-for="q in questions" :key="q.id" class="question-tile">
         <div class="text">{{ q.text }}</div>
         <div class="meta">👍 {{ q.likes || 0 }} · Anonymous</div>
       </div>
@@ -47,11 +42,12 @@ export default {
   mounted() {
     console.log("🟢 Prof_AIQnAStu.vue mounted");
 
+    // STT 텍스트 받아오기 위한 구독
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
     console.log("📡 Subscribed to transcript updates.");
 
-    // 5초마다 질문 생성 요청 → 화면 반영
+    // 5초마다 질문 생성 트리거 + 새 질문 목록 갱신
     this.pollingInterval = setInterval(async () => {
       await this.triggerAndUpdateQuestions();
     }, 5000);
@@ -70,12 +66,14 @@ export default {
         const lectureId = localStorage.getItem("lecture_id");
         if (!lectureId) return;
 
+        console.log("📤 텍스트 업로드 시도:", transcript);
         await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lecture_id: lectureId, text: transcript })
         });
-        console.log("📤 텍스트 업로드 완료");
+
+        console.log("✅ 텍스트 업로드 완료");
         this.lastTriggeredText = transcript;
       } catch (err) {
         console.error("❌ 텍스트 업로드 실패:", err);
@@ -102,7 +100,7 @@ export default {
         if (Array.isArray(data.questions)) {
           this.questions = data.questions;
         } else {
-          console.warn("❗ 'questions' 배열이 응답에 없음:", data);
+          console.warn("❗ 'questions' 배열이 응답에 없음:", data.detail || data);
         }
       } catch (err) {
         console.error("❌ 질문 생성 요청 실패:", err);
@@ -111,3 +109,30 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+.qna-wrapper { max-width: 800px; margin: 0 auto; padding: 2rem; }
+.title { font-weight: bold; }
+.control-buttons { margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
+.status { font-size: 0.9rem; }
+
+.question-list { margin-top: 1rem; }
+.question-tile {
+  background: white; border: 1px solid #dee2e6;
+  border-radius: 0.5rem; padding: 1rem; margin-bottom: 0.75rem;
+}
+.question-tile .meta {
+  font-size: 0.85rem; color: #6c757d; margin-top: 0.5rem;
+}
+.no-question {
+  color: #6c757d; text-align: center; margin-top: 2rem;
+}
+
+.log-box {
+  background: #f8f9fa;
+  padding: 1rem;
+  border: 1px dashed #adb5bd;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+</style>
