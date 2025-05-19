@@ -179,3 +179,19 @@ class LectureSummary(Base):
     image_text_3 = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+# models.py
+class StudentQuestion(Base):
+    __tablename__ = "student_questions"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    text = Column(String)
+    created_at = Column(DateTime)
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    question_text = Column(String)
+    knows = Column(Boolean)
+    created_at = Column(DateTime)
