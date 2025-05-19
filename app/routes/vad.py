@@ -11,7 +11,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-# 전역 STT 누적 버퍼 (lecture_id 제거) 왜안돼
+# 전역 STT 누적 버퍼
 text_buffer: list[str] = []
 
 # ────────────── 요청 스키마 ──────────────
@@ -19,9 +19,9 @@ class TextChunkRequest(BaseModel):
     text: str
 
 class QuestionTriggerRequest(BaseModel):
-    pass  # 더 이상 lecture_id 필요 없음
+    pass
 
-# ────────────── 전체 질문 조회 (학습자용) ──────────────
+# ────────────── 전체 질문 조회 ──────────────
 @router.get("/questions")
 async def get_all_questions():
     async with get_db_context() as db:
@@ -29,7 +29,11 @@ async def get_all_questions():
         rows = result.scalars().all()
     return {
         "results": [
-            {"paragraph": r.paragraph, "questions": r.questions} for r in rows
+            {
+                "paragraph": r.paragraph,
+                "questions": r.questions,
+                "created_at": r.created_at.isoformat() if r.created_at else None
+            } for r in rows
         ]
     }
 
@@ -39,7 +43,7 @@ async def get_all_questions():
 async def dummy_text_route():
     return JSONResponse({"message": "This endpoint only accepts POST requests."})
 
-# ────────────── STT 누적 (질문 생성 X) ──────────────
+# ────────────── STT 누적 ──────────────
 @router.post("/upload_text_chunk")
 async def upload_text_chunk(body: TextChunkRequest):
     text = body.text.strip()
@@ -48,15 +52,13 @@ async def upload_text_chunk(body: TextChunkRequest):
     text_buffer.append(text)
     return {"message": "텍스트 누적 완료"}
 
-# ────────────── 질문 생성 트리거 (질문 있나요?) ──────────────
+# ────────────── 질문 생성 트리거 ──────────────
 @router.post("/trigger_question_generation")
 async def trigger_question_generation(_: QuestionTriggerRequest):
     if not text_buffer:
         raise HTTPException(400, detail="누적된 텍스트가 없습니다.")
 
     full_text = " ".join(text_buffer)
-
-    # 질문 생성 (최대 5개) 
     questions = await asyncio.to_thread(generate_expected_questions, full_text)
     questions = questions[:5] if len(questions) > 5 else questions
 
@@ -74,13 +76,14 @@ async def trigger_question_generation(_: QuestionTriggerRequest):
         await db.commit()
         await db.refresh(obj)
 
-    # 누적 버퍼 초기화
+    # 버퍼 초기화
     text_buffer.clear()
 
     return {
         "message": "질문 생성 완료",
-        "paragraph": full_text,
-        "questions": questions
+        "paragraph": obj.paragraph,
+        "questions": obj.questions,
+        "created_at": obj.created_at.isoformat()
     }
 
 # ────────────── 유틸 함수 ──────────────
