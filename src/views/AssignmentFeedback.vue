@@ -10,30 +10,28 @@
     </div>
 
     <div v-else>
-      <h2 class="mb-4 fw-bold">📋 AI 피드백 결과</h2>
+      <div class="bg-white shadow rounded-4 p-5">
+        <h2 class="fw-bold mb-4">📋 AI 피드백 결과</h2>
 
-      <div class="d-flex flex-column gap-4">
-        <div
-          v-for="(item, index) in parsedFeedback"
-          :key="index"
-          class="card shadow-sm border-0"
-        >
-          <div class="card-body bg-light rounded">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <h5 class="card-title fw-semibold text-primary mb-0">{{ item.title }}</h5>
-              <!-- 옵션 버튼 영역 필요시 여기에 -->
-            </div>
-            <p v-html="formatContent(item.content)" class="card-text text-dark small lh-lg mb-0"></p>
+        <div class="d-flex flex-column gap-4">
+          <div
+            v-for="(item, index) in parsedFeedback"
+            :key="index"
+            class="p-4 bg-light rounded-3 shadow-sm"
+          >
+            <h5 class="fw-semibold text-primary mb-2">{{ item.title }}</h5>
+            <p v-html="formatContent(item.content)" class="mb-0 text-dark small lh-lg"></p>
           </div>
         </div>
-      </div>
 
-      <div class="mt-5">
-        <button class="btn btn-outline-secondary" @click="goBack">← 돌아가기</button>
+        <div class="mt-5 text-end">
+          <button class="btn btn-outline-secondary" @click="goBack">← 돌아가기</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref, onMounted } from 'vue'
