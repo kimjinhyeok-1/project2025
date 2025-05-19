@@ -15,14 +15,16 @@ if not ASSISTANT_ID:
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# ✅ 질문 생성 함수 (Assistant API 기반, thread 재사용 없음)
-def generate_expected_questions(summary_text: str) -> list[str]:
-    try:
-        summary = summary_text.strip()
-        if not summary or "음성이 감지되지 않았습니다" in summary:
-            return ["음성이 인식되지 않았거나 내용이 비었습니다."]
 
-        # 1️⃣ Thread 생성 (매번 새로)
+# ✅ 질문 생성 함수 (Assistant API 기반)
+def generate_expected_questions(summary_text: str) -> list[str]:
+    summary = summary_text.strip()
+
+    if not summary or "음성이 감지되지 않았습니다" in summary:
+        return ["음성이 인식되지 않았거나 내용이 비었습니다."]
+
+    try:
+        # 1️⃣ 새 thread 생성
         thread = client.beta.threads.create()
 
         # 2️⃣ 사용자 메시지 등록
@@ -32,26 +34,36 @@ def generate_expected_questions(summary_text: str) -> list[str]:
             content=summary
         )
 
-        # 3️⃣ Run 실행 및 완료 대기 (자동 polling)
-        client.beta.threads.runs.create_and_poll(
+        # 3️⃣ Assistant run 실행 + 완료 대기 (자동 polling)
+        run = client.beta.threads.runs.create_and_poll(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID
         )
 
-        # 4️⃣ 응답 메시지 확인
+        # 4️⃣ 응답 메시지 추출
         messages = client.beta.threads.messages.list(thread_id=thread.id)
-        content = messages.data[0].content[0].text.value.strip()
 
-        # 5️⃣ 질문 정제 (- 질문 1\n- 질문 2 형태)
+        # 가장 마지막 메시지 (보통 assistant 응답이 최신)
+        assistant_reply = next(
+            (msg for msg in messages.data if msg.role == "assistant"),
+            messages.data[0] if messages.data else None
+        )
+
+        if not assistant_reply or not assistant_reply.content:
+            return ["질문 생성을 실패했습니다. (빈 응답)"]
+
+        raw_text = assistant_reply.content[0].text.value.strip()
+
+        # 5️⃣ 질문 파싱 및 정제
         questions = [
-            q.strip("-•0123456789. )").strip()
-            for q in content.split("\n")
+            q.strip("•-–—0123456789). ").strip()
+            for q in raw_text.split("\n")
             if q.strip()
         ]
 
         return questions if questions else ["질문 생성을 실패했습니다."]
 
-    except Exception:
+    except Exception as e:
         print("❌ Assistant API 질문 생성 실패:")
         traceback.print_exc()
         return ["질문 생성을 실패했습니다."]

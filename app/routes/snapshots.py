@@ -287,6 +287,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         output.append({
             "topic": tp["topic"],
             "summary": tp["summary"],
+            "created_at": datetime.utcnow(),
             "highlights": highlights
         })
 
