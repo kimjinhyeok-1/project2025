@@ -4,7 +4,6 @@
     <p class="text-muted">완료된 수업 요약을 확인할 수 있습니다.</p>
 
     <div class="mt-5">
-      <!-- 수업 리스트 -->
       <div
         v-for="item in summaryList"
         :key="item.lecture_id"
@@ -21,12 +20,10 @@
         </div>
       </div>
 
-      <!-- 로딩 중 -->
       <div v-if="loading" class="text-muted mt-4">
         📡 수업 목록을 불러오는 중입니다...
       </div>
 
-      <!-- 요약 없음 -->
       <div v-if="!loading && summaryList.length === 0" class="text-danger mt-4">
         ⚠️ 현재 확인 가능한 수업 요약이 없습니다.
       </div>
@@ -60,23 +57,26 @@ export default {
             results.push({
               lecture_id: id,
               topic: item.topic,
-              dateLabel: `${date.getMonth() + 1}월 ${date.getDate()}일 수업 요약본`,
+              dateLabel: date
+                ? `${date.getMonth() + 1}월 ${date.getDate()}일 수업 요약본`
+                : `날짜 미상 수업 요약본`,
             });
           }
         } catch (err) {
-          // 요약 없는 강의는 무시
+          // 무시
         }
       }
 
-      // 최신 수업이 위로 오도록 정렬
       this.summaryList = results.sort((a, b) => b.lecture_id - a.lecture_id);
       this.loading = false;
     },
 
-    convertToKoreanDate(utcDateStr) {
-      const utc = new Date(utcDateStr);
-      const koreaTime = new Date(utc.getTime() + 8 * 60 * 60 * 1000);
-      return koreaTime;
+    convertToKoreanDate(rawDate) {
+      if (!rawDate) return null;
+      const iso = rawDate.replace(" ", "T").replace("+00", "Z");
+      const parsed = new Date(iso);
+      if (isNaN(parsed.getTime())) return null;
+      return new Date(parsed.getTime() + 8 * 60 * 60 * 1000);
     },
 
     goToDetail(id) {
