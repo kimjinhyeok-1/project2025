@@ -67,8 +67,13 @@ class Highlight(BaseModel):
 class LectureSummaryResponse(BaseModel):
     topic: str
     summary: str
-    created_at: datetime       # ✅ 추가
+    created_at: datetime
     highlights: List[Highlight]
+
+class LectureSummaryListItem(BaseModel):
+    lecture_id: int
+    topic: str
+    created_at: datetime
 
 # ────────────────
 # Helper Functions
@@ -88,53 +93,33 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     return [e.embedding for e in resp.data]
 
 # ───────────────────────────────
-# 1. POST /lectures (세션 생성)
+# 1. POST /lectures
 # ───────────────────────────────
 
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(db: AsyncSession = Depends(get_db)):
     async with db.begin():
-        # lectures 테이블의 최대 id 조회
         result = await db.execute(text("SELECT COALESCE(MAX(id), 0) FROM lectures"))
         max_id = result.scalar_one()
-
-        # 시퀀스를 max_id + 1로 설정 (다음 insert가 이 값부터 시작)
-        await db.execute(
-            text("SELECT setval('lectures_id_seq', :new_val, false)")
-            .bindparams(new_val=max_id + 1)
-        )
-
-        # Lecture 레코드 생성
+        await db.execute(text("SELECT setval('lectures_id_seq', :new_val, false)").bindparams(new_val=max_id + 1))
         lecture = Lecture()
         db.add(lecture)
-
     await db.refresh(lecture)
+    return LectureSessionResponse(lecture_id=lecture.id, created_at=lecture.created_at)
 
-    return LectureSessionResponse(
-        lecture_id=lecture.id,
-        created_at=lecture.created_at
-    )
 # ───────────────────────────────
-# 2. POST /snapshots (스냅샷 저장)
+# 2. POST /snapshots
 # ───────────────────────────────
 
 @router.post("/snapshots")
-async def upload_snapshot(
-    data: SnapshotRequest,
-    lecture_id: int = Query(...),
-    db: AsyncSession = Depends(get_db),
-):
+async def upload_snapshot(data: SnapshotRequest, lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)):
     try:
         dt = datetime.strptime(data.timestamp, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         raise HTTPException(400, "timestamp 형식 오류 (YYYY-MM-DD HH:MM:SS)")
 
     try:
-        _, encoded = (
-            data.screenshot_base64.split(",", 1)
-            if "," in data.screenshot_base64
-            else ("", data.screenshot_base64)
-        )
+        _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
         image_bytes = base64.b64decode(encoded)
         filename = f"{uuid.uuid4().hex}.png"
         save_path = os.path.join(FULL_IMAGE_DIR, filename)
@@ -184,15 +169,11 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 
     truncated = truncate_by_token(text)
     messages = [
-        {
-            "role": "system",
-            "content": "당신은 강의 마무리 리마인더를 작성합니다.\n- 핵심 키워드 3개를 정하고 각각 간결하게 요약하세요.\n- JAVA 용어 사용을 우선하세요."
-        },
+        {"role": "system", "content": "당신은 강의 마무리 리마인더를 작성합니다.\n- 핵심 키워드 3개를 정하고 각각 간결하게 요약하세요.\n- JAVA 용어 사용을 우선하세요."},
         {"role": "user", "content": f"강의 내용:\n```\n{truncated}\n```"},
     ]
 
     from openai import AsyncOpenAI
-
     client = AsyncOpenAI(api_key=settings.openai_api_key)
     res = await client.chat.completions.create(
         model="gpt-4o",
@@ -200,10 +181,7 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         temperature=0.5,
         max_tokens=1200,
     )
-    return SummaryResponse(
-        lecture_id=lecture_id,
-        summary=res.choices[0].message.content.strip(),
-    )
+    return SummaryResponse(lecture_id=lecture_id, summary=res.choices[0].message.content.strip())
 
 # ───────────────────────────────
 # 4. POST /lecture_summary
@@ -212,7 +190,6 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 @router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)):
     import math
-
     path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "텍스트 로그 없음")
@@ -220,11 +197,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
     async with aiofiles.open(path, "r", encoding="utf-8") as f:
         full_text = await f.read()
     log_lines = full_text.splitlines()
-
-    # GPT로 markdown 요약 추출
     markdown = await summarize_text_with_gpt(full_text)
-
-    # 요약된 topic 파싱
     topic_blocks = markdown.split("### ")[1:]
     topics = []
     for block in topic_blocks:
@@ -232,9 +205,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         if not lines:
             continue
         title = lines[0].strip()
-        summary = " ".join(
-            line[1:].strip() for line in lines[1:] if line.strip().startswith("-")
-        )
+        summary = " ".join(line[1:].strip() for line in lines[1:] if line.strip().startswith("-"))
         if title and summary:
             topics.append({"topic": title, "summary": summary})
     topics = topics[:3]
@@ -242,22 +213,14 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
     if not topics:
         raise HTTPException(400, "요약 토픽 없음")
 
-    # 스냅샷 불러오기
-    snaps = (
-        (await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id)))
-        .scalars()
-        .all()
-    )
+    snaps = (await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id))).scalars().all()
     if not snaps:
         raise HTTPException(404, "스냅샷 없음")
 
     snap_texts = [s.text for s in snaps]
     snap_urls = [f"{settings.base_url}{s.image_path}" for s in snaps]
-
     total_lines = len(log_lines)
     log_time_indices = np.linspace(0, total_lines, len(topics)+1, dtype=int)
-
-    # 각 topic별 snapshot 후보 범위
     snap_index_by_topic = defaultdict(list)
     for i in range(len(snaps)):
         for t_idx in range(len(topics)):
@@ -265,21 +228,16 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
                 snap_index_by_topic[t_idx].append(i)
                 break
 
-    # Embedding
     combined_inputs = [t["topic"] for t in topics] + snap_texts
     embeddings = await embed_texts(combined_inputs)
     topic_embs = embeddings[: len(topics)]
     snap_embs = embeddings[len(topics):]
-
-    # 기존 요약 삭제
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
 
     output = []
     used_indices = set()
-
-    # ✨ 개선된 연결 로직 적용
-    alpha = 0.7  # 유사도 비중
-    lambda_ = 0.3  # 시간 민감도
+    alpha = 0.7
+    lambda_ = 0.3
 
     for i, tp in enumerate(topics):
         candidate_indices = snap_index_by_topic[i] or list(range(len(snaps)))
@@ -294,7 +252,6 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
             sims.append(final_score)
 
         idx_ranked = np.argsort(sims)[::-1]
-
         selected = []
         for r in idx_ranked:
             real_idx = candidate_indices[r]
@@ -312,7 +269,6 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
             "topic": tp["topic"],
             "summary": tp["summary"]
         }
-
         if len(selected) > 0:
             fields["image_url_1"], fields["image_text_1"] = get(selected[0])
         if len(selected) > 1:
@@ -337,16 +293,13 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
     await db.commit()
     return output
 
-
 # ───────────────────────────────
-# 5. GET /lecture_summary
+# 5. GET /lecture_summary (단일)
 # ───────────────────────────────
 
 @router.get("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(LectureSummary).where(LectureSummary.lecture_id == lecture_id)
-    )
+    result = await db.execute(select(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
     summaries = result.scalars().all()
     if not summaries:
         raise HTTPException(404, "저장된 요약 없음")
@@ -364,8 +317,27 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
         output.append({
             "topic": s.topic,
             "summary": s.summary,
-            "created_at": s.created_at,     # ✅ 여기 추가
+            "created_at": s.created_at,
             "highlights": highlights
         })
-
     return output
+
+# ───────────────────────────────
+# 6. ✅ GET /snapshots/lecture_summaries (전체)
+# ───────────────────────────────
+
+@router.get("/snapshots/lecture_summaries", response_model=List[LectureSummaryListItem])
+async def get_all_lecture_summaries(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(LectureSummary))
+    summaries = result.scalars().all()
+
+    if not summaries:
+        raise HTTPException(status_code=404, detail="저장된 요약 없음")
+
+    return [
+        LectureSummaryListItem(
+            lecture_id=s.lecture_id,
+            topic=s.topic,
+            created_at=s.created_at
+        ) for s in summaries
+    ]
