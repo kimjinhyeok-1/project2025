@@ -206,6 +206,8 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 
 @router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)):
+    import math
+
     path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "텍스트 로그 없음")
@@ -214,9 +216,10 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         full_text = await f.read()
     log_lines = full_text.splitlines()
 
+    # GPT로 markdown 요약 추출
     markdown = await summarize_text_with_gpt(full_text)
 
-    # 주제 파싱
+    # 요약된 topic 파싱
     topic_blocks = markdown.split("### ")[1:]
     topics = []
     for block in topic_blocks:
@@ -229,11 +232,12 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         )
         if title and summary:
             topics.append({"topic": title, "summary": summary})
-    topics = topics[:3]  # ✅ 최대 3개로 제한
+    topics = topics[:3]
 
     if not topics:
         raise HTTPException(400, "요약 토픽 없음")
 
+    # 스냅샷 불러오기
     snaps = (
         (await db.execute(select(Snapshot).where(Snapshot.lecture_id == lecture_id)))
         .scalars()
@@ -244,9 +248,11 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
 
     snap_texts = [s.text for s in snaps]
     snap_urls = [f"{settings.base_url}{s.image_path}" for s in snaps]
+
     total_lines = len(log_lines)
     log_time_indices = np.linspace(0, total_lines, len(topics)+1, dtype=int)
 
+    # 각 topic별 snapshot 후보 범위
     snap_index_by_topic = defaultdict(list)
     for i in range(len(snaps)):
         for t_idx in range(len(topics)):
@@ -254,18 +260,34 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
                 snap_index_by_topic[t_idx].append(i)
                 break
 
+    # Embedding
     combined_inputs = [t["topic"] for t in topics] + snap_texts
     embeddings = await embed_texts(combined_inputs)
     topic_embs = embeddings[: len(topics)]
     snap_embs = embeddings[len(topics):]
 
+    # 기존 요약 삭제
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
 
     output = []
     used_indices = set()
+
+    # ✨ 개선된 연결 로직 적용
+    alpha = 0.7  # 유사도 비중
+    lambda_ = 0.3  # 시간 민감도
+
     for i, tp in enumerate(topics):
         candidate_indices = snap_index_by_topic[i] or list(range(len(snaps)))
-        sims = cosine_similarity([topic_embs[i]], [snap_embs[j] for j in candidate_indices])[0]
+        topic_center = (log_time_indices[i] + log_time_indices[i+1]) // 2
+
+        sims = []
+        for j in candidate_indices:
+            content_sim = cosine_similarity([topic_embs[i]], [snap_embs[j]])[0][0]
+            time_dist = abs(j - topic_center)
+            time_score = math.exp(-lambda_ * time_dist)
+            final_score = alpha * content_sim + (1 - alpha) * time_score
+            sims.append(final_score)
+
         idx_ranked = np.argsort(sims)[::-1]
 
         selected = []
@@ -309,6 +331,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
 
     await db.commit()
     return output
+
 
 # ───────────────────────────────
 # 5. GET /lecture_summary
