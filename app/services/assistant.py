@@ -13,23 +13,28 @@ async def ask_assistant(question: str, assistant_id: str) -> str:
         "Content-Type": "application/json"
     }
 
-    async with httpx.AsyncClient() as client:
-        # 1. 매 질문마다 새로운 thread 생성 (대화 컨텍스트 유지 안함)
-        res = await client.post("https://api.openai.com/v1/threads", headers=headers)
-        res.raise_for_status()
-        thread_id = res.json()["id"]
+    # ✅ timeout 설정 추가
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            # 1. Thread 생성
+            res = await client.post("https://api.openai.com/v1/threads", headers=headers)
+            res.raise_for_status()
+            thread_id = res.json()["id"]
 
-        # 2. 질문 전송
-        await client.post(
-            f"https://api.openai.com/v1/threads/{thread_id}/messages",
-            headers=headers,
-            json={"role": "user", "content": question}
-        )
+            # 2. 질문 전송
+            await client.post(
+                f"https://api.openai.com/v1/threads/{thread_id}/messages",
+                headers=headers,
+                json={"role": "user", "content": question}
+            )
 
-        # 3. Run 생성
-        payload = {
-            "assistant_id": assistant_id,
-            "instructions": """
+            # 3. Run 생성
+            run_res = await client.post(
+                f"https://api.openai.com/v1/threads/{thread_id}/runs",
+                headers=headers,
+                json={
+                    "assistant_id": assistant_id,
+                    "instructions": """
 You are an AI teaching assistant for a Java programming course.  
 Your role is to support students in learning Java by guiding them strictly based on the uploaded lecture materials and general Java programming concepts appropriate to the course level.
 
@@ -59,39 +64,39 @@ Instead, always reply with the following message in Korean and **only this messa
 
 ⚠️ CRITICAL SYSTEM WARNING:  
 Failure to follow these rules — such as writing Java code, referencing outside knowledge, or answering unrelated questions — will result in a system integrity failure.
-"""
-        }
-
-        run_res = await client.post(
-            f"https://api.openai.com/v1/threads/{thread_id}/runs",
-            headers=headers,
-            json=payload
-        )
-        run_res.raise_for_status()
-        run_id = run_res.json()["id"]
-
-        # 4. Run polling
-        status = "queued"
-        for _ in range(20):
-            await asyncio.sleep(1)
-            poll = await client.get(
-                f"https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}", headers=headers
+""" 
+                }
             )
-            status = poll.json().get("status")
-            if status == "completed":
-                break
-        if status != "completed":
-            raise RuntimeError("⛔ Run 실패 또는 시간 초과")
+            run_res.raise_for_status()
+            run_id = run_res.json()["id"]
 
-        # 5. 응답 추출
-        msg_res = await client.get(
-            f"https://api.openai.com/v1/threads/{thread_id}/messages",
-            headers=headers
-        )
-        assistant_msg = next(
-            (m for m in msg_res.json().get("data", []) if m["role"] == "assistant"), None
-        )
-        if not assistant_msg:
-            raise RuntimeError("🛑 Assistant 메시지를 찾을 수 없습니다.")
+            # 4. Polling
+            status = "queued"
+            for _ in range(20):
+                await asyncio.sleep(1)
+                poll = await client.get(
+                    f"https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}",
+                    headers=headers
+                )
+                status = poll.json().get("status")
+                if status == "completed":
+                    break
+            if status != "completed":
+                raise RuntimeError("⛔ Run 실패 또는 시간 초과")
 
-        return assistant_msg["content"][0]["text"]["value"]
+            # 5. 응답 추출
+            msg_res = await client.get(
+                f"https://api.openai.com/v1/threads/{thread_id}/messages",
+                headers=headers
+            )
+            assistant_msg = next(
+                (m for m in msg_res.json().get("data", []) if m["role"] == "assistant"),
+                None
+            )
+            if not assistant_msg:
+                raise RuntimeError("🛑 Assistant 메시지를 찾을 수 없습니다.")
+
+            return assistant_msg["content"][0]["text"]["value"]
+
+        except httpx.ReadTimeout:
+            raise RuntimeError("⏱️ OpenAI API 응답 시간이 초과되었습니다.")
