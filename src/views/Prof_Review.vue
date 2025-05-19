@@ -32,8 +32,6 @@
   </div>
 </template>
 
-
-
 <script>
 import axios from "axios";
 
@@ -47,7 +45,7 @@ export default {
   },
   methods: {
     async fetchSummaries() {
-      const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summary";
+      const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summaries"; // ✅ 변경 완료
       try {
         const res = await axios.get(baseUrl);
         const data = res.data;
@@ -88,7 +86,6 @@ export default {
 };
 </script>
 
-
 <style scoped>
 .review-container {
   max-width: 900px;
@@ -100,14 +97,13 @@ export default {
   background-color: #f8f9fa;
   border-radius: 12px;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease; /* ✅ 배경 + 그림자 + 이동 효과 포함 */
-  text-align: left; /* ✅ 왼쪽 정렬 유지 */
+  transition: all 0.2s ease;
+  text-align: left;
 }
 
 .review-item:hover {
   background-color: #e9ecef;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* ✅ 그림자 강조 */
-  transform: translateY(-2px); /* ✅ 살짝 떠오르는 효과 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 </style>
-
