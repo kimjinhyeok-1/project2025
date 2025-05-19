@@ -60,6 +60,10 @@ class SummaryResponse(BaseModel):
     lecture_id: int
     summary: Optional[str]
 
+class Highlight(BaseModel):
+    image_url: str
+    text: str
+
 class LectureSummaryResponse(BaseModel):
     topic: str
     summary: str
