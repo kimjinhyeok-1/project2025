@@ -10,6 +10,11 @@
       </div>
     </div>
 
+    <div class="mt-3">
+      <button class="btn btn-success me-2" @click="startRecognition">🎙️ 수업 시작 (음성 인식 시작)</button>
+      <button class="btn btn-danger" @click="stopRecognition">🛑 수업 종료 (음성 인식 중지)</button>
+    </div>
+
     <div class="mt-5">
       <ul class="nav nav-tabs">
         <li class="nav-item">
@@ -21,13 +26,18 @@
       </ul>
 
       <div v-if="filteredQuestions.length" class="mt-3">
-        <div v-for="(q, index) in filteredQuestions" :key="index" class="card mb-3">
-          <div class="card-body">
-            <p class="mb-1">{{ q.text }}</p>
-            <button class="btn btn-sm btn-outline-primary" disabled>
-              👍 {{ q.likes }}
-            </button>
+        <div
+          v-for="(q, index) in filteredQuestions"
+          :key="index"
+          class="question-tile d-flex justify-content-between align-items-start p-3 mb-2 bg-white shadow-sm rounded"
+        >
+          <div>
+            <p class="mb-1 fw-semibold">{{ q.text }}</p>
+            <small class="text-muted">Anonymous</small>
           </div>
+          <button class="btn btn-sm btn-outline-primary disabled">
+            👍 {{ q.likes }}
+          </button>
         </div>
       </div>
       <div v-else class="alert alert-info mt-4">아직 질문이 없습니다.</div>
@@ -57,7 +67,6 @@ export default {
     }
   },
   mounted() {
-    this.startRecognition();
     this.fetchQuestions();
   },
   methods: {
@@ -93,13 +102,21 @@ export default {
             this.sentenceCount++;
 
             try {
-              await fetch(`https://project2025-backend.onrender.com/vad/stream_text`, {
+              await fetch(`https://project2025-backend.onrender.com/vad/upload_text_chunk`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: transcript })
               });
+
+              if (transcript.includes('질문')) {
+                await fetch(`https://project2025-backend.onrender.com/vad/trigger_question_generation`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({})
+                });
+              }
             } catch (err) {
-              console.error('텍스트 전송 실패:', err);
+              console.error('텍스트 전송 또는 질문 트리거 실패:', err);
             }
           }
         }
@@ -115,6 +132,12 @@ export default {
       };
 
       this.recognition.start();
+    },
+    stopRecognition() {
+      if (this.recognition) {
+        this.recognition.stop();
+        this.recognitionStatus = '정지됨';
+      }
     }
   }
 }
@@ -124,5 +147,14 @@ export default {
 .card {
   border-radius: 0.75rem;
   box-shadow: 0 0 0.25rem rgba(0,0,0,0.1);
+}
+
+.question-tile {
+  border: 1px solid #dee2e6;
+  transition: box-shadow 0.2s;
+}
+
+.question-tile:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 </style>
