@@ -89,14 +89,26 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(db: AsyncSession = Depends(get_db)):
     async with db.begin():
+        # lectures 테이블의 최대 id 조회
         result = await db.execute(text("SELECT COALESCE(MAX(id), 0) FROM lectures"))
-        max_id: int = result.scalar_one() or 0
-        await db.execute(text("SELECT setval('lectures_id_seq', :new_val, true)").bindparams(new_val=max_id))
+        max_id = result.scalar_one()
+
+        # 시퀀스를 max_id + 1로 설정 (다음 insert가 이 값부터 시작)
+        await db.execute(
+            text("SELECT setval('lectures_id_seq', :new_val, false)")
+            .bindparams(new_val=max_id + 1)
+        )
+
+        # Lecture 레코드 생성
         lecture = Lecture()
         db.add(lecture)
-    await db.refresh(lecture)
-    return LectureSessionResponse(lecture_id=lecture.id, created_at=lecture.created_at)
 
+    await db.refresh(lecture)
+
+    return LectureSessionResponse(
+        lecture_id=lecture.id,
+        created_at=lecture.created_at
+    )
 # ───────────────────────────────
 # 2. POST /snapshots (스냅샷 저장)
 # ───────────────────────────────
