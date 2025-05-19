@@ -31,14 +31,14 @@ export default {
       recognition: null,
       recognitionStatus: '정지됨',
       tab: 'recent',
-      questions: [],
+      questions: []
     }
   },
   computed: {
     filteredQuestions() {
-      return [...this.questions].sort((a, b) => {
-        return this.tab === 'popular' ? b.likes - a.likes : new Date(b.created_at) - new Date(a.created_at);
-      });
+      return [...this.questions].sort((a, b) =>
+        this.tab === 'popular' ? b.likes - a.likes : new Date(b.created_at) - new Date(a.created_at)
+      );
     }
   },
   mounted() {
@@ -46,7 +46,7 @@ export default {
   },
   methods: {
     async fetchQuestions() {
-      const res = await fetch('https://project2025-backend.onrender.com/questions');
+      const res = await fetch('https://project2025-backend.onrender.com/vad/questions');
       const data = await res.json();
       this.questions = data.results || data;
     },
@@ -61,18 +61,18 @@ export default {
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript.trim();
           if (transcript) {
-            await fetch(`https://project2025-backend.onrender.com/vad/upload_text_chunk`, {
+            await fetch('https://project2025-backend.onrender.com/vad/upload_text_chunk', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: transcript }),
+              body: JSON.stringify({ text: transcript })
             });
             if (transcript.includes('질문')) {
-              await fetch(`https://project2025-backend.onrender.com/vad/trigger_question_generation`, {
+              await fetch('https://project2025-backend.onrender.com/vad/trigger_question_generation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),
+                body: JSON.stringify({})
               });
-              this.fetchQuestions();
+              await this.fetchQuestions(); // 질문 생성 직후 최신 목록 조회
             }
           }
         }
@@ -84,75 +84,39 @@ export default {
       this.recognition.onend = () => {
         this.recognitionStatus = '정지됨';
       };
+
       this.recognition.start();
     },
     stopRecognition() {
       if (this.recognition) this.recognition.stop();
-    },
+    }
   }
 }
 </script>
 
 <style scoped>
-.qna-wrapper {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-.title {
-  font-weight: bold;
-}
-.control-buttons {
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+/* 동일한 스타일 유지 (슬라이도 스타일) */
+.qna-wrapper { max-width: 800px; margin: 0 auto; padding: 2rem; }
+.title { font-weight: bold; }
+.control-buttons { margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
 .start-btn, .stop-btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  background-color: #0d6efd;
-  color: white;
-  border-radius: 0.375rem;
-  cursor: pointer;
+  padding: 0.5rem 1rem; border: none; border-radius: 0.375rem;
+  color: white; cursor: pointer;
 }
-.stop-btn {
-  background-color: #dc3545;
-}
-.tab-group {
-  display: flex;
-  gap: 1rem;
-  margin: 1rem 0;
-}
+.start-btn { background-color: #0d6efd; }
+.stop-btn { background-color: #dc3545; }
+.tab-group { display: flex; gap: 1rem; margin: 1rem 0; }
 .tab-group button {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: #e9ecef;
-  border-radius: 0.375rem;
-  cursor: pointer;
+  padding: 0.5rem 1rem; border: none; background: #e9ecef; border-radius: 0.375rem; cursor: pointer;
 }
-.tab-group .active {
-  background-color: #0d6efd;
-  color: white;
-}
-.question-list {
-  margin-top: 1rem;
-}
+.tab-group .active { background-color: #0d6efd; color: white; }
+.question-list { margin-top: 1rem; }
 .question-tile {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
+  background: white; border: 1px solid #dee2e6;
+  border-radius: 0.5rem; padding: 1rem; margin-bottom: 0.75rem;
 }
 .question-tile .meta {
-  font-size: 0.85rem;
-  color: #6c757d;
-  margin-top: 0.5rem;
+  font-size: 0.85rem; color: #6c757d; margin-top: 0.5rem;
 }
-.no-question {
-  color: #6c757d;
-  text-align: center;
-  margin-top: 2rem;
-}
+.no-question { color: #6c757d; text-align: center; margin-top: 2rem; }
 </style>

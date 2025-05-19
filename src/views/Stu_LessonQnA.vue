@@ -1,14 +1,14 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🤖 궁금한 것을 자유롭게 질문하세요</h2>
-    <p class="text-muted">AI가 생성한 질문과 직접 작성한 질문이 함께 표시됩니다.</p>
+    <h2 class="title">🤖 질문 게시판 (학생용)</h2>
+    <p class="text-muted">GPT가 만든 질문과 직접 작성한 질문을 모두 확인할 수 있습니다.</p>
 
     <div class="input-area">
       <input
         v-model="newQuestion"
         type="text"
-        placeholder="Type your question"
         class="input-box"
+        placeholder="Type your question"
         @keyup.enter="submitQuestion"
       />
       <button class="icon-button" @click="submitQuestion">➤</button>
@@ -19,12 +19,10 @@
       <button :class="{ active: tab === 'popular' }" @click="tab = 'popular'">Popular</button>
     </div>
 
-    <div v-if="filteredQuestions.length" class="question-list">
-      <div v-for="q in filteredQuestions" :key="q.id" class="question-tile">
+    <div v-if="questions.length" class="question-list">
+      <div v-for="(q, index) in questions" :key="index" class="question-tile">
         <div class="text">{{ q.text }}</div>
-        <div class="meta">
-          <button class="like-btn" @click="likeQuestion(q.id)">👍 {{ q.likes }}</button> · Anonymous
-        </div>
+        <div class="meta">Anonymous · {{ q.type === 'student' ? '📌 학생 질문' : '🤖 AI 질문' }}</div>
       </div>
     </div>
     <div v-else class="no-question">아직 질문이 없습니다.</div>
@@ -36,119 +34,96 @@ export default {
   data() {
     return {
       tab: 'recent',
-      newQuestion: '',
-      questions: []
-    }
-  },
-  computed: {
-    filteredQuestions() {
-      return [...this.questions].sort((a, b) => {
-        return this.tab === 'popular' ? b.likes - a.likes : new Date(b.created_at) - new Date(a.created_at);
-      });
+      questions: [],
+      newQuestion: ''
     }
   },
   mounted() {
     this.fetchQuestions();
   },
+  watch: {
+    tab() {
+      this.fetchQuestions();
+    }
+  },
   methods: {
     async fetchQuestions() {
-      const res = await fetch('https://project2025-backend.onrender.com/vad/trigger_question_generation');
-      const data = await res.json();
-      this.questions = data.results || data;
+      try {
+        if (this.tab === 'recent') {
+          const res = await fetch('https://project2025-backend.onrender.com/vad/questions');
+          const data = await res.json();
+          this.questions = data.results.map(q => ({
+            text: q.text,
+            created_at: q.created_at,
+            type: q.source || 'ai'
+          }));
+        } else if (this.tab === 'popular') {
+          const res = await fetch('https://project2025-backend.onrender.com/vad/questions/popular_summary');
+          const data = await res.json();
+          this.questions = data.results.map(q => ({
+            text: `${q.text} (${q.unknown_percent}%)`,
+            created_at: new Date(),
+            type: 'ai'
+          }));
+        }
+      } catch (err) {
+        console.error('질문 조회 실패:', err);
+      }
     },
     async submitQuestion() {
       const text = this.newQuestion.trim();
       if (!text) return;
-      const res = await fetch('https://project2025-backend.onrender.com/vad/trigger_question_generation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, source: 'student' })
-      });
-      const saved = await res.json();
-      this.questions.unshift(saved);
-      this.newQuestion = '';
-    },
-    async likeQuestion(id) {
-      await fetch(`https://project2025-backend.onrender.com/vad/trigger_question_generation/${id}/like`, {
-        method: 'PATCH'
-      });
-      const q = this.questions.find(q => q.id === id);
-      if (q) q.likes++;
+
+      try {
+        const res = await fetch('https://project2025-backend.onrender.com/vad/student_question', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: 1, text }) // 실제 user_id 필요
+        });
+        const data = await res.json();
+        this.questions.unshift({
+          text: data.text,
+          created_at: data.created_at,
+          type: 'student'
+        });
+        this.newQuestion = '';
+      } catch (err) {
+        console.error('질문 제출 실패:', err);
+      }
     }
   }
 }
 </script>
 
 <style scoped>
-.qna-wrapper {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-.title {
-  font-weight: bold;
-}
-.input-area {
-  display: flex;
-  margin-bottom: 1rem;
-  gap: 0.5rem;
-}
+.qna-wrapper { max-width: 800px; margin: 0 auto; padding: 2rem; }
+.title { font-weight: bold; }
+.input-area { display: flex; margin-bottom: 1rem; gap: 0.5rem; }
 .input-box {
-  flex-grow: 1;
-  padding: 0.5rem 1rem;
-  border: 1px solid #ced4da;
-  border-radius: 0.5rem;
+  flex-grow: 1; padding: 0.5rem 1rem;
+  border: 1px solid #ced4da; border-radius: 0.5rem;
 }
 .icon-button {
-  padding: 0.5rem 1rem;
-  background-color: #0d6efd;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
+  padding: 0.5rem 1rem; background-color: #0d6efd;
+  color: white; border: none; border-radius: 0.5rem;
 }
-.tab-group {
-  display: flex;
-  gap: 1rem;
-  margin: 1rem 0;
-}
+.tab-group { display: flex; gap: 1rem; margin: 1rem 0; }
 .tab-group button {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: #e9ecef;
-  border-radius: 0.375rem;
-  cursor: pointer;
+  padding: 0.5rem 1rem; border: none;
+  background: #e9ecef; border-radius: 0.375rem; cursor: pointer;
 }
 .tab-group .active {
-  background-color: #0d6efd;
-  color: white;
+  background-color: #0d6efd; color: white;
 }
-.question-list {
-  margin-top: 1rem;
-}
+.question-list { margin-top: 1rem; }
 .question-tile {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
+  background: white; border: 1px solid #dee2e6;
+  border-radius: 0.5rem; padding: 1rem; margin-bottom: 0.75rem;
 }
 .question-tile .meta {
-  font-size: 0.85rem;
-  color: #6c757d;
-  margin-top: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.like-btn {
-  border: none;
-  background: none;
-  color: #0d6efd;
-  cursor: pointer;
+  font-size: 0.85rem; color: #6c757d; margin-top: 0.5rem;
 }
 .no-question {
-  color: #6c757d;
-  text-align: center;
-  margin-top: 2rem;
+  color: #6c757d; text-align: center; margin-top: 2rem;
 }
 </style>
