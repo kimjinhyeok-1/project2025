@@ -14,7 +14,7 @@ async def ask_assistant(question: str, assistant_id: str) -> str:
     }
 
     # ✅ timeout 설정 추가
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=20.0) as client:
         try:
             # 1. Thread 생성
             res = await client.post("https://api.openai.com/v1/threads", headers=headers)
