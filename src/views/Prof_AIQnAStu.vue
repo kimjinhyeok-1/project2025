@@ -1,47 +1,45 @@
 <template>
-  <div class="container mt-5">
-    <h2 class="mb-2">🎤 실시간 질문 생성 (교수용)</h2>
-    <p class="text-muted">"질문"이라는 단어가 감지되면 이전까지의 내용을 기반으로 GPT 질문이 생성됩니다.</p>
+  <div class="px-4 py-5">
+    <h3 class="fw-bold mb-2">🎤 실시간 질문 생성 (교수용)</h3>
+    <p class="text-muted mb-4">"질문"이라는 단어가 감지되면 이전까지의 내용을 기반으로 GPT 질문이 생성됩니다.</p>
 
-    <div class="card p-4 mt-4">
-      <div class="d-flex justify-content-between align-items-center">
-        <span><strong>현재 상태:</strong> {{ recognitionStatus }}</span>
-        <span class="text-muted small">누적 문장 수: {{ sentenceCount }}</span>
-      </div>
+    <div class="d-flex align-items-center justify-content-between bg-light border rounded p-3 mb-4">
+      <span class="fw-semibold">현재 상태: {{ recognitionStatus }}</span>
+      <small class="text-muted">누적 문장 수: {{ sentenceCount }}</small>
     </div>
 
-    <div class="mt-3">
-      <button class="btn btn-success me-2" @click="startRecognition">🎙️ 수업 시작 (음성 인식 시작)</button>
-      <button class="btn btn-danger" @click="stopRecognition">🛑 수업 종료 (음성 인식 중지)</button>
+    <div class="d-flex gap-2 mb-4">
+      <button class="btn btn-success" @click="startRecognition">🎙️ 수업 시작</button>
+      <button class="btn btn-danger" @click="stopRecognition">🛑 수업 종료</button>
     </div>
 
-    <div class="mt-5">
-      <ul class="nav nav-tabs">
-        <li class="nav-item">
-          <a class="nav-link" :class="{ active: tab === 'recent' }" @click="tab = 'recent'">Recent</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" :class="{ active: tab === 'popular' }" @click="tab = 'popular'">Popular</a>
-        </li>
-      </ul>
+    <ul class="nav nav-tabs mb-3">
+      <li class="nav-item">
+        <a class="nav-link" :class="{ active: tab === 'recent' }" @click="tab = 'recent'">Recent</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" :class="{ active: tab === 'popular' }" @click="tab = 'popular'">Popular</a>
+      </li>
+    </ul>
 
-      <div v-if="filteredQuestions.length" class="mt-3">
-        <div
-          v-for="(q, index) in filteredQuestions"
-          :key="index"
-          class="question-tile d-flex justify-content-between align-items-start p-3 mb-2 bg-white shadow-sm rounded"
-        >
-          <div>
-            <p class="mb-1 fw-semibold">{{ q.text }}</p>
-            <small class="text-muted">Anonymous</small>
-          </div>
-          <button class="btn btn-sm btn-outline-primary disabled">
+    <div v-if="filteredQuestions.length">
+      <div
+        v-for="(q, index) in filteredQuestions"
+        :key="index"
+        class="d-flex justify-content-between align-items-start p-3 mb-2 border rounded bg-white"
+      >
+        <div>
+          <p class="mb-1 fw-semibold">{{ q.text }}</p>
+          <small class="text-muted">Anonymous</small>
+        </div>
+        <div class="text-end">
+          <button class="btn btn-sm btn-outline-secondary" disabled>
             👍 {{ q.likes }}
           </button>
         </div>
       </div>
-      <div v-else class="alert alert-info mt-4">아직 질문이 없습니다.</div>
     </div>
+    <div v-else class="alert alert-info">아직 질문이 없습니다.</div>
   </div>
 </template>
 
@@ -55,7 +53,7 @@ export default {
       sentenceBuffer: '',
       sentenceCount: 0,
       tab: 'recent',
-      questions: [] // { text: string, likes: number, created_at: Date }
+      questions: []
     };
   },
   computed: {
@@ -83,7 +81,6 @@ export default {
         alert('음성 인식을 지원하지 않는 브라우저입니다.');
         return;
       }
-
       const SpeechRecognition = window.webkitSpeechRecognition;
       this.recognition = new SpeechRecognition();
       this.recognition.lang = 'ko-KR';
@@ -144,17 +141,7 @@ export default {
 </script>
 
 <style scoped>
-.card {
-  border-radius: 0.75rem;
-  box-shadow: 0 0 0.25rem rgba(0,0,0,0.1);
-}
-
-.question-tile {
-  border: 1px solid #dee2e6;
-  transition: box-shadow 0.2s;
-}
-
-.question-tile:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+body {
+  background-color: #f8f9fa;
 }
 </style>
