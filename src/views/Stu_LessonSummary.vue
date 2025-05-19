@@ -45,7 +45,7 @@ export default {
   },
   methods: {
     async fetchSummaries() {
-      const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summaries"; // ✅ 수정된 경로
+      const baseUrl = "https://project2025-backend.onrender.com/snapshots/snapshots/lecture_summaries"; // ✅ 수정된 경로
       try {
         const res = await axios.get(baseUrl);
         const data = res.data;

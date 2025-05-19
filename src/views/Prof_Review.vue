@@ -45,7 +45,7 @@ export default {
   },
   methods: {
     async fetchSummaries() {
-      const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summaries"; // ✅ 변경 완료
+      const baseUrl = "https://project2025-backend.onrender.com/snapshots/snapshots/lecture_summaries"; // ✅ 변경 완료
       try {
         const res = await axios.get(baseUrl);
         const data = res.data;
