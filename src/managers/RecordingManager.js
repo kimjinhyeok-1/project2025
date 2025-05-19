@@ -1,3 +1,4 @@
+// 📁 managers/RecordingManager.js
 import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 
 class RecordingManager {
@@ -9,9 +10,19 @@ class RecordingManager {
     this.displayStream = null;
     this.recognition = null;
     this.listeners = [];
+    this.transcriptListeners = []; // ✅ 텍스트 구독 콜백 리스트 추가
     this.lectureId = null;
 
-    this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
+    this.triggerKeywords = [
+      "보면",
+      "보게 되면",
+      "이 부분",
+      "이걸 보면",
+      "코드",
+      "화면",
+      "여기",
+      "이쪽"
+    ];
   }
 
   setLectureId(id) {
@@ -29,6 +40,19 @@ class RecordingManager {
 
   notify() {
     this.listeners.forEach((cb) => cb(this.isRecording));
+  }
+
+  // ✅ 텍스트 리스너 등록/해제/알림
+  subscribeToTranscript(cb) {
+    this.transcriptListeners.push(cb);
+  }
+
+  unsubscribeFromTranscript(cb) {
+    this.transcriptListeners = this.transcriptListeners.filter((fn) => fn !== cb);
+  }
+
+  notifyTranscriptListeners(transcript) {
+    this.transcriptListeners.forEach((cb) => cb(transcript));
   }
 
   async startRecording() {
@@ -83,6 +107,9 @@ class RecordingManager {
       const raw = event.results[event.results.length - 1][0].transcript || "";
       const transcript = raw.trim();
       console.log("🎤 인식된 문장:", transcript);
+
+      // ✅ 모든 구독자에게 텍스트 전달
+      this.notifyTranscriptListeners(transcript);
 
       const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
       let imageBase64 = "";
