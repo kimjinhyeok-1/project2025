@@ -53,7 +53,15 @@ export default {
           const res = await axios.get(`${baseUrl}?lecture_id=${id}`);
           if (res.data && res.data.length > 0) {
             const item = res.data[0];
+
+            // ✅ 디버깅 콘솔 로그 추가
+            console.log(`📦 [lecture_id=${id}] topic:`, item.topic);
+            console.log(`📅 [lecture_id=${id}] created_at:`, item.created_at);
+
             const date = this.convertToKoreanDate(item.created_at);
+
+            console.log(`🧪 [lecture_id=${id}] 최종 변환된 날짜:`, date);
+
             results.push({
               lecture_id: id,
               topic: item.topic,
@@ -63,7 +71,7 @@ export default {
             });
           }
         } catch (err) {
-          // 무시
+          console.warn(`❌ lecture_id=${id} 요약 요청 실패`, err.message);
         }
       }
 
@@ -72,10 +80,16 @@ export default {
     },
 
     convertToKoreanDate(rawDate) {
-      if (!rawDate) return null;
+      if (!rawDate) {
+        console.warn("⚠️ created_at이 비어 있음!");
+        return null;
+      }
 
-      const parsed = new Date(rawDate); // ✅ 변환 없이 그대로 사용
-      if (isNaN(parsed.getTime())) return null;
+      const parsed = new Date(rawDate);
+      if (isNaN(parsed.getTime())) {
+        console.warn("⚠️ created_at 날짜 파싱 실패:", rawDate);
+        return null;
+      }
 
       return new Date(parsed.getTime() + 8 * 60 * 60 * 1000); // KST 보정
     },
