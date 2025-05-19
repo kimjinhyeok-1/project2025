@@ -1,30 +1,28 @@
 <template>
-  <div class="review-container text-center mt-5">
-    <h2>📘 수업 복습 보기</h2>
-    <p class="text-muted">완료된 수업 요약을 확인할 수 있습니다.</p>
+  <div class="review-container mt-5">
+    <h2 class="text-center">📘 수업 복습 보기</h2>
+    <p class="text-center text-muted">완료된 수업 요약을 확인할 수 있습니다.</p>
 
     <div class="mt-5">
       <div
         v-for="item in summaryList"
         :key="item.lecture_id"
-        class="review-item mb-4 p-3 d-flex justify-content-between align-items-center"
+        class="review-item mb-4 p-3"
         @click="goToDetail(item.lecture_id)"
         style="cursor: pointer"
       >
-        <div class="text-start">
+        <div>
           <p class="mb-1 fw-bold">📘 {{ item.dateLabel }}</p>
           <p class="mb-0 text-muted">📝 {{ item.topic }}</p>
         </div>
-        <div>
-          <span class="text-muted">➡️ 클릭하여 상세 보기</span>
-        </div>
+        <div class="mt-2 text-muted">➡️ 클릭하여 상세 보기</div>
       </div>
 
-      <div v-if="loading" class="text-muted mt-4">
+      <div v-if="loading" class="text-muted mt-4 text-center">
         📡 수업 목록을 불러오는 중입니다...
       </div>
 
-      <div v-if="!loading && summaryList.length === 0" class="text-danger mt-4">
+      <div v-if="!loading && summaryList.length === 0" class="text-danger mt-4 text-center">
         ⚠️ 현재 확인 가능한 수업 요약이 없습니다.
       </div>
     </div>
@@ -51,19 +49,22 @@ export default {
       for (let id = 1; id <= maxLectureId; id++) {
         try {
           const res = await axios.get(`${baseUrl}?lecture_id=${id}`);
-          if (res.data && res.data.length > 0) {
-            const item = res.data[0];
-            const date = this.convertToKoreanDate(item.created_at);
+          const summaries = res.data;
+
+          if (Array.isArray(summaries) && summaries.length > 0) {
+            const topic = summaries[0].topic;
+            const date = this.convertToDate(summaries[0].created_at);
+
             results.push({
               lecture_id: id,
-              topic: item.topic,
+              topic,
               dateLabel: date
                 ? `${date.getMonth() + 1}월 ${date.getDate()}일 수업 요약본`
                 : `날짜 미상 수업 요약본`,
             });
           }
         } catch (err) {
-          // 무시
+          console.warn(`❌ 요청 실패: lecture_id=${id}`, err.message);
         }
       }
 
@@ -71,13 +72,11 @@ export default {
       this.loading = false;
     },
 
-    convertToKoreanDate(rawDate) {
+    convertToDate(rawDate) {
       if (!rawDate) return null;
-
-      const parsed = new Date(rawDate); // ✅ PostgreSQL ISO 문자열 사용
+      const parsed = new Date(rawDate);
       if (isNaN(parsed.getTime())) return null;
-
-      return new Date(parsed.getTime() + 8 * 60 * 60 * 1000);
+      return parsed; // ✅ UTC 그대로 사용
     },
 
     goToDetail(id) {
@@ -101,6 +100,7 @@ export default {
   border-radius: 12px;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
   transition: background-color 0.2s ease;
+  text-align: left; /* ✅ 왼쪽 정렬 적용 */
 }
 .review-item:hover {
   background-color: #e9ecef;
