@@ -1,5 +1,5 @@
 <template>
-  <div class="px-7 py-8">
+  <div class="px-1 py-2">
     <h3 class="fw-bold mb-2">🎤 실시간 질문 생성 (교수용)</h3>
     <p class="text-muted mb-4">"질문"이라는 단어가 감지되면 이전까지의 내용을 기반으로 GPT 질문이 생성됩니다.</p>
 
