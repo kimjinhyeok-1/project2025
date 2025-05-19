@@ -36,7 +36,6 @@
 </template>
 
 <script>
-/* global webkitSpeechRecognition */
 export default {
   name: 'ProfessorRealtimeQuestion',
   data() {
@@ -76,7 +75,8 @@ export default {
         return;
       }
 
-      this.recognition = new window.webkitSpeechRecognition();
+      const SpeechRecognition = window.webkitSpeechRecognition;
+      this.recognition = new SpeechRecognition();
       this.recognition.lang = 'ko-KR';
       this.recognition.continuous = true;
       this.recognition.interimResults = false;
