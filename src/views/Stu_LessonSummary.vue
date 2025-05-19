@@ -47,7 +47,7 @@ export default {
   },
   methods: {
     async fetchSummaries() {
-      const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summaries";
+      const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summary";
       try {
         const res = await axios.get(baseUrl);
         const data = res.data;
