@@ -7,15 +7,18 @@
       <div
         v-for="item in summaryList"
         :key="item.lecture_id"
-        class="review-item mb-4 p-3"
+        class="review-item mb-4 p-3 d-flex justify-content-between align-items-center"
         @click="goToDetail(item.lecture_id)"
         style="cursor: pointer"
       >
+        <!-- 왼쪽 -->
         <div>
           <p class="mb-1 fw-bold">📘 {{ item.dateLabel }}</p>
           <p class="mb-0 text-muted">📝 {{ item.topic }}</p>
         </div>
-        <div class="mt-2 text-muted text-end">➡️ 클릭하여 상세 보기</div> <!-- ✅ 오른쪽 정렬 -->
+
+        <!-- 오른쪽 -->
+        <div class="text-muted text-end">➡️ 클릭하여 상세 보기</div>
       </div>
 
       <div v-if="loading" class="text-muted mt-4 text-center">
@@ -28,6 +31,7 @@
     </div>
   </div>
 </template>
+
 
 
 <script>
