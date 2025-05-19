@@ -1,188 +1,92 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    Text,
-    DateTime,
-    func,
-    ForeignKey,
-    Boolean,
-    text
-)
-from sqlalchemy.orm import relationship
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from app.services.gpt import generate_expected_questions
+from app.database import get_db_context
+from app.models import GeneratedQuestion
+import asyncio
+import re
+from sqlalchemy import select
 from datetime import datetime
-from app.database import Base
 
-try:
-    from sqlalchemy.dialects.postgresql import JSONB
-    JSONType = JSONB
-except ImportError:
-    from sqlalchemy.types import JSON as JSONType
-    JSONType = JSON
+router = APIRouter()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 사용자
-# ─────────────────────────────────────────────────────────────────────────────
-class User(Base):
-    __tablename__ = "users"
+# 전역 STT 누적 버퍼 (lecture_id 제거) 왜안돼
+text_buffer: list[str] = []
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="student")
-    is_admin = Column(Boolean, default=False)
-    has_submitted_assignment = Column(Boolean, default=False)
+# ────────────── 요청 스키마 ──────────────
+class TextChunkRequest(BaseModel):
+    text: str
 
-    questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
-    submissions = relationship("AssignmentSubmission", back_populates="student", cascade="all, delete-orphan")
+class QuestionTriggerRequest(BaseModel):
+    pass  # 더 이상 lecture_id 필요 없음
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 일반 Q&A 기록
-# ─────────────────────────────────────────────────────────────────────────────
-class QuestionAnswer(Base):
-    __tablename__ = "chat_history"
+# ────────────── 전체 질문 조회 (학습자용) ──────────────
+@router.get("/questions")
+async def get_all_questions():
+    async with get_db_context() as db:
+        result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.created_at))
+        rows = result.scalars().all()
+    return {
+        "results": [
+            {"paragraph": r.paragraph, "questions": r.questions} for r in rows
+        ]
+    }
 
-    id = Column(Integer, primary_key=True, index=True)
-    question = Column(Text, nullable=False)
-    answer = Column(Text, nullable=False)
-    created_at = Column(DateTime, server_default=text("(now() - interval '8 hour')"))
+# ────────────── 프리플라이트 dummy ──────────────
+@router.options("/upload_text_chunk")
+@router.get("/upload_text_chunk")
+async def dummy_text_route():
+    return JSONResponse({"message": "This endpoint only accepts POST requests."})
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    user = relationship("User", back_populates="questions")
+# ────────────── STT 누적 (질문 생성 X) ──────────────
+@router.post("/upload_text_chunk")
+async def upload_text_chunk(body: TextChunkRequest):
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(400, detail="텍스트가 비어있습니다.")
+    text_buffer.append(text)
+    return {"message": "텍스트 누적 완료"}
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GPT가 생성한 문단·질문 저장
-# ─────────────────────────────────────────────────────────────────────────────
-class GeneratedQuestion(Base):
-    __tablename__ = "generated_questions"
+# ────────────── 질문 생성 트리거 (질문 있나요?) ──────────────
+@router.post("/trigger_question_generation")
+async def trigger_question_generation(_: QuestionTriggerRequest):
+    if not text_buffer:
+        raise HTTPException(400, detail="누적된 텍스트가 없습니다.")
 
-    id = Column(Integer, primary_key=True, index=True)
-    paragraph = Column(Text, nullable=False)
-    questions = Column(JSONType, nullable=False)
-    likes = Column(JSONType, nullable=False)  # 질문별 좋아요 수 [0, 0, 0, 0, 0]
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    full_text = " ".join(text_buffer)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 강의 및 캡처
-# ─────────────────────────────────────────────────────────────────────────────
-class Lecture(Base):
-    __tablename__ = "lectures"
+    # 질문 생성 (최대 5개) 
+    questions = await asyncio.to_thread(generate_expected_questions, full_text)
+    questions = questions[:5] if len(questions) > 5 else questions
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=True)
-    description = Column(String, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    if not questions:
+        raise HTTPException(500, detail="GPT 질문 생성 실패")
 
-    recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
-    snapshots = relationship("Snapshot", back_populates="lecture", cascade="all, delete-orphan")
+    # DB 저장
+    obj = GeneratedQuestion(
+        paragraph=full_text,
+        questions=questions,
+        created_at=datetime.utcnow()
+    )
+    async with get_db_context() as db:
+        db.add(obj)
+        await db.commit()
+        await db.refresh(obj)
 
-class Recording(Base):
-    __tablename__ = "recordings"
+    # 누적 버퍼 초기화
+    text_buffer.clear()
 
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
-    file_path = Column(String, nullable=False)
-    uploaded_at = Column(DateTime, default=func.now())
+    return {
+        "message": "질문 생성 완료",
+        "paragraph": full_text,
+        "questions": questions
+    }
 
-    lecture = relationship("Lecture", back_populates="recordings")
+# ────────────── 유틸 함수 ──────────────
+def split_text_into_sentences(text: str) -> list[str]:
+    return [s.strip() for s in re.split(r"(?<=[.?!])\s+|\n", text) if s.strip()]
 
-class Snapshot(Base):
-    __tablename__ = "lecture_snapshots"
-
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
-    date = Column(String, nullable=False)
-    time = Column(String, nullable=False)
-    text = Column(Text, nullable=False)
-    image_path = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    lecture = relationship("Lecture", back_populates="snapshots")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 과제 관련 테이블
-# ─────────────────────────────────────────────────────────────────────────────
-class Assignment(Base):
-    __tablename__ = "assignments"
-
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    sample_answer = Column(Text, nullable=True)
-    deadline = Column(DateTime, nullable=True)
-    attached_file_path = Column(String, nullable=True)
-    created_at = Column(DateTime, default=func.now())
-
-    submissions = relationship("AssignmentSubmission", back_populates="assignment", cascade="all, delete-orphan")
-
-class AssignmentSubmission(Base):
-    __tablename__ = "assignment_submissions"
-
-    id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
-    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
-    submitted_file_path = Column(String, nullable=False)
-    submitted_at = Column(DateTime, default=func.now())
-    gpt_feedback = Column(Text, nullable=True)
-    gpt_feedback_created_at = Column(DateTime, nullable=True)
-
-    assignment = relationship("Assignment", back_populates="submissions")
-    student = relationship("User", back_populates="submissions")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 학생 피드백 (모른다 / 안다)
-# ─────────────────────────────────────────────────────────────────────────────
-class Feedback(Base):
-    __tablename__ = "feedback"
-
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    question_text = Column(Text, nullable=False)
-    knows = Column(Boolean, nullable=False)
-    created_at = Column(DateTime, default=func.now())
-
-    user = relationship("User")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 전체 요약 저장
-# ─────────────────────────────────────────────────────────────────────────────
-class Summary(Base):
-    __tablename__ = "summary"
-
-    id = Column(Integer, primary_key=True, index=True)
-    summary_text = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 강의 요약 저장 (주제 + 이미지 매핑 포함)
-# ─────────────────────────────────────────────────────────────────────────────
-class LectureSummary(Base):
-    __tablename__ = "lecture_summaries"
-
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
-    topic = Column(String, nullable=False)
-    summary = Column(Text, nullable=False)
-
-    image_url_1 = Column(String, nullable=True)
-    image_text_1 = Column(Text, nullable=True)
-
-    image_url_2 = Column(String, nullable=True)
-    image_text_2 = Column(Text, nullable=True)
-
-    image_url_3 = Column(String, nullable=True)
-    image_text_3 = Column(Text, nullable=True)
-
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 학생 직접 질문 테이블
-# ─────────────────────────────────────────────────────────────────────────────
-class StudentQuestion(Base):
-    __tablename__ = "student_questions"
-
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
-    text = Column(String)
-    created_at = Column(DateTime)
+def is_valid_paragraph(text: str) -> bool:
+    sentences = split_text_into_sentences(text)
+    return len(sentences) >= 2 or len(text.strip()) >= 20
