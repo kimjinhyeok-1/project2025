@@ -13,9 +13,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
 
-# ─────────────────────────────────────────────────────────────────────────────
-# JSON 또는 JSONB 타입 선택 (PostgreSQL 우선)
-# ─────────────────────────────────────────────────────────────────────────────
 try:
     from sqlalchemy.dialects.postgresql import JSONB
     JSONType = JSONB
@@ -34,8 +31,6 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=False, default="student")
     is_admin = Column(Boolean, default=False)
-    
-    # ✅ 과제 제출 여부 추가
     has_submitted_assignment = Column(Boolean, default=False)
 
     questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
@@ -56,7 +51,7 @@ class QuestionAnswer(Base):
     user = relationship("User", back_populates="questions")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 교수 → GPT가 생성한 문단·질문 저장
+# GPT가 생성한 문단·질문 저장
 # ─────────────────────────────────────────────────────────────────────────────
 class GeneratedQuestion(Base):
     __tablename__ = "generated_questions"
@@ -64,6 +59,7 @@ class GeneratedQuestion(Base):
     id = Column(Integer, primary_key=True, index=True)
     paragraph = Column(Text, nullable=False)
     questions = Column(JSONType, nullable=False)
+    likes = Column(JSONType, nullable=False)  # 질문별 좋아요 수 [0, 0, 0, 0, 0]
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -137,10 +133,10 @@ class AssignmentSubmission(Base):
 # ─────────────────────────────────────────────────────────────────────────────
 # 학생 피드백 (모른다 / 안다)
 # ─────────────────────────────────────────────────────────────────────────────
-class QuestionFeedback(Base):
-    __tablename__ = "question_feedback"
+class Feedback(Base):
+    __tablename__ = "feedback"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     question_text = Column(Text, nullable=False)
     knows = Column(Boolean, nullable=False)
@@ -180,18 +176,13 @@ class LectureSummary(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-# models.py
+# ─────────────────────────────────────────────────────────────────────────────
+# 학생 직접 질문 테이블
+# ─────────────────────────────────────────────────────────────────────────────
 class StudentQuestion(Base):
     __tablename__ = "student_questions"
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
     text = Column(String)
-    created_at = Column(DateTime)
-
-class Feedback(Base):
-    __tablename__ = "feedback"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
-    question_text = Column(String)
-    knows = Column(Boolean)
     created_at = Column(DateTime)

@@ -1,141 +1,188 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from fastapi.responses import JSONResponse
-from app.services.gpt import generate_expected_questions
-from app.database import get_db_context
-from app.models import GeneratedQuestion, StudentQuestion, Feedback
-from sqlalchemy import select, func, desc
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    func,
+    ForeignKey,
+    Boolean,
+    text
+)
+from sqlalchemy.orm import relationship
 from datetime import datetime
-import asyncio
-import re
+from app.database import Base
 
-router = APIRouter()
+try:
+    from sqlalchemy.dialects.postgresql import JSONB
+    JSONType = JSONB
+except ImportError:
+    from sqlalchemy.types import JSON as JSONType
+    JSONType = JSON
 
-text_buffer: list[str] = []
+# ─────────────────────────────────────────────────────────────────────────────
+# 사용자
+# ─────────────────────────────────────────────────────────────────────────────
+class User(Base):
+    __tablename__ = "users"
 
-# 요청 스키마
-class TextChunkRequest(BaseModel):
-    text: str
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    password = Column(String, nullable=False)
+    role = Column(String, nullable=False, default="student")
+    is_admin = Column(Boolean, default=False)
+    has_submitted_assignment = Column(Boolean, default=False)
 
-class QuestionTriggerRequest(BaseModel):
-    pass
+    questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
+    submissions = relationship("AssignmentSubmission", back_populates="student", cascade="all, delete-orphan")
 
-class FeedbackRequest(BaseModel):
-    user_id: int
-    question_text: str
-    knows: bool
+# ─────────────────────────────────────────────────────────────────────────────
+# 일반 Q&A 기록
+# ─────────────────────────────────────────────────────────────────────────────
+class QuestionAnswer(Base):
+    __tablename__ = "chat_history"
 
-class StudentQuestionRequest(BaseModel):
-    user_id: int
-    text: str
+    id = Column(Integer, primary_key=True, index=True)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    created_at = Column(DateTime, server_default=text("(now() - interval '8 hour')"))
 
-# 예상 질문 생성
-@router.post("/trigger_question_generation")
-async def trigger_question_generation(_: QuestionTriggerRequest):
-    if not text_buffer:
-        raise HTTPException(400, detail="누적된 텍스트가 없습니다.")
-    full_text = " ".join(text_buffer)
-    questions = await asyncio.to_thread(generate_expected_questions, full_text)
-    questions = questions[:5]
-    if not questions:
-        raise HTTPException(500, detail="GPT 질문 생성 실패")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user = relationship("User", back_populates="questions")
 
-    obj = GeneratedQuestion(
-        paragraph=full_text,
-        questions=questions,
-        created_at=datetime.utcnow()
-    )
-    async with get_db_context() as db:
-        db.add(obj)
-        await db.commit()
-        await db.refresh(obj)
-    text_buffer.clear()
-    return {"message": "질문 생성 완료", "paragraph": full_text, "questions": questions}
+# ─────────────────────────────────────────────────────────────────────────────
+# GPT가 생성한 문단·질문 저장
+# ─────────────────────────────────────────────────────────────────────────────
+class GeneratedQuestion(Base):
+    __tablename__ = "generated_questions"
 
-# 실시간 텍스트 누적
-@router.post("/upload_text_chunk")
-async def upload_text_chunk(body: TextChunkRequest):
-    text = body.text.strip()
-    if not text:
-        raise HTTPException(400, detail="텍스트가 비어있습니다.")
-    text_buffer.append(text)
-    return {"message": "텍스트 누적 완료"}
+    id = Column(Integer, primary_key=True, index=True)
+    paragraph = Column(Text, nullable=False)
+    questions = Column(JSONType, nullable=False)
+    likes = Column(JSONType, nullable=False)  # 질문별 좋아요 수 [0, 0, 0, 0, 0]
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-# 전체 질문 조회 (학생 Recent 탭용)
-@router.get("/questions")
-async def get_all_questions():
-    async with get_db_context() as db:
-        result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.created_at.desc()))
-        rows = result.scalars().all()
-    results = []
-    for r in rows:
-        for q in r.questions:
-            results.append({
-                "text": q,
-                "created_at": r.created_at,
-                "type": "ai"
-            })
-    # 직접 질문도 포함
-    async with get_db_context() as db:
-        result = await db.execute(select(StudentQuestion).order_by(StudentQuestion.created_at.desc()))
-        rows = result.scalars().all()
-    for r in rows:
-        results.append({
-            "text": r.text,
-            "created_at": r.created_at,
-            "type": "student"
-        })
-    return {"results": sorted(results, key=lambda x: x["created_at"], reverse=True)}
+# ─────────────────────────────────────────────────────────────────────────────
+# 강의 및 캡처
+# ─────────────────────────────────────────────────────────────────────────────
+class Lecture(Base):
+    __tablename__ = "lectures"
 
-# 직접 질문 작성 API
-@router.post("/student_question")
-async def add_student_question(body: StudentQuestionRequest):
-    obj = StudentQuestion(
-        user_id=body.user_id,
-        text=body.text,
-        created_at=datetime.utcnow()
-    )
-    async with get_db_context() as db:
-        db.add(obj)
-        await db.commit()
-        await db.refresh(obj)
-    return {"message": "저장 완료", "text": obj.text, "created_at": obj.created_at}
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-# 피드백 저장
-@router.post("/feedback")
-async def save_feedback(body: FeedbackRequest):
-    obj = Feedback(
-        user_id=body.user_id,
-        question_text=body.question_text,
-        knows=body.knows,
-        created_at=datetime.utcnow()
-    )
-    async with get_db_context() as db:
-        db.add(obj)
-        await db.commit()
-    return {"message": "피드백 저장 완료"}
+    recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
+    snapshots = relationship("Snapshot", back_populates="lecture", cascade="all, delete-orphan")
 
-# 인기 질문 (모름 비율 상위 2개)
-@router.get("/questions/popular_summary")
-async def get_popular_summary():
-    async with get_db_context() as db:
-        result = await db.execute(
-            select(Feedback.question_text,
-                   func.count().label("total"),
-                   func.sum(func.cast(~Feedback.knows, int)).label("unknown_count")
-                   ).group_by(Feedback.question_text)
-        )
-        rows = result.fetchall()
+class Recording(Base):
+    __tablename__ = "recordings"
 
-    enriched = []
-    for row in rows:
-        if row.total == 0 or row.unknown_count == 0:
-            continue
-        percent = round((row.unknown_count / row.total) * 100, 1)
-        enriched.append({
-            "text": row.question_text,
-            "unknown_percent": percent
-        })
+    id = Column(Integer, primary_key=True, index=True)
+    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
+    file_path = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, default=func.now())
 
-    top2 = sorted(enriched, key=lambda x: x["unknown_percent"], reverse=True)[:2]
-    return {"results": top2}
+    lecture = relationship("Lecture", back_populates="recordings")
+
+class Snapshot(Base):
+    __tablename__ = "lecture_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
+    date = Column(String, nullable=False)
+    time = Column(String, nullable=False)
+    text = Column(Text, nullable=False)
+    image_path = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    lecture = relationship("Lecture", back_populates="snapshots")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 과제 관련 테이블
+# ─────────────────────────────────────────────────────────────────────────────
+class Assignment(Base):
+    __tablename__ = "assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    sample_answer = Column(Text, nullable=True)
+    deadline = Column(DateTime, nullable=True)
+    attached_file_path = Column(String, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+    submissions = relationship("AssignmentSubmission", back_populates="assignment", cascade="all, delete-orphan")
+
+class AssignmentSubmission(Base):
+    __tablename__ = "assignment_submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    submitted_file_path = Column(String, nullable=False)
+    submitted_at = Column(DateTime, default=func.now())
+    gpt_feedback = Column(Text, nullable=True)
+    gpt_feedback_created_at = Column(DateTime, nullable=True)
+
+    assignment = relationship("Assignment", back_populates="submissions")
+    student = relationship("User", back_populates="submissions")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 학생 피드백 (모른다 / 안다)
+# ─────────────────────────────────────────────────────────────────────────────
+class Feedback(Base):
+    __tablename__ = "feedback"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    question_text = Column(Text, nullable=False)
+    knows = Column(Boolean, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+    user = relationship("User")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 전체 요약 저장
+# ─────────────────────────────────────────────────────────────────────────────
+class Summary(Base):
+    __tablename__ = "summary"
+
+    id = Column(Integer, primary_key=True, index=True)
+    summary_text = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 강의 요약 저장 (주제 + 이미지 매핑 포함)
+# ─────────────────────────────────────────────────────────────────────────────
+class LectureSummary(Base):
+    __tablename__ = "lecture_summaries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
+    topic = Column(String, nullable=False)
+    summary = Column(Text, nullable=False)
+
+    image_url_1 = Column(String, nullable=True)
+    image_text_1 = Column(Text, nullable=True)
+
+    image_url_2 = Column(String, nullable=True)
+    image_text_2 = Column(Text, nullable=True)
+
+    image_url_3 = Column(String, nullable=True)
+    image_text_3 = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 학생 직접 질문 테이블
+# ─────────────────────────────────────────────────────────────────────────────
+class StudentQuestion(Base):
+    __tablename__ = "student_questions"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    text = Column(String)
+    created_at = Column(DateTime)
