@@ -203,6 +203,8 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
     log_lines = full_text.splitlines()
 
     markdown = await summarize_text_with_gpt(full_text)
+
+    # 주제 파싱
     topic_blocks = markdown.split("### ")[1:]
     topics = []
     for block in topic_blocks:
@@ -213,7 +215,9 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         summary = " ".join(
             line[1:].strip() for line in lines[1:] if line.strip().startswith("-")
         )
-        topics.append({"topic": title, "summary": summary})
+        if title and summary:
+            topics.append({"topic": title, "summary": summary})
+    topics = topics[:3]  # ✅ 최대 3개로 제한
 
     if not topics:
         raise HTTPException(400, "요약 토픽 없음")
@@ -264,21 +268,26 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         def get(idx):
             return (snap_urls[idx], snap_texts[idx]) if idx < len(snaps) else (None, None)
 
-        u1, t1 = get(selected[0]) if len(selected) > 0 else (None, None)
-        u2, t2 = get(selected[1]) if len(selected) > 1 else (None, None)
-        u3, t3 = get(selected[2]) if len(selected) > 2 else (None, None)
+        fields = {
+            "lecture_id": lecture_id,
+            "topic": tp["topic"],
+            "summary": tp["summary"]
+        }
 
-        db.add(LectureSummary(
-            lecture_id=lecture_id,
-            topic=tp["topic"],
-            summary=tp["summary"],
-            image_url_1=u1, image_text_1=t1,
-            image_url_2=u2, image_text_2=t2,
-            image_url_3=u3, image_text_3=t3,
-        ))
+        if len(selected) > 0:
+            fields["image_url_1"], fields["image_text_1"] = get(selected[0])
+        if len(selected) > 1:
+            fields["image_url_2"], fields["image_text_2"] = get(selected[1])
+        if len(selected) > 2:
+            fields["image_url_3"], fields["image_text_3"] = get(selected[2])
 
-        highlights = [{"text": t1, "image_url": u1}, {"text": t2, "image_url": u2}, {"text": t3, "image_url": u3}]
-        highlights = [h for h in highlights if h["text"] and h["image_url"]]
+        db.add(LectureSummary(**fields))
+
+        highlights = []
+        for idx in selected:
+            url, txt = get(idx)
+            if url and txt:
+                highlights.append({"image_url": url, "text": txt})
 
         output.append({
             "topic": tp["topic"],
