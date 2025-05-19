@@ -37,94 +37,75 @@ export default {
   data() {
     return {
       recognitionStatus: '수업 중',
-      tab: 'recent',
       questions: [],
       latestTranscript: '',
       lastTriggeredText: '',
-      transcriptCallback: null
+      transcriptCallback: null,
+      pollingInterval: null
     };
-  },
-  computed: {
-    filteredQuestions() {
-      return [...this.questions].sort((a, b) =>
-        new Date(b.created_at) - new Date(a.created_at)
-      );
-    }
   },
   mounted() {
     console.log("🟢 Prof_AIQnAStu.vue mounted");
-    this.fetchQuestions();
 
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
     console.log("📡 Subscribed to transcript updates.");
+
+    // 5초마다 질문 생성 요청 → 화면 반영
+    this.pollingInterval = setInterval(async () => {
+      await this.triggerAndUpdateQuestions();
+    }, 5000);
   },
   beforeUnmount() {
     if (this.transcriptCallback) {
       recordingManager.unsubscribeFromTranscript(this.transcriptCallback);
-      console.log("❌ Unsubscribed from transcript updates.");
     }
-  },
-  watch: {
-    tab() {
-      this.fetchQuestions();
-    }
+    clearInterval(this.pollingInterval);
   },
   methods: {
-    async fetchQuestions() {
-      try {
-        const res = await fetch('https://project2025-backend.onrender.com/vad/questions');
-        const data = await res.json();
-        console.log("📥 백엔드 질문 목록 응답:", data);
-
-        if (!data.results || !Array.isArray(data.results)) {
-          console.warn("❗ 예상치 못한 데이터 구조:", data);
-          this.questions = [];
-          return;
-        }
-
-        this.questions = data.results.map(q => ({
-          id: q.id,
-          text: q.text,
-          created_at: q.created_at,
-          likes: q.likes || 0,
-          type: q.type || 'ai'
-        }));
-      } catch (err) {
-        console.error("❌ 질문 목록 불러오기 실패:", err);
-      }
-    },
-
     async handleTranscript(transcript) {
-      console.log("📝 받은 텍스트:", transcript);
       this.latestTranscript = transcript;
 
       try {
-        const uploadRes = await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
+        const lectureId = localStorage.getItem("lecture_id");
+        if (!lectureId) return;
+
+        await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: transcript })
+          body: JSON.stringify({ lecture_id: lectureId, text: transcript })
         });
-        const uploadData = await uploadRes.json();
-        console.log("📤 텍스트 업로드 결과:", uploadData);
+        console.log("📤 텍스트 업로드 완료");
+        this.lastTriggeredText = transcript;
+      } catch (err) {
+        console.error("❌ 텍스트 업로드 실패:", err);
+      }
+    },
 
-        if (transcript.includes("질문")) {
-          console.log("🧠 '질문' 트리거 감지 → GPT 질문 생성 요청");
+    async triggerAndUpdateQuestions() {
+      try {
+        const lectureId = localStorage.getItem("lecture_id");
+        if (!lectureId) {
+          console.warn("⚠️ lecture_id 없음");
+          return;
+        }
 
-          const gptRes = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({})
-          });
+        const res = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lecture_id: lectureId })
+        });
 
-          const gptData = await gptRes.json();
-          console.log("📦 GPT 질문 응답:", gptData);
+        const data = await res.json();
+        console.log("🧠 질문 생성 응답:", data);
 
-          this.lastTriggeredText = transcript;
-          await this.fetchQuestions(); // 갱신
+        if (Array.isArray(data.questions)) {
+          this.questions = data.questions;
+        } else {
+          console.warn("❗ 'questions' 배열이 응답에 없음:", data);
         }
       } catch (err) {
-        console.error("❌ 질문 생성 중 오류 발생:", err);
+        console.error("❌ 질문 생성 요청 실패:", err);
       }
     }
   }
