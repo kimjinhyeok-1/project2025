@@ -47,41 +47,35 @@ export default {
   },
   methods: {
     async fetchSummaries() {
-      const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summary";
-      const results = [];
-      const maxLectureId = 30;
+      const baseUrl = "https://project2025-backend.onrender.com/snapshots/lecture_summaries";
+      try {
+        const res = await axios.get(baseUrl);
+        const data = res.data;
 
-      for (let id = 1; id <= maxLectureId; id++) {
-        try {
-          const res = await axios.get(`${baseUrl}?lecture_id=${id}`);
-          const summaries = res.data;
-
-          if (Array.isArray(summaries) && summaries.length > 0) {
-            const topic = summaries[0].topic;
-            const date = this.convertToDate(summaries[0].created_at);
-
-            results.push({
-              lecture_id: id,
-              topic,
+        this.summaryList = data
+          .map((item) => {
+            const date = this.convertToDate(item.created_at);
+            return {
+              lecture_id: item.lecture_id,
+              topic: item.topic,
               dateLabel: date
                 ? `${date.getMonth() + 1}월 ${date.getDate()}일 수업 요약본`
                 : `날짜 미상 수업 요약본`,
-            });
-          }
-        } catch (err) {
-          console.warn(`❌ 요청 실패: lecture_id=${id}`, err.message);
-        }
+            };
+          })
+          .sort((a, b) => b.lecture_id - a.lecture_id);
+      } catch (err) {
+        console.warn("❌ 전체 요약 목록 요청 실패:", err.message);
+      } finally {
+        this.loading = false;
       }
-
-      this.summaryList = results.sort((a, b) => b.lecture_id - a.lecture_id);
-      this.loading = false;
     },
 
     convertToDate(rawDate) {
       if (!rawDate) return null;
       const parsed = new Date(rawDate);
       if (isNaN(parsed.getTime())) return null;
-      return parsed; // ✅ UTC 그대로 사용
+      return parsed;
     },
 
     goToDetail(id) {
@@ -93,6 +87,7 @@ export default {
   },
 };
 </script>
+
 
 <style scoped>
 .review-container {
