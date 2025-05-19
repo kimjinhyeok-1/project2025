@@ -117,6 +117,23 @@ class RecordingManager {
         console.error("❌ upload_text_chunk 업로드 실패:", err);
       }
 
+      // 🎯 "질문" 키워드 감지 시 질문 생성 트리거
+      if (transcript.includes("질문")) {
+        console.log("🧠 '질문' 키워드 감지됨 → GPT 질문 생성 호출");
+        try {
+          const res = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lecture_id: this.lectureId })
+          });
+          const data = await res.json();
+          console.log("📦 질문 생성 응답:", data);
+        } catch (err) {
+          console.error("❌ 질문 생성 트리거 실패:", err);
+        }
+      }
+
+      // 💡 스크린샷 조건 감지
       const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
       let imageBase64 = "";
 

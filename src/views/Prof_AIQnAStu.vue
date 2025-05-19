@@ -1,26 +1,12 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🎤 실시간 질문 생성 (교수용)</h2>
-    <p class="text-muted">"질문"이라는 단어가 감지되면 누적 내용을 기반으로 GPT 질문이 생성됩니다.</p>
-
-    <div class="control-buttons">
-      <span class="status">현재 상태: <strong>{{ recognitionStatus }}</strong></span>
-    </div>
-
-    <p>✅ Prof_AIQnAStu.vue 정상 렌더링됨</p>
+    <h2 class="title">🎤 질문 생성 감지 페이지</h2>
+    <p class="text-muted">RecordingManager에서 질문 생성 요청이 감지되면 여기 출력됩니다.</p>
 
     <div class="log-box mt-3">
       <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
-      <p v-if="lastTriggeredText"><strong>🧠 최근 질문 트리거:</strong> "{{ lastTriggeredText }}"</p>
+      <p v-if="triggered"><strong>🧠 POST /vad/trigger_question_generation 호출됨!</strong></p>
     </div>
-
-    <div v-if="questions.length" class="question-list">
-      <div v-for="q in questions" :key="q.id" class="question-tile">
-        <div class="text">{{ q.text }}</div>
-        <div class="meta">👍 {{ q.likes || 0 }} · Anonymous</div>
-      </div>
-    </div>
-    <div v-else class="no-question">아직 질문이 없습니다.</div>
   </div>
 </template>
 
@@ -30,10 +16,8 @@ import recordingManager from "@/managers/RecordingManager";
 export default {
   data() {
     return {
-      recognitionStatus: "수업 중",
-      questions: [],
       latestTranscript: "",
-      lastTriggeredText: "",
+      triggered: false,
       transcriptCallback: null
     };
   },
@@ -53,46 +37,14 @@ export default {
     async handleTranscript(transcript) {
       this.latestTranscript = transcript;
 
-      try {
-        const lectureId = localStorage.getItem("lecture_id");
-        if (!lectureId) return;
+      if (transcript.includes("질문")) {
+        console.log("🧠 POST /vad/trigger_question_generation 호출됨!");
+        this.triggered = true;
 
-        console.log("📤 텍스트 업로드 시도:", transcript);
-        await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lecture_id: lectureId, text: transcript })
-        });
-        console.log("✅ 텍스트 업로드 완료");
-
-        if (transcript.includes("질문")) {
-          console.log("🧠 '질문' 키워드 감지 → GPT 질문 생성 호출");
-
-          const res = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lecture_id: lectureId })
-          });
-
-          const data = await res.json();
-          console.log("🧠 질문 생성 응답:", data);
-
-          if (Array.isArray(data.questions)) {
-            this.questions = data.questions.map((q, index) => ({
-              id: Date.now() + index,
-              text: q,
-              created_at: new Date(),
-              likes: 0,
-              type: "ai"
-            }));
-          } else {
-            console.warn("❗ 질문 배열이 없음:", data.detail || data);
-          }
-
-          this.lastTriggeredText = transcript;
-        }
-      } catch (err) {
-        console.error("❌ 질문 처리 실패:", err);
+        // 상태 리셋 (2초 후 다시 false)
+        setTimeout(() => {
+          this.triggered = false;
+        }, 2000);
       }
     }
   }
@@ -107,35 +59,6 @@ export default {
 }
 .title {
   font-weight: bold;
-}
-.control-buttons {
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.status {
-  font-size: 0.9rem;
-}
-.question-list {
-  margin-top: 1rem;
-}
-.question-tile {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-}
-.question-tile .meta {
-  font-size: 0.85rem;
-  color: #6c757d;
-  margin-top: 0.5rem;
-}
-.no-question {
-  color: #6c757d;
-  text-align: center;
-  margin-top: 2rem;
 }
 .log-box {
   background: #f8f9fa;
