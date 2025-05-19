@@ -73,9 +73,10 @@ export default {
 
     convertToKoreanDate(rawDate) {
       if (!rawDate) return null;
-      const iso = rawDate.replace(" ", "T").replace("+00", "Z");
-      const parsed = new Date(iso);
+
+      const parsed = new Date(rawDate); // ✅ PostgreSQL ISO 문자열 사용
       if (isNaN(parsed.getTime())) return null;
+
       return new Date(parsed.getTime() + 8 * 60 * 60 * 1000);
     },
 

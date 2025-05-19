@@ -73,10 +73,11 @@ export default {
 
     convertToKoreanDate(rawDate) {
       if (!rawDate) return null;
-      const iso = rawDate.replace(" ", "T").replace("+00", "Z");
-      const parsed = new Date(iso);
+
+      const parsed = new Date(rawDate); // ✅ 변환 없이 그대로 사용
       if (isNaN(parsed.getTime())) return null;
-      return new Date(parsed.getTime() + 8 * 60 * 60 * 1000);
+
+      return new Date(parsed.getTime() + 8 * 60 * 60 * 1000); // KST 보정
     },
 
     goToDetail(id) {
