@@ -12,19 +12,24 @@
     <div v-else>
       <h2 class="mb-4 fw-bold">📋 AI 피드백 결과</h2>
 
-      <div class="feedback-text">
+      <div class="d-flex flex-column gap-4">
         <div
           v-for="(item, index) in parsedFeedback"
           :key="index"
-          class="mb-4"
+          class="card shadow-sm border-0"
         >
-          <h5 class="fw-semibold text-primary mb-2">{{ item.title }}</h5>
-          <p v-html="formatContent(item.content)" class="text-dark lh-lg mb-0"></p>
+          <div class="card-body bg-light rounded">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="card-title fw-semibold text-primary mb-0">{{ item.title }}</h5>
+              <!-- 옵션 버튼 영역 필요시 여기에 -->
+            </div>
+            <p v-html="formatContent(item.content)" class="card-text text-dark small lh-lg mb-0"></p>
+          </div>
         </div>
       </div>
 
       <div class="mt-5">
-        <button class="btn btn-secondary" @click="goBack">← 돌아가기</button>
+        <button class="btn btn-outline-secondary" @click="goBack">← 돌아가기</button>
       </div>
     </div>
   </div>
@@ -45,14 +50,6 @@ const goBack = () => {
   router.push('/student/assignment')
 }
 
-// 피드백 텍스트에서 줄바꿈과 번호 강조 처리
-const formatContent = (text) => {
-  return text
-    .replace(/\n\d+\.\s/g, '<br><strong>$&</strong>') // 줄바꿈된 번호 강조
-    .replace(/\n/g, '<br>')                            // 일반 줄바꿈 처리
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **굵게**
-}
-
 const parseFeedback = (text) => {
   if (!text) return []
   return text
@@ -67,6 +64,13 @@ const parseFeedback = (text) => {
     })
 }
 
+// 줄바꿈 및 강조 처리
+const formatContent = (text) => {
+  return text
+    .replace(/\n\d+\.\s/g, '<br><strong>$&</strong>') // 번호 줄바꿈
+    .replace(/\n/g, '<br>')                            // 일반 줄바꿈
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **굵게**
+}
 const fetchFeedback = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) {
