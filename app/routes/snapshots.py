@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text, delete
 from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 import aiofiles
 import uuid
@@ -67,7 +67,7 @@ class Highlight(BaseModel):
 class LectureSummaryResponse(BaseModel):
     topic: str
     summary: str
-    created_at: str           # ✅ 문자열로 변경 (ex: '5월 19일 16시')
+    created_at: datetime       # ✅ 추가
     highlights: List[Highlight]
 
 # ────────────────
@@ -361,14 +361,10 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
         if s.image_url_3:
             highlights.append({"image_url": s.image_url_3, "text": s.image_text_3})
 
-        # ✅ UTC 기준 created_at에 8시간 더해서 KST 변환
-        kst_created = s.created_at + timedelta(hours=8)
-        formatted_date = f"{kst_created.month}월 {kst_created.day}일 {kst_created.hour}시"
-
         output.append({
             "topic": s.topic,
             "summary": s.summary,
-            "created_at": formatted_date,    # ✅ 문자열 포맷으로 추가
+            "created_at": s.created_at,     # ✅ 여기 추가
             "highlights": highlights
         })
 
