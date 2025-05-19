@@ -59,7 +59,7 @@ class GeneratedQuestion(Base):
     id = Column(Integer, primary_key=True, index=True)
     paragraph = Column(Text, nullable=False)
     questions = Column(JSONType, nullable=False)
-    likes = Column(JSONType, nullable=False)  # 질문별 좋아요 수 [0, 0, 0, 0, 0]
+    likes = Column(JSONType, nullable=False, default=dict)  # 질문별 좋아요 수 [0, 0, 0, 0, 0]
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 # ─────────────────────────────────────────────────────────────────────────────
