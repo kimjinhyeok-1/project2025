@@ -1,7 +1,7 @@
 <template>
   <div class="qna-wrapper">
     <h2 class="title">🤖 질문 게시판 (학생용)</h2>
-    <p class="text-muted">GPT가 만든 질문과 직접 작성한 질문을 모두 확인할 수 있습니다.</p>
+    <p class="text-muted">AI가 만든 질문과 학생 질문을 보고 좋아요를 눌러보세요.</p>
 
     <div class="input-area">
       <input
@@ -20,9 +20,14 @@
     </div>
 
     <div v-if="questions.length" class="question-list">
-      <div v-for="(q, index) in questions" :key="index" class="question-tile">
+      <div v-for="q in questions" :key="q.id" class="question-tile">
         <div class="text">{{ q.text }}</div>
-        <div class="meta">Anonymous · {{ q.type === 'student' ? '📌 학생 질문' : '🤖 AI 질문' }}</div>
+        <div class="meta">
+          Anonymous · {{ q.type === 'student' ? '📌 학생 질문' : '🤖 AI 질문' }}
+          <button class="like-btn" @click="likeQuestion(q)">
+            👍 {{ q.likes || 0 }}
+          </button>
+        </div>
       </div>
     </div>
     <div v-else class="no-question">아직 질문이 없습니다.</div>
@@ -53,21 +58,25 @@ export default {
           const res = await fetch('https://project2025-backend.onrender.com/vad/questions');
           const data = await res.json();
           this.questions = data.results.map(q => ({
+            id: q.id,
             text: q.text,
             created_at: q.created_at,
-            type: q.source || 'ai'
+            type: q.type || 'ai',
+            likes: q.likes || 0
           }));
         } else if (this.tab === 'popular') {
           const res = await fetch('https://project2025-backend.onrender.com/vad/questions/popular_summary');
           const data = await res.json();
-          this.questions = data.results.map(q => ({
+          this.questions = data.results.map((q, idx) => ({
+            id: idx, // 임시 ID (백엔드 popular_summary에 ID 없음 시)
             text: `${q.text} (${q.unknown_percent}%)`,
             created_at: new Date(),
-            type: 'ai'
+            type: 'ai',
+            likes: 0
           }));
         }
       } catch (err) {
-        console.error('질문 조회 실패:', err);
+        console.error('❌ 질문 조회 실패:', err);
       }
     },
     async submitQuestion() {
@@ -78,17 +87,31 @@ export default {
         const res = await fetch('https://project2025-backend.onrender.com/vad/student_question', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: 1, text }) // 실제 user_id 필요
+          body: JSON.stringify({ user_id: 1, text })
         });
         const data = await res.json();
         this.questions.unshift({
+          id: Date.now(),
           text: data.text,
           created_at: data.created_at,
-          type: 'student'
+          type: 'student',
+          likes: 0
         });
         this.newQuestion = '';
       } catch (err) {
-        console.error('질문 제출 실패:', err);
+        console.error('❌ 질문 제출 실패:', err);
+      }
+    },
+    async likeQuestion(question) {
+      try {
+        // 서버에 좋아요 요청
+        await fetch(`https://project2025-backend.onrender.com/vad/question/${question.id}/like`, {
+          method: 'PATCH'
+        });
+        // 클라이언트에서 즉시 반영
+        question.likes++;
+      } catch (err) {
+        console.error('❌ 좋아요 실패:', err);
       }
     }
   }
@@ -122,6 +145,11 @@ export default {
 }
 .question-tile .meta {
   font-size: 0.85rem; color: #6c757d; margin-top: 0.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.like-btn {
+  background: none; border: none; cursor: pointer; color: #0d6efd;
+  font-weight: bold; padding: 0.25rem 0.5rem;
 }
 .no-question {
   color: #6c757d; text-align: center; margin-top: 2rem;
