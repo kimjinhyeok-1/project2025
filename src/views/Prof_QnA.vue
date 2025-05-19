@@ -40,10 +40,7 @@
         </div>
 
         <div v-else-if="summary.summary_for_professor">
-          <h6>📝 요약 내용</h6>
           <p style="white-space: pre-line;">{{ summary.summary_for_professor }}</p>
-
-          <h6 class="mt-4">💡 자주 묻는 질문</h6>
           <ul>
             <li v-for="(q, index) in summary.most_common_questions" :key="index">
               {{ index + 1 }}. {{ q }}
