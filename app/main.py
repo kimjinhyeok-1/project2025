@@ -8,7 +8,8 @@ from app.routes import (
     snapshots,
     assignment,     # ✅ 제출 및 피드백만 사용하는 과제 라우터 (유지) 
     ex_question,    # ✅ 예제 질문 생성 관련 라우터 (유지)
-    vad             # ✅ 음성 감지 라우터 (유지)
+    vad,             # ✅ 음성 감지 라우터 (유지)
+    ask_assistant
 )
 from app.auth import router as auth_router
 from app.routes.lecture import router as lecture_router
@@ -65,6 +66,7 @@ app.include_router(lecture_router)
 app.include_router(assignment.router, prefix="/assignments", tags=["Assignments"])
 app.include_router(ex_question.router, prefix="/questions", tags=["Questions"])
 app.include_router(vad.router, prefix="/vad", tags=["VAD"])
+app.include_router(ask_assistant.router)
 
 # 정적 파일 경로 등록
 static_dir = os.path.join(os.getcwd(), "static")
