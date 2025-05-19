@@ -5,7 +5,7 @@ import asyncio
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# ✅ 질문 실행 함수 (성능 개선 버전: DB 및 User 의존 제거)
+# ✅ 질문 실행 함수 (성능 개선 버전: DB 및 User 의존 제거)!
 async def ask_assistant(question: str, assistant_id: str) -> str:
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
