@@ -63,7 +63,8 @@ class SummaryResponse(BaseModel):
 class LectureSummaryResponse(BaseModel):
     topic: str
     summary: str
-    highlights: List[dict]
+    created_at: datetime       # ✅ 추가
+    highlights: List[Highlight]
 
 # ────────────────
 # Helper Functions
@@ -359,6 +360,7 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
         output.append({
             "topic": s.topic,
             "summary": s.summary,
+            "created_at": s.created_at,     # ✅ 여기 추가
             "highlights": highlights
         })
 
