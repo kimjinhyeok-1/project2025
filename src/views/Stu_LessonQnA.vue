@@ -23,9 +23,7 @@
         <div class="text">{{ q.text }}</div>
         <div class="meta">
           Anonymous · {{ q.type === 'student' ? '📌 학생 질문' : '🤖 AI 질문' }}
-          <button class="like-btn" @click="likeQuestion(q)">
-            👍 {{ q.likes || 0 }}
-          </button>
+          <button class="like-btn" @click="likeQuestion(q)">👍 {{ q.likes || 0 }}</button>
         </div>
       </div>
     </div>
@@ -40,7 +38,7 @@ export default {
       tab: 'recent',
       questions: [],
       newQuestion: ''
-    }
+    };
   },
   mounted() {
     this.fetchQuestions();
@@ -56,8 +54,8 @@ export default {
         if (this.tab === 'recent') {
           const res = await fetch('https://project2025-backend.onrender.com/vad/questions');
           const data = await res.json();
-          this.questions = data.results.map(q => ({
-            id: q.id,
+          this.questions = data.results.map((q, idx) => ({
+            id: idx,
             text: q.text,
             created_at: q.created_at,
             type: q.type || 'ai',
@@ -67,7 +65,7 @@ export default {
           const res = await fetch('https://project2025-backend.onrender.com/vad/questions/popular_summary');
           const data = await res.json();
           this.questions = data.results.map((q, idx) => ({
-            id: idx, // 임시 ID (백엔드 popular_summary에 ID 없음 시)
+            id: idx,
             text: `${q.text} (${q.unknown_percent}%)`,
             created_at: new Date(),
             type: 'ai',
@@ -78,6 +76,7 @@ export default {
         console.error('❌ 질문 조회 실패:', err);
       }
     },
+
     async submitQuestion() {
       const text = this.newQuestion.trim();
       if (!text) return;
@@ -88,6 +87,7 @@ export default {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: 1, text })
         });
+
         const data = await res.json();
         this.questions.unshift({
           id: Date.now(),
@@ -101,20 +101,19 @@ export default {
         console.error('❌ 질문 제출 실패:', err);
       }
     },
+
     async likeQuestion(question) {
       try {
-        // 서버에 좋아요 요청
         await fetch(`https://project2025-backend.onrender.com/vad/question/${question.id}/like`, {
           method: 'PATCH'
         });
-        // 클라이언트에서 즉시 반영
         question.likes++;
       } catch (err) {
         console.error('❌ 좋아요 실패:', err);
       }
     }
   }
-}
+};
 </script>
 
 <style scoped>

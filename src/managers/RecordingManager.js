@@ -1,3 +1,4 @@
+// ✅ 수정된 RecordingManager.js
 import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 
 class RecordingManager {
@@ -12,7 +13,16 @@ class RecordingManager {
     this.transcriptListeners = [];
     this.lectureId = null;
 
-    this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
+    this.triggerKeywords = [
+      "보면",
+      "보게 되면",
+      "이 부분",
+      "이걸 보면",
+      "코드",
+      "화면",
+      "여기",
+      "이쪽"
+    ];
   }
 
   setLectureId(id) {
@@ -37,7 +47,9 @@ class RecordingManager {
   }
 
   unsubscribeFromTranscript(cb) {
-    this.transcriptListeners = this.transcriptListeners.filter((fn) => fn !== cb);
+    this.transcriptListeners = this.transcriptListeners.filter(
+      (fn) => fn !== cb
+    );
   }
 
   notifyTranscriptListeners(transcript) {
@@ -99,41 +111,30 @@ class RecordingManager {
 
       this.notifyTranscriptListeners(transcript);
 
-      if (!this.lectureId) {
-        console.warn("⛔ lecture_id가 설정되지 않아 업로드 중단");
-        return;
-      }
-
-      console.log("📤 텍스트 upload_text_chunk 전송 시도:", transcript);
-
       try {
         await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: transcript, lecture_id: this.lectureId })
+          body: JSON.stringify({ text: transcript })
         });
-        console.log("✅ upload_text_chunk 업로드 완료");
+        console.log("✅ 텍스트 업로드 완료");
       } catch (err) {
-        console.error("❌ upload_text_chunk 업로드 실패:", err);
+        console.error("❌ 텍스트 업로드 실패:", err);
       }
 
-      // 🎯 "질문" 키워드 감지 시 질문 생성 트리거
       if (transcript.includes("질문")) {
-        console.log("🧠 '질문' 키워드 감지됨 → GPT 질문 생성 호출");
         try {
-          const res = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
+          await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lecture_id: this.lectureId })
+            body: JSON.stringify({})
           });
-          const data = await res.json();
-          console.log("📦 질문 생성 응답:", data);
+          console.log("🧠 질문 생성 요청 전송 완료");
         } catch (err) {
           console.error("❌ 질문 생성 트리거 실패:", err);
         }
       }
 
-      // 💡 스크린샷 조건 감지
       const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
       let imageBase64 = "";
 
