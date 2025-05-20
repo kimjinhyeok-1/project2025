@@ -15,7 +15,7 @@
         <div
           v-for="assignment in assignments"
           :key="assignment.id"
-          class="col-12"  
+          class="col-12" 
         >
           <router-link
             :to="`/student/assignments/${assignment.id}`"
@@ -31,10 +31,7 @@
                   📅 마감일:
                   <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong>
                 </p>
-                <p class="card-text">
-                  🕒 작성일:
-                  <strong>{{ formatDate(assignment.created_at) }}</strong>
-                </p>
+                <!-- ❌ 작성일 제거 -->
               </div>
             </div>
           </router-link>
