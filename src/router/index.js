@@ -131,6 +131,11 @@ const routes = [
         name: 'ProfessorRealtimeQuestion',
         component: ProfessorRealtimeQuestion,
       },
+      {
+        path: 'feedback/:id',
+        name: 'ProfessorAllFeedback',
+        component: () => import('../views/Prof_AllFeedback.vue'),
+      }
     ],
   },
   {

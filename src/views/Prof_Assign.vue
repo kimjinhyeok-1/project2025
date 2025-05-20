@@ -51,13 +51,16 @@
 
     <div v-else>
       <div v-for="assignment in assignments" :key="assignment.id" class="card mb-3 shadow-sm">
-        <div class="card-body">
-          <h5>{{ assignment.title }}</h5>
-          <p class="text-muted">{{ assignment.description }}</p>
-          <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
-          <button class="btn btn-outline-secondary btn-sm mt-2" @click="editAssignment(assignment)">
-            ✏ 수정
-          </button>
+        <div class="card-body d-flex justify-content-between align-items-start">
+          <div>
+            <h5>{{ assignment.title }}</h5>
+            <p class="text-muted">{{ assignment.description }}</p>
+            <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
+          </div>
+          <div class="d-flex flex-column gap-2 align-items-end">
+            <button class="btn btn-outline-primary btn-sm" @click="goToFeedback(assignment.id)">📄 피드백 보기</button>
+            <button class="btn btn-outline-secondary btn-sm" @click="editAssignment(assignment)">✏ 수정</button>
+          </div>
         </div>
       </div>
     </div>
@@ -66,8 +69,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const router = useRouter()
 const assignments = ref([])
 const loading = ref(true)
 const formVisible = ref(false)
@@ -89,7 +94,6 @@ const formatDate = (datetime) => {
   })
 }
 
-// ✅ 마감일 포맷 보정 함수
 const fixDatetimeFormat = (dt) => {
   if (!dt) return ''
   return dt.length === 16 ? dt + ':00' : dt
@@ -133,7 +137,6 @@ const handleFileChange = (e) => {
 const submitAssignment = async () => {
   const formData = new FormData()
   const formattedDeadline = fixDatetimeFormat(deadline.value)
-
   console.log('📤 [제출] 마감일:', formattedDeadline)
 
   formData.append('title', title.value)
@@ -171,7 +174,6 @@ const editAssignment = (assignment) => {
 
 const updateAssignment = async () => {
   const formattedDeadline = fixDatetimeFormat(deadline.value)
-
   console.log('🔧 [수정] 과제 ID:', editingAssignmentId.value)
   console.log('🔧 [수정] 마감일:', formattedDeadline)
 
@@ -197,6 +199,10 @@ const updateAssignment = async () => {
     console.error('❌ 과제 수정 실패:', err.response?.data || err)
     alert(`오류 발생: ${err.response?.data?.detail || '서버 오류'}`)
   }
+}
+
+const goToFeedback = (id) => {
+  router.push(`/professor/feedback/${id}`)
 }
 </script>
 
