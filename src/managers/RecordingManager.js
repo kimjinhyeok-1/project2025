@@ -1,181 +1,67 @@
-import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
+// ✅ VAD 기반 세그먼트 인식이 추가된 RecordingManager.js
+import { uploadSnapshot } from "@/api/snapshotService";
 
 class RecordingManager {
-  constructor() {
+  constructor(mode = "keyword") {
+    this.mode = mode; // 'keyword' 또는 'segment'
     this.isRecording = false;
-    this.isRecognizing = false;
-    this.audioRecorder = null;
     this.audioStream = null;
-    this.displayStream = null;
     this.recognition = null;
     this.listeners = [];
-    this.transcriptListeners = [];
-    this.lectureId = null;
-
+    this.segmentListeners = [];
     this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
   }
 
-  setLectureId(id) {
-    this.lectureId = id;
+  setMode(mode) {
+    this.mode = mode;
   }
 
-  getLectureId() {
-    return this.lectureId;
+  onSegment(callback) {
+    this.segmentListeners.push(callback);
   }
 
-  subscribe(callback) {
-    this.listeners.push(callback);
-    callback(this.isRecording);
+  notifySegment(text) {
+    this.segmentListeners.forEach((cb) => cb(text));
   }
 
-  notify() {
-    this.listeners.forEach((cb) => cb(this.isRecording));
+  async start() {
+    this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    this.startRecognition();
+    this.isRecording = true;
+    console.log("🎙️ Recording started in mode:", this.mode);
   }
 
-  subscribeToTranscript(cb) {
-    this.transcriptListeners.push(cb);
-  }
-
-  unsubscribeFromTranscript(cb) {
-    this.transcriptListeners = this.transcriptListeners.filter((fn) => fn !== cb);
-  }
-
-  notifyTranscriptListeners(transcript) {
-    this.transcriptListeners.forEach((cb) => cb(transcript));
-  }
-
-  async startRecording() {
-    if (this.isRecording) return;
-
-    try {
-      this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-
-      this.audioRecorder = new MediaRecorder(this.audioStream);
-      this.audioRecorder.start();
-
-      this.startRecognition();
-      this.isRecording = true;
-      this.notify();
-
-      console.log("🎙️ Recording Started.");
-    } catch (error) {
-      console.error("❌ 녹음 시작 실패:", error);
-    }
-  }
-
-  stopRecording() {
-    if (!this.isRecording) return;
-
-    this.audioRecorder?.stop();
+  stop() {
+    this.recognition?.stop();
     this.audioStream?.getTracks().forEach((track) => track.stop());
-    this.displayStream?.getTracks().forEach((track) => track.stop());
-    this.stopRecognition();
-
     this.isRecording = false;
-    this.notify();
-
-    console.log("🔚 Recording Stopped.");
+    console.log("🛑 Recording stopped.");
   }
 
   startRecognition() {
-    if (this.isRecognizing) return;
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("이 브라우저는 음성 인식을 지원하지 않습니다.");
-      return;
-    }
-
+    const SpeechRecognition = window.webkitSpeechRecognition;
     this.recognition = new SpeechRecognition();
     this.recognition.lang = "ko-KR";
     this.recognition.continuous = true;
     this.recognition.interimResults = false;
 
-    this.recognition.onresult = async (event) => {
-      const raw = event.results[event.results.length - 1][0].transcript || "";
-      const transcript = raw.trim();
-      console.log("🎤 인식된 문장:", transcript);
+    this.recognition.onresult = (event) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript.trim();
+        if (!transcript) continue;
 
-      this.notifyTranscriptListeners(transcript);
-
-      if (!this.lectureId) {
-        console.warn("⛔ lecture_id가 설정되지 않아 업로드 중단");
-        return;
-      }
-
-      console.log("📤 텍스트 upload_text_chunk 전송 시도:", transcript);
-
-      try {
-        await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: transcript, lecture_id: this.lectureId })
-        });
-        console.log("✅ upload_text_chunk 업로드 완료");
-      } catch (err) {
-        console.error("❌ upload_text_chunk 업로드 실패:", err);
-      }
-
-      // 🎯 "질문" 키워드 감지 시 질문 생성 트리거
-      if (transcript.includes("질문")) {
-        console.log("🧠 '질문' 키워드 감지됨 → GPT 질문 생성 호출");
-        try {
-          const res = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lecture_id: this.lectureId })
-          });
-          const data = await res.json();
-          console.log("📦 질문 생성 응답:", data);
-        } catch (err) {
-          console.error("❌ 질문 생성 트리거 실패:", err);
+        if (this.mode === "keyword") {
+          if (this.triggerKeywords.some((k) => transcript.includes(k))) {
+            console.log("🚨 키워드 트리거 감지:", transcript);
+            uploadSnapshot({ transcript });
+          }
+        } else if (this.mode === "segment") {
+          this.notifySegment(transcript);
         }
-      }
-
-      // 💡 스크린샷 조건 감지
-      const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
-      let imageBase64 = "";
-
-      if (hasKeyword) {
-        imageBase64 = await captureScreenshot(this.displayStream);
-      }
-
-      await uploadSnapshot({ transcript, screenshot_base64: imageBase64, lecture_id: this.lectureId });
-    };
-
-    this.recognition.onerror = (event) => {
-      console.error("🎙️ 음성 인식 에러:", event.error);
-      if (event.error === "no-speech" || event.error === "network") {
-        console.log("🎙️ 음성 인식 재시작");
-        this.recognition.stop();
-        this.recognition.start();
       }
     };
 
     this.recognition.start();
-    this.isRecognizing = true;
-  }
-
-  stopRecognition() {
-    if (this.recognition) {
-      this.recognition.stop();
-      this.recognition = null;
-      this.isRecognizing = false;
-    }
-  }
-
-  reconnectRecognition() {
-    if (this.isRecording && !this.isRecognizing) {
-      console.log("🎙️ 음성 인식 재연결 시도");
-      this.startRecognition();
-    }
-  }
-
-  getState() {
-    return {
-      isRecording: this.isRecording,
-    };
   }
 }
 
