@@ -4,30 +4,25 @@
     <p class="text-center text-muted">완료된 수업 요약을 확인할 수 있습니다.</p>
 
     <div class="mt-5">
-      <!-- lecture_id별 그룹 렌더링 -->
-      <div v-for="(items, lectureId) in groupedSummaries" :key="lectureId" class="mb-5">
-        <h4 class="fw-bold mb-3">🎓 수업 {{ lectureId }}번 요약</h4>
-
-        <div
-          v-for="item in items"
-          :key="item.created_at"
-          class="review-item mb-3 p-3 d-flex justify-content-between align-items-center"
-          @click="goToDetail(item.lecture_id)"
-          style="cursor: pointer"
-        >
-          <div>
-            <p class="mb-1 fw-bold">📘 {{ formatDate(item.created_at) }}</p>
-            <p class="mb-0 text-muted">📝 {{ item.topic }}</p>
-          </div>
-          <div class="text-muted text-end">➡️ 클릭하여 상세 보기</div>
+      <!-- lecture_id별로 하나의 카드만 표시 -->
+      <div
+        v-for="(summary, lectureId) in sortedSummaries"
+        :key="lectureId"
+        class="review-item mb-3 p-3 d-flex justify-content-between align-items-center"
+        @click="goToDetail(summary.lecture_id)"
+        style="cursor: pointer"
+      >
+        <div>
+          <p class="mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업 요약본</p>
         </div>
+        <div class="text-muted text-end">➡️ 클릭하여 상세 보기</div>
       </div>
 
       <div v-if="loading" class="text-muted mt-4 text-center">
         📡 수업 목록을 불러오는 중입니다...
       </div>
 
-      <div v-if="!loading && Object.keys(groupedSummaries).length === 0" class="text-danger mt-4 text-center">
+      <div v-if="!loading && Object.keys(latestSummaries).length === 0" class="text-danger mt-4 text-center">
         ⚠️ 현재 확인 가능한 수업 요약이 없습니다.
       </div>
     </div>
@@ -41,9 +36,21 @@ export default {
   name: "StudentLessonSummary",
   data() {
     return {
-      groupedSummaries: {},
+      groupedSummaries: {},     // 전체 수업 요약
+      latestSummaries: {},      // lecture_id별 최신 하나만 저장
       loading: true,
     };
+  },
+  computed: {
+    sortedSummaries() {
+      // lecture_id 숫자 내림차순 정렬
+      return Object.keys(this.latestSummaries)
+        .sort((a, b) => Number(b) - Number(a))
+        .reduce((acc, key) => {
+          acc[key] = this.latestSummaries[key];
+          return acc;
+        }, {});
+    },
   },
   methods: {
     async fetchSummaries() {
@@ -51,9 +58,17 @@ export default {
       try {
         const res = await axios.get(baseUrl);
         const data = res.data;
-
-        // 백엔드에서 lecture_id별로 그룹화되어 응답이 오므로 그대로 저장
         this.groupedSummaries = data;
+
+        // 각 lecture_id 그룹 내 가장 최신 created_at 항목만 추출
+        const latest = {};
+        for (const [lectureId, items] of Object.entries(data)) {
+          if (items.length > 0) {
+            const sortedItems = items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            latest[lectureId] = sortedItems[0];
+          }
+        }
+        this.latestSummaries = latest;
       } catch (err) {
         console.warn("❌ 전체 요약 목록 요청 실패:", err.message);
       } finally {
