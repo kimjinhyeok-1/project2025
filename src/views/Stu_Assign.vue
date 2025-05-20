@@ -15,23 +15,25 @@
         <div
           v-for="assignment in assignments"
           :key="assignment.id"
-          class="col-md-6"
+          class="col-12"  
         >
           <router-link
             :to="`/student/assignments/${assignment.id}`"
             class="text-decoration-none"
           >
             <div class="card shadow-sm h-100">
-              <div class="card-body">
+              <div class="card-body p-4">
                 <h5 class="card-title text-dark">{{ assignment.title }}</h5>
                 <p class="card-text text-muted">
-                  {{ truncateText(assignment.description, 100) }}
+                  {{ truncateText(assignment.description, 150) }}
                 </p>
                 <p class="card-text">
-                  📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong>
+                  📅 마감일:
+                  <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong>
                 </p>
                 <p class="card-text">
-                  🕒 작성일: <strong>{{ formatDate(assignment.created_at) }}</strong>
+                  🕒 작성일:
+                  <strong>{{ formatDate(assignment.created_at) }}</strong>
                 </p>
               </div>
             </div>
