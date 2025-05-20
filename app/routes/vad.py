@@ -18,9 +18,6 @@ text_buffer: list[str] = []
 class TextChunkRequest(BaseModel):
     text: str
 
-class QuestionTriggerRequest(BaseModel):
-    pass
-
 # ────────────── 전체 질문 조회 ──────────────
 @router.get("/questions")
 async def get_all_questions():
@@ -50,20 +47,28 @@ async def upload_text_chunk(body: TextChunkRequest):
     if not text:
         raise HTTPException(400, detail="텍스트가 비어있습니다.")
     text_buffer.append(text)
-    return {"message": "텍스트 누적 완료"}
+    return {"message": "텍스트 누적 완료", "buffer_length": len(text_buffer)}
 
-# ────────────── 질문 생성 트리거 ──────────────
+# ────────────── 질문 생성 및 저장 ──────────────
 @router.post("/trigger_question_generation")
-async def trigger_question_generation(_: QuestionTriggerRequest):
+async def trigger_question_generation():
     if not text_buffer:
         raise HTTPException(400, detail="누적된 텍스트가 없습니다.")
 
     full_text = " ".join(text_buffer)
-    questions = await asyncio.to_thread(generate_expected_questions, full_text)
-    questions = questions[:5] if len(questions) > 5 else questions
+    if not is_valid_paragraph(full_text):
+        raise HTTPException(400, detail="질문 생성을 위한 충분한 텍스트가 아닙니다.")
+
+    try:
+        # GPT 질문 생성 (비동기 안전성 고려)
+        questions = await asyncio.to_thread(generate_expected_questions, full_text)
+    except Exception as e:
+        raise HTTPException(500, detail=f"GPT 질문 생성 중 오류: {str(e)}")
 
     if not questions:
         raise HTTPException(500, detail="GPT 질문 생성 실패")
+
+    questions = questions[:5]  # 최대 5개 제한
 
     # DB 저장
     obj = GeneratedQuestion(
@@ -80,7 +85,7 @@ async def trigger_question_generation(_: QuestionTriggerRequest):
     text_buffer.clear()
 
     return {
-        "message": "질문 생성 완료",
+        "message": "질문 생성 및 저장 완료",
         "paragraph": obj.paragraph,
         "questions": obj.questions,
         "created_at": obj.created_at.isoformat()
