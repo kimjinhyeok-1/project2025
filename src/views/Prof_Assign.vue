@@ -2,7 +2,6 @@
   <div class="container mt-5">
     <h2 class="mb-4">📝 교수용 과제 공지 목록</h2>
 
-    <!-- 새 과제 작성 / 수정 폼 -->
     <div class="d-flex justify-content-end mb-3">
       <button @click="toggleForm" class="btn btn-primary">
         {{ formVisible ? '✖ 닫기' : editingAssignmentId ? '✏ 수정 취소' : '➕ 새 과제 작성' }}
@@ -41,24 +40,21 @@
       </form>
     </transition>
 
-    <!-- 로딩 -->
     <div v-if="loading" class="d-flex align-items-center justify-content-center my-5">
       <strong role="status">불러오는 중...  </strong>
       <div class="spinner-border ms-3" aria-hidden="true"></div>
     </div>
 
-    <!-- 과제 없음 -->
     <div v-else-if="assignments.length === 0" class="alert alert-info">
       등록된 과제 공지가 없습니다.
     </div>
 
-    <!-- 과제 목록 -->
     <div v-else>
       <div v-for="assignment in assignments" :key="assignment.id" class="card mb-3 shadow-sm">
         <div class="card-body">
           <h5>{{ assignment.title }}</h5>
           <p class="text-muted">{{ assignment.description }}</p>
-          <p>📅 마감일: {{ assignment.deadline }}</p>
+          <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
           <button class="btn btn-outline-secondary btn-sm mt-2" @click="editAssignment(assignment)">
             ✏ 수정
           </button>
@@ -83,6 +79,16 @@ const deadline = ref('')
 const sampleAnswer = ref('')
 const file = ref(null)
 
+const formatDate = (datetime) => {
+  if (!datetime) return 'N/A'
+  const date = new Date(datetime)
+  return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
 const fetchAssignments = async () => {
   loading.value = true
   try {
@@ -102,9 +108,7 @@ onMounted(fetchAssignments)
 
 const toggleForm = () => {
   formVisible.value = !formVisible.value
-  if (!formVisible.value) {
-    clearForm()
-  }
+  if (!formVisible.value) clearForm()
 }
 
 const clearForm = () => {
@@ -149,7 +153,7 @@ const submitAssignment = async () => {
 const editAssignment = (assignment) => {
   title.value = assignment.title
   description.value = assignment.description
-  deadline.value = assignment.deadline?.slice(0, 16) || '' // datetime-local 형식
+  deadline.value = assignment.deadline?.slice(0, 16) || ''
   sampleAnswer.value = assignment.sample_answer || ''
   editingAssignmentId.value = assignment.id
   formVisible.value = true

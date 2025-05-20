@@ -28,7 +28,7 @@
                   {{ truncateText(assignment.description, 100) }}
                 </p>
                 <p class="card-text">
-                  📅 마감일: <strong>{{ formatDate(assignment.deadline) }}</strong>
+                  📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong>
                 </p>
                 <p class="card-text">
                   🕒 작성일: <strong>{{ formatDate(assignment.created_at) }}</strong>
@@ -49,17 +49,16 @@ import axios from 'axios'
 const assignments = ref([])
 const loading = ref(true)
 
-// 날짜 포맷 함수
 const formatDate = (datetime) => {
   if (!datetime) return 'N/A'
-  return new Date(datetime).toLocaleDateString('ko-KR', {
+  const date = new Date(datetime)
+  return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   })
 }
 
-// 텍스트 요약 함수
 const truncateText = (text, length) => {
   if (!text) return ''
   return text.length > length ? text.slice(0, length) + '...' : text
