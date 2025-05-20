@@ -89,7 +89,7 @@ const formatDate = (datetime) => {
   })
 }
 
-// ✅ 마감일 문자열 보정 (초 단위 추가)
+// ✅ 마감일 포맷 보정 함수
 const fixDatetimeFormat = (dt) => {
   if (!dt) return ''
   return dt.length === 16 ? dt + ':00' : dt
@@ -132,9 +132,13 @@ const handleFileChange = (e) => {
 
 const submitAssignment = async () => {
   const formData = new FormData()
+  const formattedDeadline = fixDatetimeFormat(deadline.value)
+
+  console.log('📤 [제출] 마감일:', formattedDeadline)
+
   formData.append('title', title.value)
   formData.append('description', description.value)
-  if (deadline.value) formData.append('deadline', fixDatetimeFormat(deadline.value))
+  if (formattedDeadline) formData.append('deadline', formattedDeadline)
   formData.append('sample_answer', sampleAnswer.value)
   if (file.value) formData.append('file', file.value)
 
@@ -166,6 +170,11 @@ const editAssignment = (assignment) => {
 }
 
 const updateAssignment = async () => {
+  const formattedDeadline = fixDatetimeFormat(deadline.value)
+
+  console.log('🔧 [수정] 과제 ID:', editingAssignmentId.value)
+  console.log('🔧 [수정] 마감일:', formattedDeadline)
+
   try {
     const token = localStorage.getItem('access_token')
     await axios.put(`https://project2025-backend.onrender.com/assignments/${editingAssignmentId.value}`, null, {
@@ -176,7 +185,7 @@ const updateAssignment = async () => {
       params: {
         title: title.value,
         description: description.value,
-        deadline: fixDatetimeFormat(deadline.value),
+        deadline: formattedDeadline,
         sample_answer: sampleAnswer.value,
       },
     })
