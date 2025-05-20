@@ -51,13 +51,13 @@
 
     <div v-else>
       <div v-for="assignment in assignments" :key="assignment.id" class="card mb-3 shadow-sm">
-        <div class="card-body d-flex justify-content-between align-items-start">
-          <div>
-            <h5>{{ assignment.title }}</h5>
-            <p class="text-muted">{{ assignment.description }}</p>
-            <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
-          </div>
-          <div class="d-flex flex-column gap-2 align-items-end">
+        <div class="card-body">
+          <h5>{{ assignment.title }}</h5>
+          <p class="text-muted">{{ assignment.description }}</p>
+          <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
+
+          <!-- 버튼 하단 정렬: 왼쪽(피드백) + 오른쪽(수정) -->
+          <div class="d-flex justify-content-between align-items-center mt-3">
             <button class="btn btn-outline-primary btn-sm" @click="goToFeedback(assignment.id)">📄 피드백 보기</button>
             <button class="btn btn-outline-secondary btn-sm" @click="editAssignment(assignment)">✏ 수정</button>
           </div>
