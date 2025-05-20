@@ -1,6 +1,6 @@
 <template>
   <div class="container mt-5">
-    <h2 class="mb-4">📋 과제 공지 목록</h2>
+    <h2 class="mb-4">📋 과제</h2>
 
     <div v-if="loading" class="text-center">
       <div class="spinner-border" role="status"></div>

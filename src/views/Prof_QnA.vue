@@ -1,6 +1,6 @@
 <template>
   <div class="container mt-5">
-    <h2 class="text-center">❓ 질문 & 답변 확인하기</h2>
+    <h2 class="text-center">❓ Q & A HISTORY</h2>
 
     <!-- 탭 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start;">
@@ -10,7 +10,7 @@
           :class="{ active: activeTab === 'summary', 'text-primary': true }"
           @click="activeTab = 'summary'"
         >
-          요약 보기
+          SUMMARY
         </a>
       </li>
       <li class="nav-item">
@@ -19,7 +19,7 @@
           :class="{ active: activeTab === 'fullchat', 'text-primary': true }"
           @click="loadFullChat"
         >
-          전체 대화 보기
+          TOTAL
         </a>
       </li>
     </ul>

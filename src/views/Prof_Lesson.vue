@@ -1,13 +1,10 @@
 <template>
   <div class="lecture-container mt-5">
-    <h2 class="text-center">🎤 수업 녹화 & 음성 인식</h2>
-    <p class="text-muted text-center">
-      키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드로 전송됩니다.
-    </p>
+    <h2 class="text-center">🎤 수업 시작</h2>
 
     <div class="btn-group d-flex justify-content-center mt-4">
       <button class="btn btn-primary m-2" @click="toggleRecording">
-        {{ isRecording ? "🔝 음성 인식 종료" : "🎙️ 음성 인식 시작" }}
+        {{ isRecording ? "🔝 수업 종료" : "🎙️ 수업 시작" }}
       </button>
     </div>
 

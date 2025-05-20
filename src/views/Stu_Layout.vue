@@ -27,7 +27,7 @@
         <div id="collapseQuestion" class="collapse" data-parent="#studentSidebar">
           <div class="bg-white py-2 collapse-inner rounded">
             <router-link class="collapse-item" to="/student/qna">Q & A</router-link>
-            <router-link class="collapse-item" to="/student/history">대화 기록 보기</router-link>
+            <router-link class="collapse-item" to="/student/history">HISTORY</router-link>
           </div>
         </div>
       </li>
@@ -47,8 +47,8 @@
         </a>
         <div id="collapseLesson" class="collapse" data-parent="#studentSidebar">
           <div class="bg-white py-2 collapse-inner rounded">
-            <router-link class="collapse-item" to="/student/summary">요약 요약!</router-link>
-            <router-link class="collapse-item" to="/student/lessonquestion">강의 중 질문</router-link>
+            <router-link class="collapse-item" to="/student/summary">REVIEW</router-link>
+            <router-link class="collapse-item" to="/student/lessonquestion">Q & A</router-link>
           </div>
         </div>
       </li>
