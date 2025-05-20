@@ -1,7 +1,6 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🤖 질문 게시판 (학생용)</h2>
-    <p class="text-muted">AI가 만든 질문과 학생 질문을 보고 좋아요를 눌러보세요.</p>
+    <h2 class="title">🤖 Q & A</h2>
 
     <div class="input-area">
       <input
