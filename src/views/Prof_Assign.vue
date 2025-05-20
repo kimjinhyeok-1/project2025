@@ -2,16 +2,19 @@
   <div class="container mt-5">
     <h2 class="mb-4">📝 교수용 과제 공지 목록</h2>
 
-    <!-- 새 과제 작성 버튼 -->
+    <!-- 새 과제 작성 / 수정 폼 -->
     <div class="d-flex justify-content-end mb-3">
       <button @click="toggleForm" class="btn btn-primary">
-        {{ formVisible ? '✖ 작성 취소' : '➕ 새 과제 작성' }}
+        {{ formVisible ? '✖ 닫기' : editingAssignmentId ? '✏ 수정 취소' : '➕ 새 과제 작성' }}
       </button>
     </div>
 
-    <!-- 과제 작성 폼 -->
     <transition name="fade">
-      <form v-if="formVisible" @submit.prevent="submitAssignment" class="card card-body mb-4 shadow-sm">
+      <form
+        v-if="formVisible"
+        @submit.prevent="editingAssignmentId ? updateAssignment() : submitAssignment()"
+        class="card card-body mb-4 shadow-sm"
+      >
         <div class="mb-3">
           <label class="form-label">제목</label>
           <input v-model="title" type="text" class="form-control" required />
@@ -28,11 +31,13 @@
           <label class="form-label">샘플 답안</label>
           <textarea v-model="sampleAnswer" class="form-control"></textarea>
         </div>
-        <div class="mb-3">
+        <div class="mb-3" v-if="!editingAssignmentId">
           <label class="form-label">파일 첨부 (PDF)</label>
           <input type="file" class="form-control" @change="handleFileChange" accept="application/pdf" />
         </div>
-        <button type="submit" class="btn btn-success">📤 과제 등록</button>
+        <button type="submit" class="btn btn-success">
+          {{ editingAssignmentId ? '💾 수정 저장' : '📤 과제 등록' }}
+        </button>
       </form>
     </transition>
 
@@ -54,6 +59,9 @@
           <h5>{{ assignment.title }}</h5>
           <p class="text-muted">{{ assignment.description }}</p>
           <p>📅 마감일: {{ assignment.deadline }}</p>
+          <button class="btn btn-outline-secondary btn-sm mt-2" @click="editAssignment(assignment)">
+            ✏ 수정
+          </button>
         </div>
       </div>
     </div>
@@ -67,6 +75,7 @@ import axios from 'axios'
 const assignments = ref([])
 const loading = ref(true)
 const formVisible = ref(false)
+const editingAssignmentId = ref(null)
 
 const title = ref('')
 const description = ref('')
@@ -93,6 +102,18 @@ onMounted(fetchAssignments)
 
 const toggleForm = () => {
   formVisible.value = !formVisible.value
+  if (!formVisible.value) {
+    clearForm()
+  }
+}
+
+const clearForm = () => {
+  title.value = ''
+  description.value = ''
+  deadline.value = ''
+  sampleAnswer.value = ''
+  file.value = null
+  editingAssignmentId.value = null
 }
 
 const handleFileChange = (e) => {
@@ -117,15 +138,44 @@ const submitAssignment = async () => {
     })
     alert('✅ 과제가 등록되었습니다.')
     formVisible.value = false
-    // 입력 초기화
-    title.value = ''
-    description.value = ''
-    deadline.value = ''
-    sampleAnswer.value = ''
-    file.value = null
+    clearForm()
     await fetchAssignments()
   } catch (err) {
     console.error('❌ 과제 생성 실패:', err.response?.data || err)
+    alert(`오류 발생: ${err.response?.data?.detail || '서버 오류'}`)
+  }
+}
+
+const editAssignment = (assignment) => {
+  title.value = assignment.title
+  description.value = assignment.description
+  deadline.value = assignment.deadline?.slice(0, 16) || '' // datetime-local 형식
+  sampleAnswer.value = assignment.sample_answer || ''
+  editingAssignmentId.value = assignment.id
+  formVisible.value = true
+}
+
+const updateAssignment = async () => {
+  try {
+    const token = localStorage.getItem('access_token')
+    await axios.put(`https://project2025-backend.onrender.com/assignments/${editingAssignmentId.value}`, null, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      params: {
+        title: title.value,
+        description: description.value,
+        deadline: deadline.value,
+        sample_answer: sampleAnswer.value,
+      },
+    })
+    alert('✅ 과제가 수정되었습니다.')
+    formVisible.value = false
+    clearForm()
+    await fetchAssignments()
+  } catch (err) {
+    console.error('❌ 과제 수정 실패:', err.response?.data || err)
     alert(`오류 발생: ${err.response?.data?.detail || '서버 오류'}`)
   }
 }

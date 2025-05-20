@@ -28,7 +28,10 @@
                   {{ truncateText(assignment.description, 100) }}
                 </p>
                 <p class="card-text">
-                  📅 작성일: <strong>{{ formatDate(assignment.created_at) }}</strong>
+                  📅 마감일: <strong>{{ formatDate(assignment.deadline) }}</strong>
+                </p>
+                <p class="card-text">
+                  🕒 작성일: <strong>{{ formatDate(assignment.created_at) }}</strong>
                 </p>
               </div>
             </div>
@@ -48,6 +51,7 @@ const loading = ref(true)
 
 // 날짜 포맷 함수
 const formatDate = (datetime) => {
+  if (!datetime) return 'N/A'
   return new Date(datetime).toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',

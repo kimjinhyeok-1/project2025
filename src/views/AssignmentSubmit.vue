@@ -11,7 +11,7 @@
     <div v-else>
       <h2 class="mb-4">📝 과제 제출: {{ assignment.title }}</h2>
       <p class="text-muted">{{ assignment.description }}</p>
-      <p><strong>마감일:</strong> {{ assignment.due }}</p>
+      <p><strong>마감일:</strong> {{ assignment.deadline }}</p>
 
       <!-- ✅ 이미 제출된 경우 안내 및 버튼 -->
       <div v-if="alreadySubmitted" class="alert alert-info d-flex justify-content-between align-items-center">
@@ -95,8 +95,8 @@ const handleSubmit = async () => {
       }
     )
 
-    alert('✅ 과제가 성공적으로 제출되었고, AI 피드백이 생성되었습니다.')
-    router.push(`/student/feedback/${assignmentId}`)
+    alert('✅ 과제가 성공적으로 제출되었습니다. 피드백은 마감일 이후 확인할 수 있습니다.')
+    alreadySubmitted.value = true
   } catch (err) {
     const msg = err.response?.data?.detail || err.message || '서버 오류 발생'
     if (msg.includes('마감일')) {
@@ -111,6 +111,20 @@ const handleSubmit = async () => {
 }
 
 const goToFeedback = () => {
+  if (!assignment.value?.deadline) {
+    alert('❗ 마감일 정보가 없습니다.')
+    return
+  }
+
+  const today = new Date()
+  const dueDate = new Date(assignment.value.deadline)
+  dueDate.setDate(dueDate.getDate() + 1) // 마감일 다음 날부터 가능
+
+  if (today < dueDate) {
+    alert('📅 과제 제출 마감일이 아직 지나지 않았습니다.')
+    return
+  }
+
   router.push(`/student/feedback/${assignmentId}`)
 }
 
@@ -122,7 +136,7 @@ onMounted(async () => {
       axios.get(`https://project2025-backend.onrender.com/assignments/${assignmentId}`),
       axios.get(`https://project2025-backend.onrender.com/assignments/${assignmentId}/feedback`, {
         headers: { Authorization: `Bearer ${token}` }
-      }).catch(() => null) // 404는 무시
+      }).catch(() => null)
     ])
 
     assignment.value = assignmentRes.data
