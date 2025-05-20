@@ -1,7 +1,6 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🎤 실시간 질문 생성 (교수용)</h2>
-    <p class="text-muted">"질문"이라는 단어가 감지되면 누적 내용을 기반으로 GPT 질문이 생성됩니다.</p>
+    <h2 class="title">🎤 실시간 질문 생성</h2>
 
     <div class="control-buttons">
       <button class="start-btn" @click="startRecognition">🎙️ 수업 시작</button>
