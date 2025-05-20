@@ -1,41 +1,63 @@
 import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 
 class RecordingManager {
-  constructor(mode = 'keyword') {
-    this.mode = mode;
+  constructor() {
     this.isRecording = false;
     this.isRecognizing = false;
     this.audioRecorder = null;
     this.audioStream = null;
     this.displayStream = null;
     this.recognition = null;
-    this.keywordListeners = [];
-    this.segmentListeners = [];
+    this.listeners = [];
     this.transcriptListeners = [];
     this.lectureId = null;
-    this.segmentBuffer = "";
-    this.lastTranscriptTime = null;
-    this.segmentSilenceTimeout = 3000;
+
     this.triggerKeywords = ["보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"];
   }
 
-  setLectureId(id) { this.lectureId = id; }
-  getLectureId() { return this.lectureId; }
-  setMode(mode) { this.mode = mode; }
+  setLectureId(id) {
+    this.lectureId = id;
+  }
 
-  onKeyword(cb) { this.keywordListeners.push(cb); }
-  onSegment(cb) { this.segmentListeners.push(cb); }
-  onTranscript(cb) { this.transcriptListeners.push(cb); }
+  getLectureId() {
+    return this.lectureId;
+  }
+
+  subscribe(callback) {
+    this.listeners.push(callback);
+    callback(this.isRecording);
+  }
+
+  notify() {
+    this.listeners.forEach((cb) => cb(this.isRecording));
+  }
+
+  subscribeToTranscript(cb) {
+    this.transcriptListeners.push(cb);
+  }
+
+  unsubscribeFromTranscript(cb) {
+    this.transcriptListeners = this.transcriptListeners.filter((fn) => fn !== cb);
+  }
+
+  notifyTranscriptListeners(transcript) {
+    this.transcriptListeners.forEach((cb) => cb(transcript));
+  }
 
   async startRecording() {
     if (this.isRecording) return;
+
     try {
       this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
       this.audioRecorder = new MediaRecorder(this.audioStream);
       this.audioRecorder.start();
+
       this.startRecognition();
       this.isRecording = true;
+      this.notify();
+
       console.log("🎙️ Recording Started.");
     } catch (error) {
       console.error("❌ 녹음 시작 실패:", error);
@@ -44,30 +66,91 @@ class RecordingManager {
 
   stopRecording() {
     if (!this.isRecording) return;
+
     this.audioRecorder?.stop();
-    this.audioStream?.getTracks().forEach((t) => t.stop());
-    this.displayStream?.getTracks().forEach((t) => t.stop());
+    this.audioStream?.getTracks().forEach((track) => track.stop());
+    this.displayStream?.getTracks().forEach((track) => track.stop());
     this.stopRecognition();
+
     this.isRecording = false;
-    console.log("🛑 Recording Stopped.");
+    this.notify();
+
+    console.log("🔚 Recording Stopped.");
   }
 
   startRecognition() {
+    if (this.isRecognizing) return;
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return alert("❌ 브라우저가 STT를 지원하지 않습니다.");
+    if (!SpeechRecognition) {
+      alert("이 브라우저는 음성 인식을 지원하지 않습니다.");
+      return;
+    }
+
     this.recognition = new SpeechRecognition();
-    this.recognition.continuous = true;
-    this.recognition.interimResults = true;
     this.recognition.lang = "ko-KR";
+    this.recognition.continuous = true;
+    this.recognition.interimResults = false;
 
-    this.recognition.onresult = (event) => {
-      const results = event.results;
-      const transcript = results[results.length - 1][0].transcript.trim();
-      const isFinal = results[results.length - 1].isFinal;
+    this.recognition.onresult = async (event) => {
+      const raw = event.results[event.results.length - 1][0].transcript || "";
+      const transcript = raw.trim();
+      console.log("🎤 인식된 문장:", transcript);
 
-      this.transcriptListeners.forEach(cb => cb(transcript));
-      if (this.mode === 'keyword') this.handleKeyword(transcript);
-      else if (this.mode === 'segment') this.handleSegment(transcript, isFinal);
+      this.notifyTranscriptListeners(transcript);
+
+      if (!this.lectureId) {
+        console.warn("⛔ lecture_id가 설정되지 않아 업로드 중단");
+        return;
+      }
+
+      console.log("📤 텍스트 upload_text_chunk 전송 시도:", transcript);
+
+      try {
+        await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: transcript, lecture_id: this.lectureId })
+        });
+        console.log("✅ upload_text_chunk 업로드 완료");
+      } catch (err) {
+        console.error("❌ upload_text_chunk 업로드 실패:", err);
+      }
+
+      // 🎯 "질문" 키워드 감지 시 질문 생성 트리거
+      if (transcript.includes("질문")) {
+        console.log("🧠 '질문' 키워드 감지됨 → GPT 질문 생성 호출");
+        try {
+          const res = await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lecture_id: this.lectureId })
+          });
+          const data = await res.json();
+          console.log("📦 질문 생성 응답:", data);
+        } catch (err) {
+          console.error("❌ 질문 생성 트리거 실패:", err);
+        }
+      }
+
+      // 💡 스크린샷 조건 감지
+      const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
+      let imageBase64 = "";
+
+      if (hasKeyword) {
+        imageBase64 = await captureScreenshot(this.displayStream);
+      }
+
+      await uploadSnapshot({ transcript, screenshot_base64: imageBase64, lecture_id: this.lectureId });
+    };
+
+    this.recognition.onerror = (event) => {
+      console.error("🎙️ 음성 인식 에러:", event.error);
+      if (event.error === "no-speech" || event.error === "network") {
+        console.log("🎙️ 음성 인식 재시작");
+        this.recognition.stop();
+        this.recognition.start();
+      }
     };
 
     this.recognition.start();
@@ -77,42 +160,24 @@ class RecordingManager {
   stopRecognition() {
     if (this.recognition) {
       this.recognition.stop();
+      this.recognition = null;
       this.isRecognizing = false;
     }
   }
 
-  handleKeyword(transcript) {
-    const match = this.triggerKeywords.find(k => transcript.includes(k));
-    if (match) {
-      console.log("🔔 키워드 감지:", match);
-      this.keywordListeners.forEach(cb => cb(transcript));
-      this.captureAndSend(transcript);
+  reconnectRecognition() {
+    if (this.isRecording && !this.isRecognizing) {
+      console.log("🎙️ 음성 인식 재연결 시도");
+      this.startRecognition();
     }
   }
 
-  handleSegment(transcript, isFinal) {
-    const now = Date.now();
-    this.segmentBuffer += transcript + " ";
-    this.lastTranscriptTime = now;
-
-    if (isFinal) {
-      setTimeout(() => {
-        const elapsed = Date.now() - this.lastTranscriptTime;
-        if (elapsed >= this.segmentSilenceTimeout && this.segmentBuffer.trim()) {
-          const segment = this.segmentBuffer.trim();
-          console.log("🧠 문단 생성:", segment);
-          this.segmentListeners.forEach(cb => cb(segment));
-          this.segmentBuffer = "";
-        }
-      }, this.segmentSilenceTimeout + 100);
-    }
-  }
-
-  async captureAndSend(transcript) {
-    const screenshot_base64 = await captureScreenshot(this.displayStream);
-    const timestamp = new Date().toISOString();
-    await uploadSnapshot({ timestamp, transcript, screenshot_base64 });
+  getState() {
+    return {
+      isRecording: this.isRecording,
+    };
   }
 }
 
-export default new RecordingManager();
+const recordingManager = new RecordingManager();
+export default recordingManager;
