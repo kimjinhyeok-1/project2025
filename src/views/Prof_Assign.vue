@@ -89,6 +89,12 @@ const formatDate = (datetime) => {
   })
 }
 
+// ✅ 마감일 문자열 보정 (초 단위 추가)
+const fixDatetimeFormat = (dt) => {
+  if (!dt) return ''
+  return dt.length === 16 ? dt + ':00' : dt
+}
+
 const fetchAssignments = async () => {
   loading.value = true
   try {
@@ -128,7 +134,7 @@ const submitAssignment = async () => {
   const formData = new FormData()
   formData.append('title', title.value)
   formData.append('description', description.value)
-  if (deadline.value) formData.append('deadline', deadline.value)
+  if (deadline.value) formData.append('deadline', fixDatetimeFormat(deadline.value))
   formData.append('sample_answer', sampleAnswer.value)
   if (file.value) formData.append('file', file.value)
 
@@ -170,7 +176,7 @@ const updateAssignment = async () => {
       params: {
         title: title.value,
         description: description.value,
-        deadline: deadline.value,
+        deadline: fixDatetimeFormat(deadline.value),
         sample_answer: sampleAnswer.value,
       },
     })
