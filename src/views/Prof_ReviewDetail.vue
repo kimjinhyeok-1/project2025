@@ -45,7 +45,11 @@
 
 <script setup>
 import { onMounted, ref } from "vue";
+import { useRoute } from "vue-router"; // ✅ 추가
 import axios from "axios";
+
+const route = useRoute(); // ✅ lecture_id를 URL 파라미터로 받음
+const lectureId = route.params.id;
 
 const summaryData = ref([]);
 const loading = ref(true);
@@ -53,11 +57,6 @@ const imageVisibleMap = ref({});
 
 const fetchLectureSummary = async () => {
   try {
-    const lectureId = localStorage.getItem("lecture_id");
-    if (!lectureId) {
-      throw new Error("❌ lecture_id가 없습니다. 수업 세션이 시작되지 않았거나 저장되지 않았습니다.");
-    }
-
     const response = await axios.get(
       `https://project2025-backend.onrender.com/snapshots/lecture_summary?lecture_id=${lectureId}`
     );
