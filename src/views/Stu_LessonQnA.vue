@@ -19,11 +19,11 @@
     </div>
 
     <div v-if="questions.length" class="question-list">
-      <div v-for="q in questions" :key="q.id" class="question-tile">
+      <div v-for="(q, idx) in questions" :key="idx" class="question-tile">
         <div class="text">{{ q.text }}</div>
         <div class="meta">
-          Anonymous · {{ q.type === 'student' ? '📌 학생 질문' : '🤖 AI 질문' }}
-          <button class="like-btn" @click="likeQuestion(q)">👍 {{ q.likes || 0 }}</button>
+          Anonymous · 🤖 AI 질문
+          <button class="like-btn">👍 0</button>
         </div>
       </div>
     </div>
@@ -54,13 +54,22 @@ export default {
         if (this.tab === 'recent') {
           const res = await fetch('https://project2025-backend.onrender.com/vad/questions');
           const data = await res.json();
-          this.questions = data.results.map((q, idx) => ({
-            id: idx,
-            text: q.text,
-            created_at: q.created_at,
-            type: q.type || 'ai',
-            likes: q.likes || 0
-          }));
+          console.log('📥 질문 응답:', data);
+
+          const parsed = [];
+          data.results.forEach((entry) => {
+            if (Array.isArray(entry.questions)) {
+              entry.questions.forEach((q) => {
+                parsed.push({
+                  text: q,
+                  created_at: entry.created_at,
+                  type: 'ai'
+                });
+              });
+            }
+          });
+
+          this.questions = parsed;
         } else if (this.tab === 'popular') {
           const res = await fetch('https://project2025-backend.onrender.com/vad/questions/popular_summary');
           const data = await res.json();
