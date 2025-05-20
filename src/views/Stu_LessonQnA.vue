@@ -1,6 +1,6 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🤖 Q & A</h2>
+    <h2 class="title">🤖 실시간 질문 하기</h2>
 
     <div class="input-area">
       <input

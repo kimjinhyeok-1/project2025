@@ -1,6 +1,6 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🎤 Q & A</h2>
+    <h2 class="title">🎤 실시간 질문 </h2>
 
     <div class="control-buttons">
       <button class="start-btn" @click="startRecognition">🎙️ 수업 시작</button>

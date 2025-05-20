@@ -1,6 +1,6 @@
 <template>
   <div class="container mt-5">
-    <h2 class="text-center">❓ Q & A HISTORY</h2>
+    <h2 class="text-center">❓ 학생들의 질문Y</h2>
 
     <!-- 탭 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start;">
@@ -28,7 +28,7 @@
     <div class="tab-content mt-3 border p-4 rounded bg-white shadow-sm">
       <!-- 요약 탭 -->
       <div v-if="activeTab === 'summary'">
-        <h5>📋 질문 요약</h5>
+        <h5>📋 SUMMARY</h5>
 
         <button v-if="!summary.summary_for_professor && !summaryLoading" class="btn btn-primary mb-3" @click="loadSummary">
           📥 요약 불러오기

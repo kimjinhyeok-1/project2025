@@ -1,6 +1,7 @@
 <template>
   <div class="lecture-container mt-5">
     <h2 class="text-center">🎤 수업 시작</h2>
+    <p class="text-center text-muted">수업 요약을 확인할 수 있습니다.</p>
 
     <div class="btn-group d-flex justify-content-center mt-4">
       <button class="btn btn-primary m-2" @click="toggleRecording">
