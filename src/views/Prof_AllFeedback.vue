@@ -117,7 +117,7 @@ const loadFeedbacks = async () => {
         headers: { Authorization: `Bearer ${token}` }
       }
     )
-    feedbackList.value = res.data.feedbacks || []
+    feedbackList.value = (res.data.feedbacks || []).sort((a, b) => a.student_id - b.student_id)
   } catch (err) {
     console.error('❌ 전체 피드백 로딩 실패:', err)
     alert('피드백 불러오기 실패. 제출된 정보가 없거나 권한이 없을 수 있습니다.')
