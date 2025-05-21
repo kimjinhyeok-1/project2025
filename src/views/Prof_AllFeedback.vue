@@ -19,32 +19,38 @@
       >
         <h5 class="text-primary mb-2">👤 학생 ID: {{ entry.student_id }} - {{ entry.student_name }}</h5>
 
-        <p class="mb-1 fw-bold">📌 AI 피드백:</p>
-        <div v-if="entry.gpt_feedback" v-html="formatContent(entry.gpt_feedback)" class="small text-dark lh-lg mb-2"></div>
-        <div v-else class="text-muted">AI 피드백 없음</div>
-
-        <p class="mb-1 fw-bold">👨‍🏫 교수 피드백:</p>
-        <div v-if="entry.professor_feedback">{{ entry.professor_feedback }}</div>
-        <div v-else class="text-muted">작성된 교수 피드백 없음</div>
-
-        <!-- 추가 피드백 작성 -->
-        <div v-if="editingId === entry.student_id" class="mt-2">
-          <textarea
-            v-model="feedbackInputs[entry.student_id]"
-            class="form-control mb-2"
-            rows="3"
-            placeholder="교수 피드백 입력"
-          ></textarea>
-          <button class="btn btn-sm btn-success me-2" @click="submitFeedback(entry.student_id)">저장</button>
-          <button class="btn btn-sm btn-secondary" @click="editingId = null">취소</button>
+        <!-- AI 피드백 -->
+        <div v-if="entry.gpt_feedback">
+          <p class="mb-1 fw-bold">📌 AI 피드백:</p>
+          <div v-html="formatContent(entry.gpt_feedback)" class="small text-dark lh-lg mb-2"></div>
         </div>
-        <div v-else class="mt-2">
-          <button class="btn btn-sm btn-outline-primary" @click="startEditing(entry.student_id, entry.professor_feedback)">
-            ✍️ 추가 피드백 작성
-          </button>
-        </div>
+        <div v-else class="text-muted">제출된 과제 없음.</div>
 
-        <p class="text-muted mt-2 mb-0">🕒 생성일: {{ formatDate(entry.gpt_feedback_time) }}</p>
+        <!-- 교수 피드백 -->
+        <div v-if="entry.gpt_feedback">
+          <p class="mb-1 fw-bold">👨‍🏫 교수 피드백:</p>
+          <div v-if="entry.professor_feedback">{{ entry.professor_feedback }}</div>
+          <div v-else class="text-muted">작성된 교수 피드백 없음</div>
+
+          <!-- 추가 피드백 작성 -->
+          <div v-if="editingId === entry.student_id" class="mt-2">
+            <textarea
+              v-model="feedbackInputs[entry.student_id]"
+              class="form-control mb-2"
+              rows="3"
+              placeholder="교수 피드백 입력"
+            ></textarea>
+            <button class="btn btn-sm btn-success me-2" @click="submitFeedback(entry.student_id)">저장</button>
+            <button class="btn btn-sm btn-secondary" @click="editingId = null">취소</button>
+          </div>
+          <div v-else class="mt-2">
+            <button class="btn btn-sm btn-outline-primary" @click="startEditing(entry.student_id, entry.professor_feedback)">
+              ✍️ 추가 피드백 작성
+            </button>
+          </div>
+
+          <p class="text-muted mt-2 mb-0">🕒 생성일: {{ formatDate(entry.gpt_feedback_time) }}</p>
+        </div>
       </div>
     </div>
 
