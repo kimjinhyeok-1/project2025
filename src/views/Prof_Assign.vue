@@ -56,7 +56,6 @@
           <p class="text-muted">{{ assignment.description }}</p>
           <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
 
-          <!-- 버튼 하단 정렬: 왼쪽(피드백) + 오른쪽(수정) -->
           <div class="d-flex justify-content-between align-items-center mt-3">
             <button class="btn btn-outline-primary btn-sm" @click="goToFeedback(assignment.id)">📄 피드백 보기</button>
             <button class="btn btn-outline-secondary btn-sm" @click="editAssignment(assignment)">✏ 수정</button>
@@ -179,18 +178,24 @@ const updateAssignment = async () => {
 
   try {
     const token = localStorage.getItem('access_token')
-    await axios.put(`https://project2025-backend.onrender.com/assignments/${editingAssignmentId.value}`, null, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      params: {
-        title: title.value,
-        description: description.value,
-        deadline: formattedDeadline,
-        sample_answer: sampleAnswer.value,
-      },
-    })
+
+    const form = new URLSearchParams()
+    form.append('title', title.value)
+    form.append('description', description.value)
+    form.append('sample_answer', sampleAnswer.value)
+    if (formattedDeadline) form.append('deadline', formattedDeadline)
+
+    await axios.put(
+      `https://project2025-backend.onrender.com/assignments/${editingAssignmentId.value}`,
+      form,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    )
+
     alert('✅ 과제가 수정되었습니다.')
     formVisible.value = false
     clearForm()
