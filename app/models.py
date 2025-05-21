@@ -126,7 +126,8 @@ class AssignmentSubmission(Base):
     submitted_at = Column(DateTime, default=func.now())
     gpt_feedback = Column(Text, nullable=True)
     gpt_feedback_created_at = Column(DateTime, nullable=True)
-
+    professor_feedback = Column(Text, nullable=True)
+    professor_feedback_created_at = Column(DateTime, nullable=True)
     assignment = relationship("Assignment", back_populates="submissions")
     student = relationship("User", back_populates="submissions")
 
