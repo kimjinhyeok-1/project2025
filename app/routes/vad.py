@@ -67,23 +67,28 @@ async def trigger_question_generation():
     }
 
 # ───────── 특정 질문 세트 조회 (q_id) ─────────
-@router.get("/questions/{q_id}")
-async def get_questions_by_qid(q_id: int):
+@router.get("/questions/latest")
+async def get_latest_questions():
     async with get_db_context() as db:
-        result = await db.execute(select(GeneratedQuestion).where(GeneratedQuestion.id == q_id))
-        question_set = result.scalar()
+        # 가장 최근에 생성된 질문 세트(id가 가장 큰 항목)를 가져옴
+        result = await db.execute(
+            select(GeneratedQuestion).order_by(GeneratedQuestion.id.desc()).limit(1)
+        )
+        latest_question_set = result.scalar()
 
-    if not question_set:
-        raise HTTPException(404, detail="해당 q_id에 대한 질문 세트를 찾을 수 없습니다.")
+    if not latest_question_set:
+        raise HTTPException(status_code=404, detail="질문 세트가 존재하지 않습니다.")
 
     return {
-        "q_id": question_set.id,
-        "paragraph": question_set.paragraph,
+        "q_id": latest_question_set.id,
+        "paragraph": latest_question_set.paragraph,
         "questions": [
-            {"text": q, "likes": question_set.likes[i]} for i, q in enumerate(question_set.questions)
+            {"text": q, "likes": latest_question_set.likes[i]} for i, q in enumerate(latest_question_set.questions)
         ],
-        "created_at": question_set.created_at.isoformat() if question_set.created_at else None
+        "created_at": latest_question_set.created_at.isoformat() if latest_question_set.created_at else None
     }
+
+
 
 # ───────── 좋아요 반영 ─────────
 @router.patch("/question/{q_id}/like")
