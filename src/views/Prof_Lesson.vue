@@ -114,7 +114,7 @@ export default {
           console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
 
           // ✅ 학생 페이지로 라우팅 시 q_id 전달
-          this.$router.push({ name: 'StuLessonQnA', query: { q_id } });
+          this.$router.push({ name: 'StudentLessonQnA', query: { q_id } });
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         }
