@@ -35,7 +35,6 @@
           <div class="bg-white py-2 collapse-inner rounded">
             <router-link class="collapse-item" to="/professor/lesson">수업 시작</router-link>
             <router-link class="collapse-item" to="/professor/review">수업 요약</router-link>
-            <router-link class="collapse-item" to="/professor/realtime-question">실시간 질문</router-link>
           </div>
         </div>
       </li>
