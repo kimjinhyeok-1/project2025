@@ -109,17 +109,25 @@ export default {
       if (text.includes("질문") || text.includes("?")) {
         this.triggered = true;
         try {
-          await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
-          console.log("🧠 질문 생성 API 호출 완료");
+          const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
+          const q_id = res.data.q_id;
+          console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
+
+          // ✅ 학생 페이지로 라우팅 시 q_id 전달
+          this.$router.push({ name: 'StuLessonQnA', query: { q_id } });
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         }
       } else {
         this.triggered = false;
       }
-
-      // ⚠️ 수업 중에는 요약을 실시간 렌더링하지 않도록 분리
     }
   }
 };
 </script>
+
+<style scoped>
+.markdown-body {
+  white-space: pre-wrap;
+}
+</style>
