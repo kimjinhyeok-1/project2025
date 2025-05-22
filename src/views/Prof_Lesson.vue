@@ -55,10 +55,16 @@ export default {
       latestTranscript: "",
       triggered: false,
       transcriptCallback: null,
-      showFinalSummary: false
+      showFinalSummary: false  // ✅ 수업 종료 시 요약 표시 플래그
     };
   },
   async mounted() {
+    try {
+      await createLecture(); // 🔑 lecture_id 생성
+    } catch (err) {
+      console.error("강의 세션 생성 실패:", err);
+    }
+
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
   },
@@ -71,15 +77,7 @@ export default {
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
-        this.showFinalSummary = false;
-
-        try {
-          const lecture_id = await createLecture();
-          console.log("✅ 강의 세션 시작:", lecture_id);
-        } catch (err) {
-          console.error("❌ 강의 세션 생성 실패:", err);
-        }
-
+        this.showFinalSummary = false;  // 🔁 새 세션 시작 시 숨김
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
@@ -115,6 +113,7 @@ export default {
           const q_id = res.data.q_id;
           console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
 
+          // ✅ 학생 페이지로 라우팅 시 q_id 전달
           this.$router.push({ name: 'StudentLessonQnA', query: { q_id } });
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
