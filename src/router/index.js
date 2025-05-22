@@ -18,13 +18,12 @@ import ProfessorView from '../views/Prof_DashBoard.vue'
 import ProfessorLesson from '../views/Prof_Lesson.vue'
 import ProfessorQnA from '../views/Prof_QnA.vue'
 import ProfessorReviewView from '../views/Prof_Review.vue'
-import ProfessorReviewDetail from '../views/Prof_ReviewDetail.vue' // ✅ 추가된 import
+import ProfessorReviewDetail from '../views/Prof_ReviewDetail.vue'
 import ProfessorAssignments from '../views/Prof_Assign.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
-import ProfessorRealtimeQuestion from '../views/Prof_AIQnAStu.vue'
+// ⛔ 삭제됨: import ProfessorRealtimeQuestion from '../views/Prof_AIQnAStu.vue'
 import AssignmentFeedback from '../views/AssignmentFeedback.vue'
-
 
 const routes = [
   {
@@ -112,7 +111,7 @@ const routes = [
         component: ProfessorReviewView,
       },
       {
-        path: 'review/:id', // ✅ 상세 페이지 경로 추가
+        path: 'review/:id',
         name: 'ProfessorReviewDetail',
         component: ProfessorReviewDetail,
       },
@@ -129,7 +128,7 @@ const routes = [
       {
         path: 'realtime-question',
         name: 'ProfessorRealtimeQuestion',
-        component: ProfessorRealtimeQuestion,
+        component: ProfessorLesson,  // 💡 변경됨: Prof_Lesson.vue 사용
       },
       {
         path: 'feedback/:id',
@@ -150,4 +149,3 @@ const router = createRouter({
 })
 
 export default router
- 
