@@ -1,5 +1,10 @@
 <template>
-  <div class="lecture-container mt-5">
+  <div v-if="!accessAllowed" class="container mt-5 text-center">
+    <p class="text-danger h5">❗ 로그인되어 있지 않거나 수업이 시작되지 않았습니다.</p>
+    <p class="text-muted">로그인 후 수업을 다시 시작해주세요.</p>
+  </div>
+
+  <div v-else class="lecture-container mt-5">
     <h2 class="text-center">🎤 수업 녹화 & 음성 인식</h2>
     <p class="text-muted text-center">
       녹음 중 키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드에 전송됩니다.
@@ -42,10 +47,22 @@ export default {
       renderedSummary: "",
       latestTranscript: "",
       triggered: false,
-      transcriptCallback: null
+      transcriptCallback: null,
+      accessAllowed: false // ✅ UI 접근 조건 제어용
     };
   },
   mounted() {
+    const token = localStorage.getItem("access_token");
+    const lectureId = localStorage.getItem("lecture_id");
+
+    if (!token || !lectureId) {
+      console.warn("❌ access_token 또는 lecture_id 없음.");
+      this.accessAllowed = false;
+      return;
+    }
+
+    this.accessAllowed = true;
+
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
   },
@@ -74,7 +91,7 @@ export default {
       const token = localStorage.getItem("access_token");
 
       if (!lectureId || !token) {
-        console.error("❌ lecture_id 또는 access_token 없음. 먼저 로그인하고 수업을 시작하세요.");
+        console.error("❌ lecture_id 또는 access_token 없음.");
         return;
       }
 
