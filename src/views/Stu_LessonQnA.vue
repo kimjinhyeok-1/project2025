@@ -23,7 +23,7 @@
         <div class="text">{{ q.text }}</div>
         <div class="meta">
           Anonymous · 🤖 AI 질문
-          <button class="like-btn">👍 0</button>
+          <button class="like-btn" @click="likeQuestion(q)">👍 {{ q.likes || 0 }}</button>
         </div>
       </div>
     </div>
@@ -37,7 +37,8 @@ export default {
     return {
       tab: 'recent',
       questions: [],
-      newQuestion: ''
+      newQuestion: '',
+      q_id: 12  // ✅ 기본 테스트용. 실제 상황에선 /trigger_question_generation 호출 후 설정
     };
   },
   mounted() {
@@ -52,37 +53,48 @@ export default {
     async fetchQuestions() {
       try {
         if (this.tab === 'recent') {
-          const res = await fetch('https://project2025-backend.onrender.com/vad/questions');
+          const res = await fetch('https://project2025-backend.onrender.com/questions');
           const data = await res.json();
           console.log('📥 질문 응답:', data);
 
           const parsed = [];
-          data.results.forEach((entry) => {
-            if (Array.isArray(entry.questions)) {
-              entry.questions.forEach((q) => {
-                parsed.push({
-                  text: q,
-                  created_at: entry.created_at,
-                  type: 'ai'
+          if (Array.isArray(data.results)) {
+            data.results.forEach((entry) => {
+              if (Array.isArray(entry.questions)) {
+                entry.questions.forEach((q) => {
+                  parsed.push({
+                    text: q.text || q,
+                    created_at: entry.created_at,
+                    type: 'ai',
+                    likes: q.likes || 0,
+                    q_id: entry.q_id
+                  });
                 });
-              });
-            }
-          });
+              }
+            });
+          }
 
           this.questions = parsed;
         } else if (this.tab === 'popular') {
-          const res = await fetch('https://project2025-backend.onrender.com/vad/questions/popular_summary');
+          const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${this.q_id}`);
           const data = await res.json();
-          this.questions = data.results.map((q, idx) => ({
-            id: idx,
-            text: `${q.text} (${q.unknown_percent}%)`,
-            created_at: new Date(),
-            type: 'ai',
-            likes: 0
-          }));
+          console.log("📥 인기 질문 응답:", data);
+
+          if (Array.isArray(data.results)) {
+            this.questions = data.results.map((q, idx) => ({
+              id: idx,
+              text: q.text,
+              likes: q.likes || 0,
+              created_at: new Date(),
+              type: 'ai'
+            }));
+          } else {
+            this.questions = [];
+          }
         }
       } catch (err) {
         console.error('❌ 질문 조회 실패:', err);
+        this.questions = [];
       }
     },
 
@@ -113,10 +125,13 @@ export default {
 
     async likeQuestion(question) {
       try {
-        await fetch(`https://project2025-backend.onrender.com/vad/question/${question.id}/like`, {
-          method: 'PATCH'
+        const qid = question.q_id || this.q_id;
+        const res = await fetch(`https://project2025-backend.onrender.com/question/${qid}/like`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question_id: 0 }) // 인덱스 기반 처리 필요 시 수정
         });
-        question.likes++;
+        question.likes = (question.likes || 0) + 1;
       } catch (err) {
         console.error('❌ 좋아요 실패:', err);
       }
