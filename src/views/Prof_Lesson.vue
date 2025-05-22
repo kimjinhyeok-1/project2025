@@ -15,9 +15,15 @@
       </button>
     </div>
 
-    <!-- 요약 결과 -->
-    <div v-if="summaryResult" class="alert alert-success mt-4 markdown-body">
+    <!-- 실시간 요약 결과 -->
+    <div v-if="summaryResult && !showFinalSummary" class="alert alert-success mt-4 markdown-body">
       <h5>📘 수업 요약 결과:</h5>
+      <div v-html="renderedSummary"></div>
+    </div>
+
+    <!-- 수업 종료 후 전체 요약 -->
+    <div v-if="showFinalSummary" class="alert alert-primary mt-4 markdown-body">
+      <h5>📘 수업 종료 요약:</h5>
       <div v-html="renderedSummary"></div>
     </div>
 
@@ -48,7 +54,8 @@ export default {
       renderedSummary: "",
       latestTranscript: "",
       triggered: false,
-      transcriptCallback: null
+      transcriptCallback: null,
+      showFinalSummary: false  // ✅ 수업 종료 시 요약 표시 플래그
     };
   },
   async mounted() {
@@ -67,12 +74,29 @@ export default {
     }
   },
   methods: {
-    toggleAudioRecording() {
+    async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
+        this.showFinalSummary = false;  // 🔁 새 세션 시작 시 숨김
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
+        try {
+          const summary = await generateLectureSummary();
+          const markdownText = Array.isArray(summary)
+            ? summary.map(item => item.summary || item.text || "").join("\n\n")
+            : summary;
+
+          this.summaryResult = markdownText;
+          this.renderedSummary = marked.parse(markdownText || "");
+          this.showFinalSummary = true;
+        } catch (error) {
+          if (error.response?.status === 404 || error.response?.status === 400) {
+            console.warn("📭 요약 없음 또는 잘못된 요청: 충분한 데이터가 없을 수 있습니다.");
+          } else {
+            console.error("요약 생성 실패:", error);
+          }
+        }
       }
     },
     async testOptions() {
@@ -94,19 +118,7 @@ export default {
         this.triggered = false;
       }
 
-      try {
-        const summary = await generateLectureSummary();
-
-        // ✅ 배열 처리: text 필드만 추출해 줄바꿈으로 연결
-        const markdownText = Array.isArray(summary)
-          ? summary.map(item => item.text || "").join("\n\n")
-          : summary;
-
-        this.summaryResult = markdownText;
-        this.renderedSummary = marked.parse(markdownText || "");
-      } catch (error) {
-        console.error("요약 생성 실패:", error);
-      }
+      // ⚠️ 수업 중에는 요약을 실시간 렌더링하지 않도록 분리
     }
   }
 };
