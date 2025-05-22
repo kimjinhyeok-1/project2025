@@ -16,6 +16,9 @@ text_buffer: list[str] = []  # STT 누적 버퍼
 class TextChunkRequest(BaseModel):
     text: str
 
+class LikeRequest(BaseModel):
+    question_id: int  # 질문 인덱스 (0~4)
+
 # ───────── 텍스트 누적 ─────────
 @router.post("/upload_text_chunk")
 async def upload_text_chunk(body: TextChunkRequest):
@@ -46,6 +49,7 @@ async def trigger_question_generation():
     obj = GeneratedQuestion(
         paragraph=full_text,
         questions=questions[:5],
+        likes=[0] * min(5, len(questions)),
         created_at=datetime.utcnow()
     )
     async with get_db_context() as db:
@@ -56,6 +60,7 @@ async def trigger_question_generation():
     text_buffer.clear()
     return {
         "message": "질문 생성 및 저장 완료",
+        "q_id": obj.id,
         "paragraph": obj.paragraph,
         "questions": obj.questions,
         "created_at": obj.created_at.isoformat()
@@ -69,12 +74,47 @@ async def get_all_questions():
         return {
             "results": [
                 {
+                    "q_id": r.id,
                     "paragraph": r.paragraph,
-                    "questions": r.questions,
+                    "questions": [
+                        {"text": q, "likes": r.likes[i]} for i, q in enumerate(r.questions)
+                    ],
                     "created_at": r.created_at.isoformat() if r.created_at else None
                 } for r in result.scalars().all()
             ]
         }
+
+# ───────── 좋아요 반영 ─────────
+@router.patch("/question/{q_id}/like")
+async def like_question(q_id: int, body: LikeRequest):
+    async with get_db_context() as db:
+        result = await db.execute(select(GeneratedQuestion).where(GeneratedQuestion.id == q_id))
+        question_set = result.scalar()
+
+        if not question_set or body.question_id >= len(question_set.likes):
+            raise HTTPException(404, detail="질문 인덱스를 찾을 수 없습니다.")
+
+        question_set.likes[body.question_id] += 1
+        await db.commit()
+
+    return {"message": "좋아요 반영 완료"}
+
+# ───────── 인기 질문 정렬 조회 ─────────
+@router.get("/questions/popular_likes")
+async def get_popular_likes(q_id: int):
+    async with get_db_context() as db:
+        result = await db.execute(select(GeneratedQuestion).where(GeneratedQuestion.id == q_id))
+        question_set = result.scalar()
+
+    if not question_set:
+        return {"results": []}
+
+    questions_with_likes = [
+        {"text": q, "likes": question_set.likes[i]}
+        for i, q in enumerate(question_set.questions)
+    ]
+    sorted_questions = sorted(questions_with_likes, key=lambda x: x["likes"], reverse=True)
+    return {"results": sorted_questions}
 
 # ───────── OPTIONS 프리플라이트 ─────────
 @router.options("/upload_text_chunk")
