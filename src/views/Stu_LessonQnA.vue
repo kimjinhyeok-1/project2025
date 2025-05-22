@@ -49,13 +49,13 @@ export default {
     this.q_id = this.$route.query.q_id;
     if (this.q_id) {
       this.loadSelected();
-      await this.fetchQuestions();
+      await this.fetchQuestionsById(this.q_id);
     }
   },
   methods: {
-    async fetchQuestions() {
+    async fetchQuestionsById(q_id) {
       try {
-        const res = await fetch(`https://project2025-backend.onrender.com/questions/${this.q_id}`);
+        const res = await fetch(`https://project2025-backend.onrender.com/questions/${q_id}`);
         const data = await res.json();
         if (Array.isArray(data.questions)) {
           this.questions = data.questions.map(q => ({ text: q.text }));
@@ -66,13 +66,9 @@ export default {
     },
     async loadLatestQuestions() {
       try {
-        const latestRes = await fetch("https://project2025-backend.onrender.com/questions/latest");
-        const latestData = await latestRes.json();
-        this.q_id = latestData.q_id;
-
-        const questionRes = await fetch(`https://project2025-backend.onrender.com/questions/${this.q_id}`);
-        const data = await questionRes.json();
-
+        const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
+        const data = await res.json();
+        this.q_id = data.q_id;
         if (Array.isArray(data.questions)) {
           this.questions = data.questions.map(q => ({ text: q.text }));
         }
