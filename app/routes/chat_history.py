@@ -104,14 +104,15 @@ async def get_question_summary(
         formatted = "\n".join(f"{i+1}. {q}" for i, q in enumerate(processed))
 
         prompt = f"""
-다음은 학생들이 최근 한 질문입니다:
+아래는 학생들이 최근에 남긴 질문입니다:
 
 {formatted}
 
-JAVA 언어나 객체지향프로그래밍 관련 질문만 골라 요약하세요.
-JAVA 관련 질문이 아니면 요약에 포함시키지 마세요.
-유사 질문은 하나로 묶고, 중복은 제거하세요.
-간결한 문장으로 줄바꿈만 해주세요.
+이 중 JAVA 언어나 객체지향 프로그래밍(OOP)에 관련된 질문만 골라 간결하게 요약해 주세요.
+- 유사한 질문은 하나로 묶고, 중복된 질문은 제거해 주세요.
+- 질문 형태는 유지하되, 문장을 자연스럽고 매끄럽게 다듬어 주세요.
+- JAVA와 무관한 질문은 제외해 주세요.
+- 각 질문은 줄바꿈으로 구분해 주세요.
 """
 
         response = openai_client.chat.completions.create(
