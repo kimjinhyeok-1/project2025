@@ -33,7 +33,11 @@
 import axios from "axios";
 import recordingManager from "@/managers/RecordingManager";
 import { marked } from "marked";
-import { testOptionsRequest, generateLectureSummary } from "@/api/snapshotService";
+import {
+  testOptionsRequest,
+  generateLectureSummary,
+  createLecture
+} from "@/api/snapshotService";
 
 export default {
   name: "ProfessorLesson",
@@ -47,7 +51,13 @@ export default {
       transcriptCallback: null
     };
   },
-  mounted() {
+  async mounted() {
+    try {
+      await createLecture(); // 🔑 lecture_id 생성
+    } catch (err) {
+      console.error("강의 세션 생성 실패:", err);
+    }
+
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
   },
@@ -72,7 +82,6 @@ export default {
     async handleTranscript(text) {
       this.latestTranscript = text;
 
-      // 질문 유도 키워드 감지 예시
       if (text.includes("질문") || text.includes("?")) {
         this.triggered = true;
         try {
@@ -85,10 +94,13 @@ export default {
         this.triggered = false;
       }
 
-      // 강의 요약 생성 (선택적으로 활성화 가능)
-      const summary = await generateLectureSummary(text);
-      this.summaryResult = summary;
-      this.renderedSummary = marked.parse(summary || "");
+      try {
+        const summary = await generateLectureSummary();
+        this.summaryResult = summary;
+        this.renderedSummary = marked.parse(summary || "");
+      } catch (error) {
+        console.error("요약 생성 실패:", error);
+      }
     }
   }
 };

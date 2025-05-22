@@ -1,4 +1,3 @@
-// ✅ snapshotService.js 수정본
 import axios from 'axios';
 
 const BASE_URL = 'https://project2025-backend.onrender.com';
@@ -80,7 +79,6 @@ async function getSummaries() {
   }
 }
 
-// ✅ 강의 종료 후 summary 저장 API
 async function generateLectureSummary() {
   const lecture_id = localStorage.getItem("lecture_id");
   if (!lecture_id) throw new Error("lecture_id 없음");
