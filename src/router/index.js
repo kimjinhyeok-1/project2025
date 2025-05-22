@@ -22,7 +22,7 @@ import ProfessorReviewDetail from '../views/Prof_ReviewDetail.vue' // ✅ 추가
 import ProfessorAssignments from '../views/Prof_Assign.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
-import ProfessorRealtimeQuestion from '../views/Prof_AIQnAStu.vue'
+import ProfessorRealtimeQuestion from '../views/Prof_Lesson.vue'
 import AssignmentFeedback from '../views/AssignmentFeedback.vue'
 
 
