@@ -2,6 +2,10 @@
   <div class="container mt-5">
     <h2 class="text-center mb-4">🤖 실시간 질문 확인</h2>
 
+    <div class="text-center mb-4">
+      <button class="btn btn-success" @click="loadLatestQuestions">🔄 질문 불러오기</button>
+    </div>
+
     <div class="row">
       <div
         v-for="(q, idx) in questions"
@@ -43,12 +47,10 @@ export default {
   },
   async mounted() {
     this.q_id = this.$route.query.q_id;
-    if (!this.q_id) {
-      console.warn("❌ q_id가 URL에 없습니다");
-      return;
+    if (this.q_id) {
+      this.loadSelected();
+      await this.fetchQuestions();
     }
-    this.loadSelected();
-    await this.fetchQuestions();
   },
   methods: {
     async fetchQuestions() {
@@ -64,13 +66,24 @@ export default {
         console.error("질문 조회 실패:", err);
       }
     },
+    async loadLatestQuestions() {
+      try {
+        const latestRes = await fetch("https://project2025-backend.onrender.com/questions/popular_likes?q_id=latest");
+        const latestData = await latestRes.json();
+        if (Array.isArray(latestData.results)) {
+          this.questions = latestData.results.map(q => ({ text: q.text }));
+        }
+      } catch (err) {
+        console.error("최신 질문 불러오기 실패:", err);
+      }
+    },
     selectQuestion(index) {
       this.selected.push(index);
       localStorage.setItem(
-        `selected_questions_${this.q_id}`,
+        `selected_questions_${this.q_id || 'latest'}`,
         JSON.stringify(this.selected)
       );
-      fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/like`, {
+      fetch(`https://project2025-backend.onrender.com/question/${this.q_id || 'latest'}/like`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question_id: index })
