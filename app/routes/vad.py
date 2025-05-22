@@ -66,7 +66,7 @@ async def trigger_question_generation():
         "created_at": obj.created_at.isoformat()
     }
 
-# ───────── 질문 전체 조회 ─────────
+# ───────── 전체 질문 세트 조회 ─────────
 @router.get("/questions")
 async def get_all_questions():
     async with get_db_context() as db:
@@ -83,6 +83,25 @@ async def get_all_questions():
                 } for r in result.scalars().all()
             ]
         }
+
+# ───────── 특정 질문 세트 조회 (q_id) ─────────
+@router.get("/questions/{q_id}")
+async def get_questions_by_qid(q_id: int):
+    async with get_db_context() as db:
+        result = await db.execute(select(GeneratedQuestion).where(GeneratedQuestion.id == q_id))
+        question_set = result.scalar()
+
+    if not question_set:
+        raise HTTPException(404, detail="해당 q_id에 대한 질문 세트를 찾을 수 없습니다.")
+
+    return {
+        "q_id": question_set.id,
+        "paragraph": question_set.paragraph,
+        "questions": [
+            {"text": q, "likes": question_set.likes[i]} for i, q in enumerate(question_set.questions)
+        ],
+        "created_at": question_set.created_at.isoformat() if question_set.created_at else None
+    }
 
 # ───────── 좋아요 반영 ─────────
 @router.patch("/question/{q_id}/like")
