@@ -15,9 +15,16 @@
       </button>
     </div>
 
+    <!-- 요약 결과 -->
     <div v-if="summaryResult" class="alert alert-success mt-4 markdown-body">
       <h5>📘 수업 요약 결과:</h5>
       <div v-html="renderedSummary"></div>
+    </div>
+
+    <!-- 질문 감지 출력 -->
+    <div class="alert alert-info mt-4">
+      <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
+      <p v-if="triggered"><strong>🧠 질문 생성 요청이 감지되었습니다!</strong></p>
     </div>
   </div>
 </template>
@@ -34,116 +41,55 @@ export default {
     return {
       isRecording: false,
       summaryResult: null,
+      renderedSummary: "",
+      latestTranscript: "",
+      triggered: false,
+      transcriptCallback: null
     };
   },
-  computed: {
-    renderedSummary() {
-      return this.summaryResult ? marked.parse(this.summaryResult) : "";
-    },
+  mounted() {
+    this.transcriptCallback = this.handleTranscript;
+    recordingManager.subscribeToTranscript(this.transcriptCallback);
+  },
+  beforeUnmount() {
+    if (this.transcriptCallback) {
+      recordingManager.unsubscribeFromTranscript(this.transcriptCallback);
+    }
   },
   methods: {
-    async startLectureSession() {
-      try {
-        const res = await axios.post(
-          "https://project2025-backend.onrender.com/snapshots/lectures",
-          {},
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        const { lecture_id } = res.data;
-        localStorage.setItem("lecture_id", lecture_id);
-        recordingManager.setLectureId(lecture_id);
-
-        console.log("🎓 수업 세션 시작:", lecture_id);
-        return lecture_id;
-      } catch (err) {
-        console.error("❌ 수업 세션 시작 실패:", err);
-        alert("수업 세션 생성에 실패했습니다.");
-        return null;
-      }
-    },
-
-    async toggleAudioRecording() {
-      if (!recordingManager.getState().isRecording) {
-        const lectureId = await this.startLectureSession();
-        if (!lectureId) {
-          alert("수업 세션이 생성되지 않아 녹음을 시작할 수 없습니다.");
-          return;
-        }
-        await recordingManager.startRecording();
+    toggleAudioRecording() {
+      this.isRecording = !this.isRecording;
+      if (this.isRecording) {
+        recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
-        this.isRecording = recordingManager.getState().isRecording;
-        await generateLectureSummary();
-        await this.requestLectureSummary();
-      }
-      this.isRecording = recordingManager.getState().isRecording;
-    },
-
-    async requestLectureSummary() {
-      try {
-        const lectureId = localStorage.getItem("lecture_id");
-        if (!lectureId) throw new Error("lecture_id가 없습니다. 세션을 먼저 시작하세요.");
-
-        const response = await fetch(
-          `https://project2025-backend.onrender.com/snapshots/generate_markdown_summary?lecture_id=${lectureId}`
-        );
-        if (!response.ok) throw new Error("요약 요청 실패");
-
-        const data = await response.json();
-        this.summaryResult = data.summary;
-        console.log("📘 요약 결과:", data.summary);
-      } catch (error) {
-        console.error("❌ 수업 요약 요청 실패:", error);
-        alert("요약 요청에 실패했습니다.");
       }
     },
-
     async testOptions() {
-      await testOptionsRequest();
+      const response = await testOptionsRequest();
+      console.log("OPTIONS Response:", response);
     },
-  },
-  mounted() {
-    this.isRecording = recordingManager.getState().isRecording;
+    async handleTranscript(text) {
+      this.latestTranscript = text;
 
-    recordingManager.subscribe((newState) => {
-      this.isRecording = newState;
-    });
+      // 질문 유도 키워드 감지 예시
+      if (text.includes("질문") || text.includes("?")) {
+        this.triggered = true;
+        try {
+          await axios.post("https://project2025-backend.onrender.com/vad/trigger_question_generation");
+          console.log("🧠 질문 생성 API 호출 완료");
+        } catch (error) {
+          console.error("질문 생성 API 호출 실패:", error);
+        }
+      } else {
+        this.triggered = false;
+      }
 
-    recordingManager.reconnectRecognition();
-  },
+      // 강의 요약 생성 (선택적으로 활성화 가능)
+      const summary = await generateLectureSummary(text);
+      this.summaryResult = summary;
+      this.renderedSummary = marked.parse(summary || "");
+    }
+  }
 };
 </script>
-
-<style scoped>
-.lecture-container {
-  max-width: 900px;
-  margin: auto;
-  padding: 30px;
-}
-
-.markdown-body {
-  text-align: left;
-  white-space: normal;
-}
-
-.markdown-body h3 {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #155724;
-  margin-top: 1.5rem;
-}
-
-.markdown-body ul {
-  padding-left: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.markdown-body li {
-  margin-bottom: 0.5rem;
-}
-</style>
