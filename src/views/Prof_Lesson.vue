@@ -70,18 +70,27 @@ export default {
     async handleTranscript(text) {
       this.latestTranscript = text;
 
-      const lectureId = localStorage.getItem("lecture_id"); // ✅ localStorage에서 불러옴
-      if (!lectureId) {
-        console.error("❌ lecture_id 없음. 먼저 수업을 시작하세요.");
+      const lectureId = localStorage.getItem("lecture_id");
+      const token = localStorage.getItem("access_token");
+
+      if (!lectureId || !token) {
+        console.error("❌ lecture_id 또는 access_token 없음. 먼저 로그인하고 수업을 시작하세요.");
         return;
       }
 
       if (text.includes("질문") || text.includes("?")) {
         this.triggered = true;
         try {
-          await axios.post("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
-            lecture_id: lectureId
-          });
+          await axios.post(
+            "https://project2025-backend.onrender.com/vad/trigger_question_generation",
+            { lecture_id: lectureId },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`
+              },
+              withCredentials: true
+            }
+          );
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         }
@@ -90,7 +99,7 @@ export default {
       }
 
       try {
-        const summary = await generateLectureSummary(text, lectureId); // ✅ 전달
+        const summary = await generateLectureSummary(text, lectureId);
         this.summaryResult = summary;
         this.renderedSummary = marked.parse(summary || "");
       } catch (error) {
