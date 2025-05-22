@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import Optional
 from app.services.gpt import generate_expected_questions
 from app.database import get_db_context
 from app.models import GeneratedQuestion
@@ -10,7 +11,7 @@ import asyncio
 import re
 
 router = APIRouter()
-text_buffer: list[str] = []  # STT 누적 버퍼
+text_buffer: list[str] = []
 
 # ───────── 요청 스키마 ─────────
 class TextChunkRequest(BaseModel):
@@ -18,6 +19,14 @@ class TextChunkRequest(BaseModel):
 
 class LikeRequest(BaseModel):
     question_id: int  # 질문 인덱스 (0~4)
+
+# ───────── 공통 유틸: 최신 또는 특정 질문 세트 가져오기 ─────────
+async def get_question_set(db, q_id: Optional[int] = None) -> Optional[GeneratedQuestion]:
+    if q_id is not None:
+        result = await db.execute(select(GeneratedQuestion).where(GeneratedQuestion.id == q_id))
+    else:
+        result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.id.desc()).limit(1))
+    return result.scalar_one_or_none()
 
 # ───────── 텍스트 누적 ─────────
 @router.post("/upload_text_chunk")
@@ -66,36 +75,29 @@ async def trigger_question_generation():
         "created_at": obj.created_at.isoformat()
     }
 
-# ───────── 특정 질문 세트 조회 (q_id) ─────────
+# ───────── 최신 질문 조회 ─────────
 @router.get("/questions/latest")
 async def get_latest_questions():
     async with get_db_context() as db:
-        # 가장 최근에 생성된 질문 세트(id가 가장 큰 항목)를 가져옴
-        result = await db.execute(
-            select(GeneratedQuestion).order_by(GeneratedQuestion.id.desc()).limit(1)
-        )
-        latest_question_set = result.scalar()
+        question_set = await get_question_set(db)
 
-    if not latest_question_set:
-        raise HTTPException(status_code=404, detail="질문 세트가 존재하지 않습니다.")
+    if not question_set:
+        raise HTTPException(404, detail="질문 세트가 존재하지 않습니다.")
 
     return {
-        "q_id": latest_question_set.id,
-        "paragraph": latest_question_set.paragraph,
+        "q_id": question_set.id,
+        "paragraph": question_set.paragraph,
         "questions": [
-            {"text": q, "likes": latest_question_set.likes[i]} for i, q in enumerate(latest_question_set.questions)
+            {"text": q, "likes": question_set.likes[i]} for i, q in enumerate(question_set.questions)
         ],
-        "created_at": latest_question_set.created_at.isoformat() if latest_question_set.created_at else None
+        "created_at": question_set.created_at.isoformat() if question_set.created_at else None
     }
 
-
-
 # ───────── 좋아요 반영 ─────────
-@router.patch("/question/{q_id}/like")
-async def like_question(q_id: int, body: LikeRequest):
+@router.patch("/question/like")
+async def like_question(body: LikeRequest, q_id: Optional[int] = None):
     async with get_db_context() as db:
-        result = await db.execute(select(GeneratedQuestion).where(GeneratedQuestion.id == q_id))
-        question_set = result.scalar()
+        question_set = await get_question_set(db, q_id)
 
         if not question_set or body.question_id >= len(question_set.likes):
             raise HTTPException(404, detail="질문 인덱스를 찾을 수 없습니다.")
@@ -107,10 +109,9 @@ async def like_question(q_id: int, body: LikeRequest):
 
 # ───────── 인기 질문 정렬 조회 ─────────
 @router.get("/questions/popular_likes")
-async def get_popular_likes(q_id: int):
+async def get_popular_likes(q_id: Optional[int] = None):
     async with get_db_context() as db:
-        result = await db.execute(select(GeneratedQuestion).where(GeneratedQuestion.id == q_id))
-        question_set = result.scalar()
+        question_set = await get_question_set(db, q_id)
 
     if not question_set:
         return {"results": []}
@@ -128,7 +129,7 @@ async def get_popular_likes(q_id: int):
 async def dummy_text_route():
     return JSONResponse({"message": "POST로만 요청 가능합니다."})
 
-# ───────── 유틸 ─────────
+# ───────── 유틸 함수 ─────────
 def split_text_into_sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.?!])\s+|\n", text) if s.strip()]
 
