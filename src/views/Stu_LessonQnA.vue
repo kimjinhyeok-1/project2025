@@ -55,11 +55,11 @@ export default {
     async fetchQuestions() {
       try {
         const res = await fetch(
-          `https://project2025-backend.onrender.com/questions/popular_likes?q_id=${this.q_id}`
+          `https://project2025-backend.onrender.com/questions/${this.q_id}`
         );
         const data = await res.json();
-        if (Array.isArray(data.results)) {
-          this.questions = data.results.map(q => ({ text: q.text }));
+        if (Array.isArray(data.questions)) {
+          this.questions = data.questions.map(q => ({ text: q.text }));
         }
       } catch (err) {
         console.error("질문 조회 실패:", err);
@@ -71,7 +71,6 @@ export default {
         `selected_questions_${this.q_id}`,
         JSON.stringify(this.selected)
       );
-      // 서버에 선택 정보 PATCH 요청
       fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/like`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
