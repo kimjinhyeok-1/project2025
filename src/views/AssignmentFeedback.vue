@@ -24,6 +24,11 @@
           </div>
         </div>
 
+        <div v-if="professorFeedback" class="mt-5 p-4 bg-warning-subtle rounded-3 shadow-sm">
+          <h5 class="fw-bold text-warning mb-2">👨‍🏫 교수 피드백</h5>
+          <p class="mb-0 text-dark small lh-lg">{{ professorFeedback }}</p>
+        </div>
+
         <div class="mt-5 text-end">
           <button class="btn btn-outline-secondary" @click="goBack">← 돌아가기</button>
         </div>
@@ -36,19 +41,20 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { marked } from 'marked' // ✅ Markdown 파서 추가
+import { marked } from 'marked'
 
 const route = useRoute()
 const router = useRouter()
 const assignmentId = route.params.id
 const loading = ref(true)
 const parsedFeedback = ref([])
+const professorFeedback = ref('') // ✅ 교수 피드백 상태 추가
 
 const goBack = () => {
   router.push('/student/assignment')
 }
 
-// 피드백을 제목 + 내용으로 나누기
+// AI 피드백 텍스트 → 배열로 파싱
 const parseFeedback = (text) => {
   if (!text) return []
   return text
@@ -63,7 +69,7 @@ const parseFeedback = (text) => {
     })
 }
 
-// ✅ Markdown을 HTML로 변환
+// ✅ Markdown → HTML 변환
 const formatContent = (text) => {
   return marked.parse(text || '')
 }
@@ -85,12 +91,15 @@ const fetchFeedback = async () => {
     )
 
     const feedbackRaw = res.data.feedback
+    const profFeedbackRaw = res.data.professor_feedback // ✅ 교수 피드백
+
     if (!feedbackRaw) {
       alert('❗ 피드백 내용이 없습니다. 과제를 다시 제출해보세요.')
       return
     }
 
     parsedFeedback.value = parseFeedback(feedbackRaw)
+    professorFeedback.value = profFeedbackRaw || '' // ✅ 값 할당
   } catch (err) {
     console.error('❌ 피드백 불러오기 실패:', err)
     alert('❌ 피드백을 불러오는 데 실패했습니다.\n마감일이 지나지 않았거나 제출 정보가 없을 수 있습니다.')
