@@ -72,19 +72,7 @@ class Lecture(Base):
     title = Column(String, nullable=True)
     description = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    recordings = relationship("Recording", back_populates="lecture", cascade="all, delete-orphan")
     snapshots = relationship("Snapshot", back_populates="lecture", cascade="all, delete-orphan")
-
-class Recording(Base):
-    __tablename__ = "recordings"
-
-    id = Column(Integer, primary_key=True, index=True)
-    lecture_id = Column(Integer, ForeignKey("lectures.id"), nullable=False)
-    file_path = Column(String, nullable=False)
-    uploaded_at = Column(DateTime, default=func.now())
-
-    lecture = relationship("Lecture", back_populates="recordings")
 
 class Snapshot(Base):
     __tablename__ = "lecture_snapshots"
@@ -130,20 +118,6 @@ class AssignmentSubmission(Base):
     professor_feedback_created_at = Column(DateTime, nullable=True)
     assignment = relationship("Assignment", back_populates="submissions")
     student = relationship("User", back_populates="submissions")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 학생 피드백 (모른다 / 안다)
-# ─────────────────────────────────────────────────────────────────────────────
-class Feedback(Base):
-    __tablename__ = "feedback"
-
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    question_text = Column(Text, nullable=False)
-    knows = Column(Boolean, nullable=False)
-    created_at = Column(DateTime, default=func.now())
-
-    user = relationship("User")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 전체 요약 저장
