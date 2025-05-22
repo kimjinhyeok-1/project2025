@@ -60,7 +60,15 @@ async def save_pdf(file: UploadFile, path: str):
         contents = await file.read()
         await out_file.write(contents)
     return contents
-
+    
+async def get_submission(db: AsyncSession, assignment_id: int, student_id: int) -> Optional[AssignmentSubmission]:
+    result = await db.execute(
+        select(AssignmentSubmission).where(
+            AssignmentSubmission.assignment_id == assignment_id,
+            AssignmentSubmission.student_id == student_id
+        )
+    )
+    return result.scalar_one_or_none()
 # ─────────────────────────────────────────────
 # ✅ 과제 생성
 # ─────────────────────────────────────────────
@@ -285,6 +293,7 @@ async def get_all_feedbacks_for_assignment(
         })
 
     return {"assignment_id": assignment_id, "feedbacks": feedback_list}
+
 
 # ─────────────────────────────────────────────
 # ✅ 교수자 피드백 추가
