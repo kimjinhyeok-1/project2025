@@ -100,6 +100,7 @@ const routes = [
         path: 'lesson/:lecture_id', // ✅ lecture_id를 URL에서 받음
         name: 'ProfessorLesson',
         component: ProfessorLesson,
+        meta: { requiresAuth: false } // 👈 인증 예외 처리
       },
       {
         path: 'qna',
