@@ -112,7 +112,7 @@ class RecordingManager {
       this.notifyTranscriptListeners(transcript);
 
       try {
-        await fetch("https://project2025-backend.onrender.com/vad/upload_text_chunk", {
+        await fetch("https://project2025-backend.onrender.com/upload_text_chunk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: transcript })
@@ -124,7 +124,7 @@ class RecordingManager {
 
       if (transcript.includes("질문")) {
         try {
-          await fetch("https://project2025-backend.onrender.com/vad/trigger_question_generation", {
+          await fetch("https://project2025-backend.onrender.com/trigger_question_generation", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({})

@@ -109,7 +109,7 @@ export default {
       if (text.includes("질문") || text.includes("?")) {
         this.triggered = true;
         try {
-          await axios.post("https://project2025-backend.onrender.com/vad/trigger_question_generation");
+          await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
           console.log("🧠 질문 생성 API 호출 완료");
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
