@@ -2,7 +2,7 @@
   <div class="container mt-5">
     <h2 class="text-center mb-4">🤖 실시간 질문 확인</h2>
 
-    <div v-if="questions.length" class="row">
+    <div class="row">
       <div
         v-for="(q, idx) in questions"
         :key="idx"
@@ -26,10 +26,6 @@
         </div>
       </div>
     </div>
-
-    <div v-else class="text-center text-muted mt-5">
-      📭 질문이 없습니다.
-    </div>
   </div>
 </template>
 
@@ -37,7 +33,10 @@
 export default {
   data() {
     return {
-      questions: [],
+      questions: [
+        { text: "곧 AI가 질문을 생성합니다..." },
+        { text: "이곳에 실시간 질문이 표시됩니다." }
+      ],
       q_id: null,
       selected: []
     };
