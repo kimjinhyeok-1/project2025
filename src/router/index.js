@@ -22,7 +22,7 @@ import ProfessorReviewDetail from '../views/Prof_ReviewDetail.vue' // ✅ 추가
 import ProfessorAssignments from '../views/Prof_Assign.vue'
 import AssignmentPostForm from '../views/AssignmentPostForm.vue'
 import AssignmentSubmit from '../views/AssignmentSubmit.vue'
-import ProfessorRealtimeQuestion from '../views/Prof_Lesson.vue'
+import ProfessorRealtimeQuestion from '../views/Prof_AIQnAStu.vue'
 import AssignmentFeedback from '../views/AssignmentFeedback.vue'
 
 
@@ -97,10 +97,9 @@ const routes = [
         component: ProfessorView,
       },
       {
-        path: 'lesson/:lecture_id', // ✅ lecture_id를 URL에서 받음
+        path: 'lesson',
         name: 'ProfessorLesson',
         component: ProfessorLesson,
-        meta: { requiresAuth: false } // 👈 인증 예외 처리
       },
       {
         path: 'qna',
