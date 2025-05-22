@@ -38,7 +38,7 @@ export default {
       tab: 'recent',
       questions: [],
       newQuestion: '',
-      q_id: 12  // ✅ 기본 테스트용. 실제 상황에선 /trigger_question_generation 호출 후 설정
+      q_id: 12  // 실제 상황에서는 trigger_question_generation의 응답에서 받아야 함
     };
   },
   mounted() {
@@ -103,13 +103,13 @@ export default {
       if (!text) return;
 
       try {
-        const res = await fetch('https://project2025-backend.onrender.com/vad/student_question', {
+        const response = await fetch('https://project2025-backend.onrender.com/vad/student_question', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: 1, text })
         });
 
-        const data = await res.json();
+        const data = await response.json();
         this.questions.unshift({
           id: Date.now(),
           text: data.text,
@@ -126,10 +126,10 @@ export default {
     async likeQuestion(question) {
       try {
         const qid = question.q_id || this.q_id;
-        const res = await fetch(`https://project2025-backend.onrender.com/question/${qid}/like`, {
+        await fetch(`https://project2025-backend.onrender.com/question/${qid}/like`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question_id: 0 }) // 인덱스 기반 처리 필요 시 수정
+          body: JSON.stringify({ question_id: 0 }) // 인덱스 처리 필요 시 수정
         });
         question.likes = (question.likes || 0) + 1;
       } catch (err) {
