@@ -66,24 +66,6 @@ async def trigger_question_generation():
         "created_at": obj.created_at.isoformat()
     }
 
-# ───────── 전체 질문 세트 조회 ─────────
-@router.get("/questions")
-async def get_all_questions():
-    async with get_db_context() as db:
-        result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.created_at))
-        return {
-            "results": [
-                {
-                    "q_id": r.id,
-                    "paragraph": r.paragraph,
-                    "questions": [
-                        {"text": q, "likes": r.likes[i]} for i, q in enumerate(r.questions)
-                    ],
-                    "created_at": r.created_at.isoformat() if r.created_at else None
-                } for r in result.scalars().all()
-            ]
-        }
-
 # ───────── 특정 질문 세트 조회 (q_id) ─────────
 @router.get("/questions/{q_id}")
 async def get_questions_by_qid(q_id: int):
