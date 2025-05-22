@@ -64,6 +64,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { marked } from 'marked' // ✅ Markdown 파서 추가
 
 const route = useRoute()
 const router = useRouter()
@@ -74,24 +75,25 @@ const feedbackList = ref([])
 const editingId = ref(null)
 const feedbackInputs = ref({})
 
+// ✅ Markdown -> HTML
 const formatContent = (text) => {
-  return text
-    ?.replace(/\n\d+\.\s/g, '<br><strong>$&</strong>')
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+  return marked.parse(text || '')
 }
 
+// 날짜 형식
 const formatDate = (dt) => {
   if (!dt) return 'N/A'
   const date = new Date(dt)
   return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString('ko-KR')
 }
 
+// 교수 피드백 입력 시작
 const startEditing = (studentId, current) => {
   editingId.value = studentId
   feedbackInputs.value[studentId] = current || ''
 }
 
+// 교수 피드백 저장
 const submitFeedback = async (studentId) => {
   const token = localStorage.getItem('access_token')
   const formData = new FormData()
@@ -114,6 +116,7 @@ const submitFeedback = async (studentId) => {
   }
 }
 
+// 모든 피드백 로딩
 const loadFeedbacks = async () => {
   const token = localStorage.getItem('access_token')
   try {

@@ -32,11 +32,11 @@
   </div>
 </template>
 
-
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { marked } from 'marked' // ✅ Markdown 파서 추가
 
 const route = useRoute()
 const router = useRouter()
@@ -48,6 +48,7 @@ const goBack = () => {
   router.push('/student/assignment')
 }
 
+// 피드백을 제목 + 내용으로 나누기
 const parseFeedback = (text) => {
   if (!text) return []
   return text
@@ -62,13 +63,11 @@ const parseFeedback = (text) => {
     })
 }
 
-// 줄바꿈 및 강조 처리
+// ✅ Markdown을 HTML로 변환
 const formatContent = (text) => {
-  return text
-    .replace(/\n\d+\.\s/g, '<br><strong>$&</strong>') // 번호 줄바꿈
-    .replace(/\n/g, '<br>')                            // 일반 줄바꿈
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **굵게**
+  return marked.parse(text || '')
 }
+
 const fetchFeedback = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) {
