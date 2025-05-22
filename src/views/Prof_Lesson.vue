@@ -96,8 +96,14 @@ export default {
 
       try {
         const summary = await generateLectureSummary();
-        this.summaryResult = summary;
-        this.renderedSummary = marked.parse(summary || "");
+
+        // ✅ 배열 처리: text 필드만 추출해 줄바꿈으로 연결
+        const markdownText = Array.isArray(summary)
+          ? summary.map(item => item.text || "").join("\n\n")
+          : summary;
+
+        this.summaryResult = markdownText;
+        this.renderedSummary = marked.parse(markdownText || "");
       } catch (error) {
         console.error("요약 생성 실패:", error);
       }
