@@ -55,11 +55,7 @@ export default {
       latestTranscript: "",
       triggered: false,
       transcriptCallback: null,
-      showFinalSummary: false,
-
-      // ✅ 중복 방지용 추가 변수
-      isTriggering: false,
-      lastTriggeredAt: null
+      showFinalSummary: false  // ✅ 수업 종료 시 요약 표시 플래그
     };
   },
   async mounted() {
@@ -81,7 +77,7 @@ export default {
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
-        this.showFinalSummary = false;
+        this.showFinalSummary = false;  // 🔁 새 세션 시작 시 숨김
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
@@ -109,30 +105,20 @@ export default {
     },
     async handleTranscript(text) {
       this.latestTranscript = text;
-      const now = Date.now();
 
-      const shouldTrigger =
-        (text.includes("질문") || text.includes("?")) &&
-        (!this.lastTriggeredAt || now - this.lastTriggeredAt > 5000);
-
-      if (shouldTrigger && !this.isTriggering) {
+      if (text.includes("질문") || text.includes("?")) {
         this.triggered = true;
-        this.isTriggering = true;
-        this.lastTriggeredAt = now;
-
         try {
           await axios.post("https://project2025-backend.onrender.com/vad/trigger_question_generation");
           console.log("🧠 질문 생성 API 호출 완료");
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
-        } finally {
-          setTimeout(() => {
-            this.isTriggering = false;
-          }, 2000); // ✅ 최소 2초 대기 후 다시 트리거 가능
         }
       } else {
         this.triggered = false;
       }
+
+      // ⚠️ 수업 중에는 요약을 실시간 렌더링하지 않도록 분리
     }
   }
 };

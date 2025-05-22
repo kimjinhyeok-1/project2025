@@ -19,49 +19,35 @@
 export default {
   data() {
     return {
-      q_id: null,
-      questions: []
+      questions: [],
+      q_id: null
     };
   },
   async mounted() {
-    await this.initializeQuestionSet();
+    this.q_id = this.$route.query.q_id;
+    if (!this.q_id) {
+      console.warn("❌ q_id가 URL에 포함되어 있지 않습니다.");
+      return;
+    }
+    await this.fetchQuestions();
   },
   methods: {
-    async initializeQuestionSet() {
-      try {
-        // 1. 질문 세트 생성
-        const triggerRes = await fetch("https://project2025-backend.onrender.com/trigger_question_generation", {
-          method: "POST"
-        });
-        const triggerData = await triggerRes.json();
-        this.q_id = triggerData.q_id;
-        console.log("✅ 질문 세트 생성 완료:", this.q_id);
-
-        // 2. 인기 질문 조회
-        await this.fetchQuestions();
-      } catch (error) {
-        console.error("❌ 질문 세트 초기화 실패:", error);
-      }
-    },
-
     async fetchQuestions() {
-      if (!this.q_id) return;
-
       try {
         const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${this.q_id}`);
         const data = await res.json();
         console.log("📥 인기 질문 응답:", data);
 
         if (Array.isArray(data.results)) {
-          this.questions = data.results.map((q) => ({
+          this.questions = data.results.map(q => ({
             text: q.text,
             likes: q.likes || 0
           }));
         } else {
           this.questions = [];
         }
-      } catch (error) {
-        console.error("❌ 인기 질문 조회 실패:", error);
+      } catch (err) {
+        console.error("❌ 질문 조회 실패:", err);
         this.questions = [];
       }
     },
@@ -73,7 +59,6 @@ export default {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question_id: questionIndex })
         });
-
         this.questions[questionIndex].likes++;
       } catch (error) {
         console.error("❌ 좋아요 실패:", error);
