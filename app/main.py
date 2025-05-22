@@ -61,7 +61,7 @@ app.include_router(snapshots.router, prefix="/snapshots", tags=["Snapshots"])
 app.include_router(auth_router)
 app.include_router(lecture_router)
 app.include_router(assignment.router, prefix="/assignments", tags=["Assignments"])
-app.include_router(vad.router, prefix="/vad", tags=["VAD"])
+app.include_router(vad.router, tags=["VAD"])
 app.include_router(ask_assistant.router)
 
 # 정적 파일 경로 등록
