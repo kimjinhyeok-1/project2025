@@ -55,9 +55,7 @@ export default {
   methods: {
     async fetchQuestions() {
       try {
-        const res = await fetch(
-          `https://project2025-backend.onrender.com/questions/${this.q_id}`
-        );
+        const res = await fetch(`https://project2025-backend.onrender.com/questions/${this.q_id}`);
         const data = await res.json();
         if (Array.isArray(data.questions)) {
           this.questions = data.questions.map(q => ({ text: q.text }));
@@ -68,10 +66,15 @@ export default {
     },
     async loadLatestQuestions() {
       try {
-        const latestRes = await fetch("https://project2025-backend.onrender.com/questions/popular_likes?q_id=latest");
+        const latestRes = await fetch("https://project2025-backend.onrender.com/questions/latest");
         const latestData = await latestRes.json();
-        if (Array.isArray(latestData.results)) {
-          this.questions = latestData.results.map(q => ({ text: q.text }));
+        this.q_id = latestData.q_id;
+
+        const questionRes = await fetch(`https://project2025-backend.onrender.com/questions/${this.q_id}`);
+        const data = await questionRes.json();
+
+        if (Array.isArray(data.questions)) {
+          this.questions = data.questions.map(q => ({ text: q.text }));
         }
       } catch (err) {
         console.error("최신 질문 불러오기 실패:", err);
