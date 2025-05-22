@@ -97,10 +97,10 @@ const routes = [
         component: ProfessorView,
       },
       {
-        path: 'lesson',
+        path: 'lesson/:lecture_id', // ✅ lecture_id를 URL에서 받음
         name: 'ProfessorLesson',
         component: ProfessorLesson,
-      },
+      }
       {
         path: 'qna',
         name: 'ProfessorQnA',
