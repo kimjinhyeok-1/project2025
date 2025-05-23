@@ -24,7 +24,7 @@
           <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
             <div v-if="summary.topic" class="mb-2">
               <h6 class="mb-1">📌 주제</h6>
-              <span class="display-1 fw-bold text-primary">{{ summary.topic }}</span>
+              <span class="display-6 fw-bold text-primary">{{ summary.topic }}</span>
             </div>
             <div v-html="summary.text"></div>
           </div>
