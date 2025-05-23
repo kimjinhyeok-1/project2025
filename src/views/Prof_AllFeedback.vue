@@ -22,13 +22,13 @@
         <!-- AI 피드백 -->
         <div v-if="entry.gpt_feedback">
           <p class="mb-1 fw-bold">📌 AI 피드백:</p>
-          <div v-html="formatContent(entry.gpt_feedback)" class="small text-dark lh-lg mb-2"></div>
+          <MarkdownViewer :markdown="entry.gpt_feedback" />
         </div>
         <div v-else class="text-muted">제출된 과제 없음.</div>
 
         <!-- 교수 피드백 -->
         <div v-if="entry.gpt_feedback">
-          <p class="mb-1 fw-bold">👨‍🏫 교수 피드백:</p>
+          <p class="mb-1 fw-bold mt-3">👨‍🏫 교수 피드백:</p>
           <div v-if="entry.professor_feedback">{{ entry.professor_feedback }}</div>
           <div v-else class="text-muted">작성된 교수 피드백 없음</div>
 
@@ -48,8 +48,6 @@
               ✍️ 추가 피드백 작성
             </button>
           </div>
-
-          <p class="text-muted mt-2 mb-0">🕒 생성일: {{ formatDate(entry.gpt_feedback_time) }}</p>
         </div>
       </div>
     </div>
@@ -64,7 +62,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { marked } from 'marked' // ✅ Markdown 파서 추가
+import MarkdownViewer from '@/components/common/MarkdownViewer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -75,25 +73,11 @@ const feedbackList = ref([])
 const editingId = ref(null)
 const feedbackInputs = ref({})
 
-// ✅ Markdown -> HTML
-const formatContent = (text) => {
-  return marked.parse(text || '')
-}
-
-// 날짜 형식
-const formatDate = (dt) => {
-  if (!dt) return 'N/A'
-  const date = new Date(dt)
-  return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString('ko-KR')
-}
-
-// 교수 피드백 입력 시작
 const startEditing = (studentId, current) => {
   editingId.value = studentId
   feedbackInputs.value[studentId] = current || ''
 }
 
-// 교수 피드백 저장
 const submitFeedback = async (studentId) => {
   const token = localStorage.getItem('access_token')
   const formData = new FormData()
@@ -116,7 +100,6 @@ const submitFeedback = async (studentId) => {
   }
 }
 
-// 모든 피드백 로딩
 const loadFeedbacks = async () => {
   const token = localStorage.getItem('access_token')
   try {
