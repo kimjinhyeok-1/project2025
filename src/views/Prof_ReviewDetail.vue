@@ -1,19 +1,19 @@
 <template>
   <div class="page-container">
-    <h2 class="page-title">📄 수업 복습 상세보기</h2>
+    <h2 class="page-title">📄 수업 복습 상세보기 </h2>
 
     <div v-if="loading" class="text-muted mt-3">요약을 불러오는 중입니다...</div>
 
     <div v-else-if="summaryData.length">
       <div v-for="(topic, index) in summaryData" :key="index" class="card">
         <div class="card-content">
-          <!-- 왼쪽 -->
+          <!-- 왼쪽: 주제와 요약 -->
           <div class="card-left">
             <h4 class="card-topic">📘 {{ topic.topic }}</h4>
             <p class="card-summary">{{ topic.summary }}</p>
           </div>
 
-          <!-- 오른쪽 -->
+          <!-- 오른쪽: 교수님의 한마디 -->
           <div class="card-right">
             <div class="label">👨‍🏫 교수님의 한마디</div>
             <ul class="script-list">
@@ -25,11 +25,13 @@
                 <span
                   v-if="highlight.image_url && highlight.image_url.trim() !== ''"
                   class="script-link"
-                  @click="openModal(highlight.image_url)"
+                  @click="openModal(toFullUrl(highlight.image_url))"
                 >
                   🗣 {{ highlight.text }}
                 </span>
-                <span v-else>🗣 {{ highlight.text }}</span>
+                <span v-else>
+                  🗣 {{ highlight.text }}
+                </span>
               </li>
             </ul>
           </div>
@@ -77,6 +79,13 @@ const fetchLectureSummary = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const toFullUrl = (path) => {
+  if (!path) return '';
+  return path.startsWith('/static')
+    ? `https://project2025-backend.onrender.com${path}`
+    : path;
 };
 
 const openModal = (url) => {
