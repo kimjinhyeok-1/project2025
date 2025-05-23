@@ -45,7 +45,10 @@
         <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 질문 불러오기</button>
       </div>
       <div class="card-body">
-        <div v-if="loadingQuestions" class="text-center text-muted">
+        <div v-if="noQidWarning" class="text-danger text-center">
+          ⚠️ q_id가 없어 질문을 불러올 수 없습니다.
+        </div>
+        <div v-else-if="loadingQuestions" class="text-center text-muted">
           질문 생성중입니다.
         </div>
         <div v-else>
@@ -78,6 +81,7 @@ export default {
       transcriptCallback: null,
       loadingSummary: true,
       loadingQuestions: true,
+      noQidWarning: false,
       placeholderQuestions: []
     };
   },
@@ -148,6 +152,14 @@ export default {
       }
     },
     async loadPopularQuestions(q_id) {
+      if (!q_id) {
+        console.warn("❌ q_id 없음. 인기 질문 조회 중단");
+        this.noQidWarning = true;
+        this.loadingQuestions = false;
+        return;
+      }
+
+      this.noQidWarning = false;
       this.loadingQuestions = true;
       try {
         const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${q_id}`);
