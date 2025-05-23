@@ -281,11 +281,13 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
     if not summaries:
         raise HTTPException(404, "저장된 요약 없음")
 
-    # 2. 관련된 snapshot 전부 가져오기 (STT 요약 포함)
+    # 2. 관련된 snapshot 전부 가져오기 (STT 원문 포함)
     snapshots = (await db.execute(
         select(Snapshot).where(Snapshot.lecture_id == lecture_id)
     )).scalars().all()
-    image_path_to_summary_text = {s.image_path: s.summary_text or "" for s in snapshots}
+
+    # ✅ 요약문 대신 STT 원문 반환
+    image_path_to_summary_text = {s.image_path: s.text or "" for s in snapshots}
 
     # 3. 응답 구성
     output = []
@@ -295,7 +297,7 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
             if image_url:
                 highlights.append({
                     "image_url": image_url,
-                    "text": image_path_to_summary_text.get(image_url, "")  # 요약된 STT
+                    "text": image_path_to_summary_text.get(image_url, "")  # ✅ STT 원문 반환
                 })
 
         output.append({
@@ -306,6 +308,7 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
         })
 
     return output
+
 
 # ───────────────────────────────
 # 6. ✅ GET /snapshots/lecture_summaries (전체)
