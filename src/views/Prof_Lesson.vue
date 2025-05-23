@@ -109,9 +109,9 @@ export default {
 
           this.summaryResult = markdownText;
           this.renderedSummary = marked.parse(markdownText || "");
-          if (Array.isArray(summary) && summary[0]?.keywords) {
-            this.summaryTopics = [summary[0].topic];
-          } else if (summary?.keywords) {
+          if (Array.isArray(summary)) {
+            this.summaryTopics = summary.map(item => item.topic).filter(Boolean);
+          } else if (summary?.topic) {
             this.summaryTopics = [summary.topic];
           }
           this.showFinalSummary = true;
