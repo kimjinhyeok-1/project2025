@@ -12,19 +12,20 @@
     </div>
 
     <!-- 실시간 요약 결과 (로딩 서클 또는 텍스트) -->
-    <div class="alert alert-success mt-4 markdown-body">
-      <h5>📘 수업 요약 결과:</h5>
-      <div v-if="loadingSummary" class="text-center">
-        <div class="spinner-border text-primary" role="status">
-        </div>
+    <div v-for="(summary, idx) in summaries" :key="idx" class="card mt-4">
+      <div class="card-header bg-primary text-white">
+        📘 수업 요약 결과 {{ idx + 1 }}
       </div>
-      <div v-else>
-        <div v-html="renderedSummary"></div>
-        <div v-if="summaryTopics.length" class="mt-3">
-          <h6 class="mt-3">📌 주제:</h6>
-          <span v-for="(kw, i) in summaryTopics" :key="i" class="badge bg-secondary me-1">
-            {{ kw }}
-          </span>
+      <div class="card-body">
+        <div v-if="loadingSummary" class="text-center">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+        <div v-else>
+          <div v-html="summary.text"></div>
+          <div v-if="summary.topic" class="mt-3">
+            <h6>📌 주제:</h6>
+            <span class="badge bg-secondary me-1">{{ summary.topic }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -65,6 +66,7 @@ export default {
   name: "ProfessorLesson",
   data() {
     return {
+      summaries: [],
       summaryTopics: [],
       isRecording: false,
       summaryResult: null,
@@ -107,13 +109,15 @@ export default {
             ? summary.map(item => item.summary || item.text || "").join("\n\n")
             : summary;
 
-          this.summaryResult = markdownText;
-          this.renderedSummary = marked.parse(markdownText || "");
-          if (Array.isArray(summary)) {
-            this.summaryTopics = summary.map(item => item.topic).filter(Boolean);
-          } else if (summary?.topic) {
-            this.summaryTopics = [summary.topic];
-          }
+          this.summaries = Array.isArray(summary)
+            ? summary.map(item => ({
+                text: marked.parse(item.summary || ""),
+                topic: item.topic || null
+              }))
+            : [{
+                text: marked.parse(summary.summary || ""),
+                topic: summary.topic || null
+              }];
           this.showFinalSummary = true;
           this.loadingSummary = false;
         } catch (error) {
