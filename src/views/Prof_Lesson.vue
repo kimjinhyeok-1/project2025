@@ -20,19 +20,10 @@
         <div v-if="loadingSummary[0]" class="text-center text-muted">
           요약을 준비하고 있습니다.
         </div>
-        <div v-else>
-          <div class="mb-4">
-            <div v-for="(summary, idx) in summaries" :key="idx" class="mb-3">
-              <div v-if="summary.topic" class="mb-2">
-                <h6 class="mb-1">📌 주제</h6>
-                <span class="badge bg-secondary">{{ summary.topic }}</span>
-              </div>
-              <div v-html="summary.text"></div>
-              
-            </div>
-          </div>
+        $1
         </div>
-      <!-- 질문 감지 출력 -->
+      </div>
+$2
     <div class="alert alert-info mt-4">
       <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
       <p v-if="triggered"><strong>🧠 질문 생성 요청이 감지되었습니다!</strong></p>
