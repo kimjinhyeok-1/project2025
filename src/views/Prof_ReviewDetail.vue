@@ -2,31 +2,30 @@
   <div class="container mt-5">
     <h2>📄 수업 복습 상세보기 (교수용)</h2>
 
-    <div v-if="loading" class="text-muted mt-3">
-      요약을 불러오는 중입니다...
-    </div>
+    <div v-if="loading" class="text-muted mt-3">요약을 불러오는 중입니다...</div>
 
     <div v-else-if="summaryData.length">
-      <div v-for="(topic, index) in summaryData" :key="index" class="topic-section mb-5">
-        <h4>📘 {{ topic.topic }}</h4>
-        <p class="mb-2 text-muted">{{ topic.summary }}</p>
-
-        <ul>
-          <li v-for="(highlight, idx) in topic.highlights" :key="idx">
-            <p
-              v-if="highlight.image_url && highlight.image_url.trim() !== ''"
-              class="mb-1 clickable-text"
-              @click="openModal(highlight.image_url)"
-            >
-              🗣 {{ highlight.text }}
-            </p>
-            <p v-else class="mb-1">
-              🗣 {{ highlight.text }}
-            </p>
-          </li>
-        </ul>
+      <div v-for="(topic, index) in summaryData" :key="index" class="topic-card">
+        <div class="left-content">
+          <h4>📘 {{ topic.topic }}</h4>
+          <p class="text-muted">{{ topic.summary }}</p>
+        </div>
+        <div class="right-box">
+          <h5 class="comment-title">👨‍🏫 교수님의 한마디</h5>
+          <ul class="highlight-list">
+            <li v-for="(highlight, idx) in topic.highlights" :key="idx" class="highlight-item">
+              <span
+                v-if="highlight.image_url && highlight.image_url.trim() !== ''"
+                class="clickable-text"
+                @click="openModal(highlight.image_url)"
+              >
+                🗣 {{ highlight.text }}
+              </span>
+              <span v-else>🗣 {{ highlight.text }}</span>
+            </li>
+          </ul>
+        </div>
       </div>
-
       <button class="btn btn-outline-secondary" @click="$router.back()">← 강의 목록으로 돌아가기</button>
     </div>
 
@@ -34,7 +33,6 @@
       📂 아직 생성된 수업 요약이 없거나, 해당 강의에 대한 요약 데이터가 없습니다.
     </div>
 
-    <!-- 이미지 팝업 -->
     <div v-if="modalImageUrl" class="modal-backdrop" @click.self="closeModal">
       <div class="modal-content">
         <img :src="modalImageUrl" alt="확대된 이미지" />
@@ -86,14 +84,47 @@ onMounted(fetchLectureSummary);
   padding: 2rem;
   border-radius: 1rem;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
-  max-width: 900px;
+  max-width: 1000px;
   margin: auto;
 }
-.topic-section {
+.topic-card {
+  display: flex;
+  justify-content: space-between;
   background-color: #f8f9fa;
-  padding: 1rem;
+  padding: 1.5rem;
   border-radius: 1rem;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+  gap: 2rem;
+}
+.left-content {
+  width: 60%;
+}
+.right-box {
+  width: 35%;
+  background-color: #e2e8f0;
+  padding: 1rem 1.2rem;
+  border-radius: 0.8rem;
+}
+.comment-title {
+  font-weight: bold;
+  margin-bottom: 0.8rem;
+}
+.highlight-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.highlight-item {
+  margin-bottom: 0.6rem;
+}
+.clickable-text {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  color: inherit;
+}
+.clickable-text:hover {
+  text-decoration: underline;
 }
 .modal-backdrop {
   position: fixed;
@@ -130,13 +161,5 @@ onMounted(fetchLectureSummary);
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
-}
-.clickable-text {
-  cursor: pointer;
-  text-decoration: underline dotted;
-  color: inherit;
-}
-.clickable-text:hover {
-  text-decoration: underline;
 }
 </style>
