@@ -1,22 +1,26 @@
 <template>
-  <div class="container mt-5">
-    <h2>📄 수업 복습 상세보기</h2>
+  <div class="page-container">
+    <h2 class="page-title">📄 수업 복습 상세보기 </h2>
 
     <div v-if="loading" class="text-muted mt-3">요약을 불러오는 중입니다...</div>
 
     <div v-else-if="summaryData.length">
-      <div v-for="(topic, index) in summaryData" :key="index" class="topic-card">
-        <div class="left-content">
-          <h4>📘 {{ topic.topic }}</h4>
-          <p class="text-muted">{{ topic.summary }}</p>
+      <div v-for="(topic, index) in summaryData" :key="index" class="card">
+        <div class="card-left">
+          <h4 class="card-topic">📘 {{ topic.topic }}</h4>
+          <p class="card-summary">{{ topic.summary }}</p>
         </div>
-        <div class="right-box">
-          <h5 class="comment-title">👨‍🏫 교수님의 한마디</h5>
-          <ul class="highlight-list">
-            <li v-for="(highlight, idx) in topic.highlights" :key="idx" class="highlight-item">
+        <div class="card-right">
+          <h5 class="card-right-title">👨‍🏫 교수님의 한마디</h5>
+          <ul class="script-list">
+            <li
+              v-for="(highlight, idx) in topic.highlights"
+              :key="idx"
+              class="script-item"
+            >
               <span
                 v-if="highlight.image_url && highlight.image_url.trim() !== ''"
-                class="clickable-text"
+                class="script-link"
                 @click="openModal(highlight.image_url)"
               >
                 🗣 {{ highlight.text }}
@@ -26,13 +30,17 @@
           </ul>
         </div>
       </div>
-      <button class="btn btn-outline-secondary" @click="$router.back()">← 목록으로 돌아가기</button>
+
+      <button class="btn btn-outline-secondary back-button" @click="$router.back()">
+        ← 강의 목록으로 돌아가기
+      </button>
     </div>
 
     <div v-else class="alert alert-warning mt-3">
-      📂 수업 요약이 아직 생성되지 않았거나, 해당 lecture_id에 대한 요약 파일이 존재하지 않습니다.
+      📂 아직 생성된 수업 요약이 없거나, 해당 강의에 대한 요약 데이터가 없습니다.
     </div>
 
+    <!-- 팝업 이미지 -->
     <div v-if="modalImageUrl" class="modal-backdrop" @click.self="closeModal">
       <div class="modal-content">
         <img :src="modalImageUrl" alt="확대된 이미지" />
@@ -79,73 +87,87 @@ onMounted(fetchLectureSummary);
 </script>
 
 <style scoped>
-.container {
-  background-color: white;
-  padding: 2rem;
-  border-radius: 1rem;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+.page-container {
   max-width: 1000px;
   margin: auto;
+  padding: 2rem 1rem;
 }
-.topic-card {
+.page-title {
+  font-weight: bold;
+  font-size: 1.6rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.card {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
   display: flex;
   justify-content: space-between;
-  background-color: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   margin-bottom: 2rem;
   gap: 2rem;
 }
-.left-content {
+.card-left {
   width: 60%;
 }
-.right-box {
-  width: 35%;
-  background-color: #e2e8f0;
-  padding: 1rem 1.2rem;
-  border-radius: 0.8rem;
-}
-.comment-title {
+.card-topic {
+  font-size: 1.2rem;
   font-weight: bold;
   margin-bottom: 0.8rem;
 }
-.highlight-list {
+.card-summary {
+  color: #555;
+}
+.card-right {
+  width: 35%;
+  background-color: #edf2ff;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+.card-right-title {
+  font-weight: bold;
+  margin-bottom: 0.8rem;
+}
+.script-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
-.highlight-item {
-  margin-bottom: 0.6rem;
+.script-item {
+  margin-bottom: 0.5rem;
 }
-.clickable-text {
+.script-link {
   cursor: pointer;
   text-decoration: underline dotted;
   color: inherit;
 }
-.clickable-text:hover {
+.script-link:hover {
   text-decoration: underline;
+}
+.back-button {
+  display: block;
+  margin: 0 auto;
+  margin-top: 1rem;
 }
 .modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.7);
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 9999;
+  align-items: center;
+  z-index: 10000;
 }
 .modal-content {
-  position: relative;
   background: white;
-  padding: 1rem;
   border-radius: 1rem;
+  padding: 1rem;
   max-width: 90%;
   max-height: 90%;
   overflow: auto;
+  position: relative;
 }
 .modal-content img {
   max-width: 100%;
