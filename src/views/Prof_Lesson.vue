@@ -15,16 +15,14 @@
       </button>
     </div>
 
-    <!-- 실시간 요약 결과 -->
-    <div v-if="summaryResult && !showFinalSummary" class="alert alert-success mt-4 markdown-body">
+    <!-- 실시간 요약 결과 (로딩 서클 또는 텍스트) -->
+    <div class="alert alert-success mt-4 markdown-body">
       <h5>📘 수업 요약 결과:</h5>
-      <div v-html="renderedSummary"></div>
-    </div>
-
-    <!-- 수업 종료 후 전체 요약 -->
-    <div v-if="showFinalSummary" class="alert alert-primary mt-4 markdown-body">
-      <h5>📘 수업 종료 요약:</h5>
-      <div v-html="renderedSummary"></div>
+      <div v-if="loadingSummary" class="text-center">
+        <div class="spinner-border text-primary" role="status">
+        </div>
+      </div>
+      <div v-else v-html="renderedSummary"></div>
     </div>
 
     <!-- 질문 감지 출력 -->
@@ -35,8 +33,9 @@
 
     <!-- 교수용 질문 확인 UI -->
     <div class="card mt-5">
-      <div class="card-header bg-secondary text-white">
-        🧠 AI 생성 질문 및 학생 선택 수
+      <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+        <span>🧠 AI 생성 질문 및 학생 선택 수</span>
+        <button class="btn btn-sm btn-light" @click="loadLatestQuestions">🔄 질문 불러오기</button>
       </div>
       <div class="card-body">
         <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="mb-3">
@@ -71,6 +70,7 @@ export default {
       triggered: false,
       transcriptCallback: null,
       showFinalSummary: false,
+      loadingSummary: true,
       placeholderQuestions: [
         { text: "이 이론은 실제로 어떻게 적용되나요?", likes: 3 },
         { text: "이 개념은 시험에 자주 나옵니까?", likes: 5 },
@@ -80,7 +80,7 @@ export default {
   },
   async mounted() {
     try {
-      await createLecture(); // 🔑 lecture_id 생성
+      await createLecture();
     } catch (err) {
       console.error("강의 세션 생성 실패:", err);
     }
@@ -98,6 +98,7 @@ export default {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
         this.showFinalSummary = false;
+        this.loadingSummary = true;
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
@@ -110,7 +111,9 @@ export default {
           this.summaryResult = markdownText;
           this.renderedSummary = marked.parse(markdownText || "");
           this.showFinalSummary = true;
+          this.loadingSummary = false;
         } catch (error) {
+          this.loadingSummary = false;
           if (error.response?.status === 404 || error.response?.status === 400) {
             console.warn("📭 요약 없음 또는 잘못된 요청: 충분한 데이터가 없을 수 있습니다.");
           } else {
@@ -139,6 +142,17 @@ export default {
         }
       } else {
         this.triggered = false;
+      }
+    },
+    async loadLatestQuestions() {
+      try {
+        const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
+        const data = await res.json();
+        if (Array.isArray(data.questions)) {
+          this.placeholderQuestions = data.questions.map(q => ({ text: q.text, likes: q.likes ?? 0 }));
+        }
+      } catch (err) {
+        console.error("질문 불러오기 실패:", err);
       }
     }
   }
