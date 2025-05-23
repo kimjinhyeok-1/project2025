@@ -1,5 +1,5 @@
 <template>
-  <div class="lecture-container mt-5 mx-7">
+  <div class="lecture-container mt-5 mx-auto px-4" style="max-width: 960px;">
     <h2 class="text-center">🎤 수업 녹화 & 음성 인식</h2>
     <p class="text-muted text-center">
       녹음 중 키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드에 전송됩니다.
@@ -77,7 +77,7 @@ export default {
       triggered: false,
       transcriptCallback: null,
       showFinalSummary: false,
-      loadingSummary: [],
+      loadingSummary: [true],
       placeholderQuestions: []
     };
   },
