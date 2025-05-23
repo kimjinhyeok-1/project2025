@@ -1,23 +1,22 @@
 <template>
   <div class="page-container">
-    <h2 class="page-title">📄 수업 복습 상세보기 </h2>
+    <h2 class="page-title">📄 수업 복습 상세보기</h2>
 
     <div v-if="loading" class="text-muted mt-3">요약을 불러오는 중입니다...</div>
 
     <div v-else-if="summaryData.length">
       <div v-for="(topic, index) in summaryData" :key="index" class="card">
+        <!-- 왼쪽 -->
         <div class="card-left">
           <h4 class="card-topic">📘 {{ topic.topic }}</h4>
           <p class="card-summary">{{ topic.summary }}</p>
         </div>
+
+        <!-- 오른쪽 -->
         <div class="card-right">
-          <h5 class="card-right-title">👨‍🏫 교수님의 한마디</h5>
+          <div class="label">👨‍🏫 교수님의 한마디</div>
           <ul class="script-list">
-            <li
-              v-for="(highlight, idx) in topic.highlights"
-              :key="idx"
-              class="script-item"
-            >
+            <li v-for="(highlight, idx) in topic.highlights" :key="idx" class="script-item">
               <span
                 v-if="highlight.image_url && highlight.image_url.trim() !== ''"
                 class="script-link"
@@ -32,7 +31,7 @@
       </div>
 
       <button class="btn btn-outline-secondary back-button" @click="$router.back()">
-        ← 강의 목록으로 돌아가기
+        ← 목록으로 돌아가기
       </button>
     </div>
 
@@ -40,7 +39,6 @@
       📂 아직 생성된 수업 요약이 없거나, 해당 강의에 대한 요약 데이터가 없습니다.
     </div>
 
-    <!-- 팝업 이미지 -->
     <div v-if="modalImageUrl" class="modal-backdrop" @click.self="closeModal">
       <div class="modal-content">
         <img :src="modalImageUrl" alt="확대된 이미지" />
@@ -121,13 +119,15 @@ onMounted(fetchLectureSummary);
 }
 .card-right {
   width: 35%;
-  background-color: #edf2ff;
-  border-radius: 0.75rem;
-  padding: 1rem;
 }
-.card-right-title {
+.label {
+  background-color: #3b4890;
+  color: white;
   font-weight: bold;
-  margin-bottom: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+  display: inline-block;
 }
 .script-list {
   list-style: none;
