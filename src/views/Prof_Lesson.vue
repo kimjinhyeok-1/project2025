@@ -45,10 +45,15 @@
         <button class="btn btn-sm btn-light" @click="loadLatestQuestions">🔄 질문 불러오기</button>
       </div>
       <div class="card-body">
-        <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="mb-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <span>{{ q.text }}</span>
-            <span class="badge bg-info">선택 수: {{ q.likes }}</span>
+        <div v-if="loadingQuestions" class="text-center text-muted">
+          질문 생성중입니다.
+        </div>
+        <div v-else>
+          <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>{{ q.text }}</span>
+              <span class="badge bg-info">선택 수: {{ q.likes }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -72,6 +77,7 @@ export default {
       triggered: false,
       transcriptCallback: null,
       loadingSummary: true,
+      loadingQuestions: true,
       placeholderQuestions: []
     };
   },
@@ -142,28 +148,29 @@ export default {
       }
     },
     async loadLatestQuestions() {
+      this.loadingQuestions = true;
       try {
         const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
         const data = await res.json();
         if (data && data.q_id) {
-          this.loadPopularQuestions(data.q_id);
+          await this.loadPopularQuestions(data.q_id);
         }
       } catch (err) {
         console.error("최신 질문 세트 조회 실패:", err);
       }
     },
     async loadPopularQuestions(q_id) {
+      this.loadingQuestions = true;
       try {
         const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${q_id}`);
         const data = await res.json();
         if (Array.isArray(data.results)) {
-          this.placeholderQuestions = data.results.map(q => ({
-            text: q.text,
-            likes: q.likes ?? 0
-          }));
+          this.placeholderQuestions = data.results;
         }
       } catch (err) {
         console.error("인기 질문 조회 실패:", err);
+      } finally {
+        this.loadingQuestions = false;
       }
     }
   }
