@@ -82,7 +82,8 @@ export default {
       loadingSummary: true,
       loadingQuestions: true,
       noQidWarning: false,
-      placeholderQuestions: []
+      placeholderQuestions: [],
+      lastQid: null // ✅ q_id 저장용
     };
   },
   async mounted() {
@@ -130,9 +131,7 @@ export default {
       this.latestTranscript = text;
 
       try {
-        await axios.post("https://project2025-backend.onrender.com/upload_text_chunk", {
-          text
-        });
+        await axios.post("https://project2025-backend.onrender.com/upload_text_chunk", { text });
       } catch (error) {
         console.error("❌ 텍스트 업로드 실패:", error);
       }
@@ -142,6 +141,7 @@ export default {
         try {
           const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
           const q_id = res.data.q_id;
+          this.lastQid = q_id; // ✅ 생성된 q_id 저장
           console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
           this.loadPopularQuestions(q_id);
         } catch (error) {
@@ -151,7 +151,7 @@ export default {
         this.triggered = false;
       }
     },
-    async loadPopularQuestions(q_id) {
+    async loadPopularQuestions(q_id = this.lastQid) {
       if (!q_id) {
         console.warn("❌ q_id 없음. 인기 질문 조회 중단");
         this.noQidWarning = true;
