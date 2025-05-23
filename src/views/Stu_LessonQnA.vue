@@ -17,7 +17,6 @@
           :class="{ 'bg-primary text-white': selected.includes(idx) }"
         >
           <div class="card-body">
-            <p class="card-text">{{ q.text }} (👍 {{ q.likes }})</p>
             <button
               class="btn btn-outline-primary mt-3"
               :class="{ 'btn-light text-primary': selected.includes(idx) }"
