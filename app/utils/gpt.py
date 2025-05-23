@@ -31,8 +31,7 @@ async def summarize_snapshot_transcript(context: str) -> str:
             {
                 "role": "system",
                 "content": (
-                    "다음 문장을 참고하여 교수님이 설명 중인 핵심 개념을 추론한 후, "
-                    "'교수님이 OO에 대해 설명하는 장면입니다.' 형식으로 요약하세요."
+                    "다음 문장을 참고하여 교수님이 설명하는 강의내용을 분석하여 사진을 소개하는 말을 작성해주세요."
                 )
             },
             {"role": "user", "content": context}
