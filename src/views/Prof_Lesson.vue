@@ -105,10 +105,7 @@ export default {
         recordingManager.stopRecording();
         try {
           const summary = await generateLectureSummary();
-          const markdownText = Array.isArray(summary)
-            ? summary.map(item => item.summary || item.text || "").join("\n\n")
-            : summary;
-
+          
           this.summaries = Array.isArray(summary)
             ? summary.map(item => ({
                 text: marked.parse(item.summary || ""),
