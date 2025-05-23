@@ -20,10 +20,9 @@
         <div v-if="loadingSummary[0]" class="text-center text-muted">
           요약을 준비하고 있습니다.
         </div>
-        $1
         </div>
       </div>
-$2
+
     <div class="alert alert-info mt-4">
       <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
       <p v-if="triggered"><strong>🧠 질문 생성 요청이 감지되었습니다!</strong></p>
