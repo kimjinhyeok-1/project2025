@@ -21,13 +21,18 @@
           요약 제공 준비중입니다.
         </div>
         <div v-else>
-          <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
-            <div v-html="summary.text"></div>
-            <div v-if="summary.topic" class="mt-2">
-              <h6>📌 주제:</h6>
-              <span class="badge bg-secondary me-1">{{ summary.topic }}</span>
+          <div class="mb-4">
+            <div v-for="(summary, idx) in summaries" :key="idx" class="mb-3">
+              <div v-if="summary.topic" class="mb-2">
+                <h6 class="mb-1">📌 주제</h6>
+                <span class="badge bg-secondary">{{ summary.topic }}</span>
+              </div>
+              <div v-html="summary.text"></div>
+              <hr v-if="idx !== summaries.length - 1" class="my-4" />
             </div>
           </div>
+        </div>
+      </div>
         </div>
       </div>
     </div>
