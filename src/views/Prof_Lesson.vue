@@ -54,9 +54,7 @@
 import axios from "axios";
 import recordingManager from "@/managers/RecordingManager";
 import { marked } from "marked";
-import {
-  testOptionsRequest,
-  generateLectureSummary,
+import { generateLectureSummary,
   createLecture
 } from "@/api/snapshotService";
 
