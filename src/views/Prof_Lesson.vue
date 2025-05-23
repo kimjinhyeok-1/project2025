@@ -9,10 +9,6 @@
       <button class="btn btn-primary m-2" @click="toggleAudioRecording">
         {{ isRecording ? "🔝 음성 인식 종료" : "🎙️ 음성 인식 시작" }}
       </button>
-
-      <button class="btn btn-warning m-2" @click="testOptions">
-        🧪 OPTIONS 테스트
-      </button>
     </div>
 
     <!-- 실시간 요약 결과 (로딩 서클 또는 텍스트) -->
@@ -20,7 +16,6 @@
       <h5>📘 수업 요약 결과:</h5>
       <div v-if="loadingSummary" class="text-center">
         <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
         </div>
       </div>
       <div v-else>
