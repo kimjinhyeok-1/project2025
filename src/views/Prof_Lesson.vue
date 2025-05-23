@@ -24,7 +24,7 @@
           <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
             <div v-if="summary.topic" class="mb-2">
               <h6 class="mb-1">📌 주제</h6>
-              <span class="display-6 fw-bold text-primary">{{ summary.topic }}</span>
+              <span class="badge bg-secondary">{{ summary.topic }}</span>
             </div>
             <div v-html="summary.text"></div>
           </div>
@@ -42,7 +42,7 @@
     <div class="card mt-5">
       <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
         <span>🧠 AI 생성 질문 및 학생 선택 수</span>
-        <button class="btn btn-sm btn-light" @click="loadLatestQuestions">🔄 질문 불러오기</button>
+        <button class="btn btn-sm btn-light" @click="loadPopularQuestions">🔄 질문 불러오기</button>
       </div>
       <div class="card-body">
         <div v-if="loadingQuestions" class="text-center text-muted">
@@ -147,21 +147,17 @@ export default {
         this.triggered = false;
       }
     },
-    async loadLatestQuestions() {
+    async loadPopularQuestions(q_id = null) {
       this.loadingQuestions = true;
       try {
-        const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
-        const data = await res.json();
-        if (data && data.q_id) {
-          await this.loadPopularQuestions(data.q_id);
+        if (!q_id) {
+          const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
+          const data = await res.json();
+          q_id = data?.q_id;
         }
-      } catch (err) {
-        console.error("최신 질문 세트 조회 실패:", err);
-      }
-    },
-    async loadPopularQuestions(q_id) {
-      this.loadingQuestions = true;
-      try {
+
+        if (!q_id) throw new Error("q_id가 없습니다.");
+
         const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${q_id}`);
         const data = await res.json();
         if (Array.isArray(data.results)) {
