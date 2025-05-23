@@ -42,7 +42,7 @@
     <div class="card mt-5">
       <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
         <span>🧠 AI 생성 질문 및 학생 선택 수</span>
-        <button class="btn btn-sm btn-light" @click="loadPopularQuestions">🔄 질문 불러오기</button>
+        <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 질문 불러오기</button>
       </div>
       <div class="card-body">
         <div v-if="loadingQuestions" class="text-center text-muted">
