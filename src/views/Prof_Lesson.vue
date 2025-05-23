@@ -20,13 +20,14 @@
       <h5>📘 수업 요약 결과:</h5>
       <div v-if="loadingSummary" class="text-center">
         <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
       </div>
       <div v-else>
         <div v-html="renderedSummary"></div>
-        <div v-if="summaryKeywords.length" class="mt-3">
-          <h6 class="mt-3">📌 키워드:</h6>
-          <span v-for="(kw, i) in summaryKeywords" :key="i" class="badge bg-secondary me-1">
+        <div v-if="summaryTopics.length" class="mt-3">
+          <h6 class=\"mt-3\">📌 주제:</h6>
+          <span v-for="(kw, i) in summaryTopics" :key="i" class="badge bg-secondary me-1">
             {{ kw }}
           </span>
         </div>
@@ -114,9 +115,9 @@ export default {
           this.summaryResult = markdownText;
           this.renderedSummary = marked.parse(markdownText || "");
           if (Array.isArray(summary) && summary[0]?.keywords) {
-            this.summaryKeywords = summary[0].keywords;
+            this.summaryTopics = [summary[0].topic];
           } else if (summary?.keywords) {
-            this.summaryKeywords = summary.keywords;
+            this.summaryTopics = [summary.topic];
           }
           this.showFinalSummary = true;
           this.loadingSummary = false;
