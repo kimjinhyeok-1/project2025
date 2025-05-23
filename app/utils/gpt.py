@@ -1,5 +1,6 @@
 import os
 from openai import AsyncOpenAI
+from app.models import Snapshot
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ASSISTANT_ID = os.getenv("OPENAI_SUMMARY_ASSISTANT_ID")

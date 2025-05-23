@@ -214,7 +214,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         full_text = await f.read()
 
     # 2. Assistant 요약 호출
-    markdown = await summarize_text_with_assistant(full_text)
+    markdown = await summarize_text_with_gpt(full_text)
     topic_blocks = markdown.split("### ")[1:]
     topics = []
     for block in topic_blocks:
