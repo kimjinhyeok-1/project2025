@@ -20,9 +20,13 @@
         <ul>
           <li v-for="(highlight, idx) in topic.highlights" :key="idx">
             <p
-              class="mb-1 link-style"
-              @click="highlight.image_url && openModal(highlight.image_url)"
+              v-if="highlight.image_url"
+              class="mb-1 clickable-text"
+              @click="openModal(highlight.image_url)"
             >
+              🗣 {{ highlight.text }}
+            </p>
+            <p v-else class="mb-1">
               🗣 {{ highlight.text }}
             </p>
           </li>
@@ -147,12 +151,12 @@ onMounted(fetchLectureSummary);
   font-size: 1.2rem;
   cursor: pointer;
 }
-.link-style {
+.clickable-text {
   cursor: pointer;
-  color: #0d6efd;
-  text-decoration: underline;
+  text-decoration: underline dotted;
+  color: inherit;
 }
-.link-style:hover {
-  text-decoration: none;
+.clickable-text:hover {
+  text-decoration: underline;
 }
 </style>
