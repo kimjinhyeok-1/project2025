@@ -83,7 +83,7 @@ export default {
       loadingQuestions: true,
       noQidWarning: false,
       placeholderQuestions: [],
-      lastQid: null // ✅ q_id 저장용
+      lastQid: null
     };
   },
   async mounted() {
@@ -141,9 +141,9 @@ export default {
         try {
           const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
           const q_id = res.data.q_id;
-          this.lastQid = q_id; // ✅ 생성된 q_id 저장
+          this.lastQid = q_id;
           console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
-          this.loadPopularQuestions(q_id);
+          this.loadPopularQuestions(q_id); // ✅ 조회는 교수 화면 내에서
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         }
