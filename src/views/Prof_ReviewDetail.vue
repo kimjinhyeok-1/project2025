@@ -1,40 +1,32 @@
 <template>
-  <div class="page-container">
-    <h2 class="page-title">📄 수업 복습 상세보기 </h2>
+  <div class="main-card">
+    <h2 class="main-title">📄 수업 복습 상세보기</h2>
 
     <div v-if="loading" class="text-muted mt-3">요약을 불러오는 중입니다...</div>
 
     <div v-else-if="summaryData.length">
-      <div v-for="(topic, index) in summaryData" :key="index" class="card">
-        <div class="card-content">
-          <!-- 왼쪽: 주제와 요약 -->
-          <div class="card-left">
-            <h4 class="card-topic">📘 {{ topic.topic }}</h4>
-            <p class="card-summary">{{ topic.summary }}</p>
-          </div>
+      <div v-for="(topic, index) in summaryData" :key="index" class="topic-block">
+        <!-- 왼쪽 회색 네모 -->
+        <div class="topic-summary">
+          <h4 class="topic-title">📘 {{ topic.topic }}</h4>
+          <p class="topic-text">{{ topic.summary }}</p>
+        </div>
 
-          <!-- 오른쪽: 교수님의 한마디 -->
-          <div class="card-right">
-            <div class="label">👨‍🏫 교수님의 한마디</div>
-            <ul class="script-list">
-              <li
-                v-for="(highlight, idx) in topic.highlights"
-                :key="idx"
-                class="script-item"
+        <!-- 오른쪽 교수님의 한마디 -->
+        <div class="professor-note">
+          <div class="label">👨‍🏫 교수님의 한마디</div>
+          <ul class="script-list">
+            <li v-for="(highlight, idx) in topic.highlights" :key="idx" class="script-item">
+              <span
+                v-if="highlight.image_url && highlight.image_url.trim() !== ''"
+                class="script-link"
+                @click="openModal(toFullUrl(highlight.image_url))"
               >
-                <span
-                  v-if="highlight.image_url && highlight.image_url.trim() !== ''"
-                  class="script-link"
-                  @click="openModal(toFullUrl(highlight.image_url))"
-                >
-                  🗣 {{ highlight.text }}
-                </span>
-                <span v-else>
-                  🗣 {{ highlight.text }}
-                </span>
-              </li>
-            </ul>
-          </div>
+                🗣 {{ highlight.text }}
+              </span>
+              <span v-else>🗣 {{ highlight.text }}</span>
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -47,6 +39,7 @@
       📂 아직 생성된 수업 요약이 없거나, 해당 강의에 대한 요약 데이터가 없습니다.
     </div>
 
+    <!-- 이미지 팝업 -->
     <div v-if="modalImageUrl" class="modal-backdrop" @click.self="closeModal">
       <div class="modal-content">
         <img :src="modalImageUrl" alt="확대된 이미지" />
@@ -100,51 +93,53 @@ onMounted(fetchLectureSummary);
 </script>
 
 <style scoped>
-.page-container {
+.main-card {
   max-width: 1000px;
+  background: white;
   margin: auto;
-  padding: 2rem 1rem;
+  margin-top: 2rem;
+  padding: 2rem;
+  border-radius: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
-.page-title {
-  font-weight: bold;
+.main-title {
   font-size: 1.6rem;
+  font-weight: bold;
   margin-bottom: 2rem;
   text-align: center;
 }
-.card {
-  background-color: white;
-  border-radius: 1rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-}
-.card-content {
+.topic-block {
   display: flex;
   justify-content: space-between;
-  gap: 2rem;
-  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  position: relative;
 }
-.card-left {
+.topic-summary {
+  background-color: #f5f5f5;
+  border-radius: 1rem;
+  padding: 1.2rem;
   flex: 1 1 60%;
+  margin-right: 1rem;
 }
-.card-right {
-  flex: 0 0 300px;
-}
-.card-topic {
+.topic-title {
   font-size: 1.2rem;
   font-weight: bold;
   margin-bottom: 0.8rem;
 }
-.card-summary {
-  color: #555;
+.topic-text {
+  color: #333;
+}
+.professor-note {
+  flex: 0 0 35%;
+  padding: 0.5rem 0.2rem;
 }
 .label {
   background-color: #3b4890;
   color: white;
   font-weight: bold;
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 0.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
   display: inline-block;
 }
 .script-list {
