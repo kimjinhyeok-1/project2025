@@ -150,7 +150,7 @@ export default {
         const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
         const data = await res.json();
         if (Array.isArray(data.questions)) {
-          this.placeholderQuestions = data.questions.map((q, i) => ({ text: q.text, likes: q.likes ?? 0 }));
+          this.placeholderQuestions = data.questions.map(q => ({ text: q.text, likes: q.likes ?? 0 }));
         }
       } catch (err) {
         console.error("질문 불러오기 실패:", err);
