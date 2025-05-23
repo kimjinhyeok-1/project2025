@@ -9,7 +9,7 @@
         <!-- 왼쪽 회색 네모 -->
         <div class="topic-summary">
           <h4 class="topic-title">📘 {{ topic.topic }}</h4>
-          <p class="topic-text">{{ topic.summary }}</p>
+          <p class="topic-text" v-html="formatSummary(topic.summary)"></p>
         </div>
 
         <!-- 오른쪽 교수님의 한마디 -->
@@ -61,6 +61,32 @@ const summaryData = ref([]);
 const loading = ref(true);
 const modalImageUrl = ref('');
 
+// ✅ image_url 상대 경로 처리
+const toFullUrl = (path) => {
+  if (!path) return '';
+  return path.startsWith('/static')
+    ? `https://project2025-backend.onrender.com${path}`
+    : path;
+};
+
+// ✅ summary 줄바꿈 처리 함수
+const formatSummary = (text) => {
+  if (!text) return '';
+  return text
+    .split('\n')
+    .map(line => line.startsWith('- ') ? `<br>${line}` : line)
+    .join('')
+    .replace(/\n/g, '<br>');
+};
+
+const openModal = (url) => {
+  modalImageUrl.value = url;
+};
+
+const closeModal = () => {
+  modalImageUrl.value = '';
+};
+
 const fetchLectureSummary = async () => {
   try {
     const response = await axios.get(
@@ -72,21 +98,6 @@ const fetchLectureSummary = async () => {
   } finally {
     loading.value = false;
   }
-};
-
-const toFullUrl = (path) => {
-  if (!path) return '';
-  return path.startsWith('/static')
-    ? `https://project2025-backend.onrender.com${path}`
-    : path;
-};
-
-const openModal = (url) => {
-  modalImageUrl.value = url;
-};
-
-const closeModal = () => {
-  modalImageUrl.value = '';
 };
 
 onMounted(fetchLectureSummary);
@@ -128,6 +139,7 @@ onMounted(fetchLectureSummary);
 }
 .topic-text {
   color: #333;
+  line-height: 1.6;
 }
 .professor-note {
   flex: 0 0 35%;
