@@ -75,7 +75,15 @@ async def trigger_question_generation():
         "created_at": obj.created_at.isoformat()
     }
 
-# ───────── 최신 질문 조회 ─────────
+# ───────── 최신 질문 ID 조회 ─────────
+@router.get("/questions/latest_id")
+async def get_latest_qid():
+    async with get_db_context() as db:
+        result = await db.execute(select(GeneratedQuestion.id).order_by(GeneratedQuestion.id.desc()).limit(1))
+        q_id = result.scalar()
+    return {"q_id": q_id}
+
+# ───────── 최신 질문 전체 조회 ─────────
 @router.get("/questions/latest")
 async def get_latest_questions():
     async with get_db_context() as db:
@@ -94,8 +102,8 @@ async def get_latest_questions():
     }
 
 # ───────── 좋아요 반영 ─────────
-@router.patch("/question/like")
-async def like_question(body: LikeRequest, q_id: Optional[int] = None):
+@router.patch("/question/{q_id}/like")
+async def like_question(q_id: int, body: LikeRequest):
     async with get_db_context() as db:
         question_set = await get_question_set(db, q_id)
 
@@ -106,6 +114,22 @@ async def like_question(body: LikeRequest, q_id: Optional[int] = None):
         await db.commit()
 
     return {"message": "좋아요 반영 완료"}
+
+# ───────── 좋아요 취소 반영 ─────────
+@router.patch("/question/{q_id}/unlike")
+async def unlike_question(q_id: int, body: LikeRequest):
+    async with get_db_context() as db:
+        question_set = await get_question_set(db, q_id)
+
+        if not question_set or body.question_id >= len(question_set.likes):
+            raise HTTPException(404, detail="질문 인덱스를 찾을 수 없습니다.")
+
+        if question_set.likes[body.question_id] > 0:
+            question_set.likes[body.question_id] -= 1
+            await db.commit()
+            return {"message": "좋아요 취소 완료"}
+        else:
+            return {"message": "이미 좋아요 수가 0입니다. 더 이상 감소할 수 없습니다."}
 
 # ───────── 인기 질문 정렬 조회 ─────────
 @router.get("/questions/popular_likes")
