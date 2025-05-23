@@ -9,6 +9,10 @@
       <button class="btn btn-primary m-2" @click="toggleAudioRecording">
         {{ isRecording ? "🔝 음성 인식 종료" : "🎙️ 음성 인식 시작" }}
       </button>
+
+      <button class="btn btn-warning m-2" @click="testOptions">
+        🧪 OPTIONS 테스트
+      </button>
     </div>
 
     <!-- 실시간 요약 결과 (로딩 서클 또는 텍스트) -->
@@ -16,12 +20,13 @@
       <h5>📘 수업 요약 결과:</h5>
       <div v-if="loadingSummary" class="text-center">
         <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
       </div>
       <div v-else>
         <div v-html="renderedSummary"></div>
         <div v-if="summaryTopics.length" class="mt-3">
-          <h6 class=\"mt-3\">📌 주제:</h6>
+          <h6 class="mt-3">📌 주제:</h6>
           <span v-for="(kw, i) in summaryTopics" :key="i" class="badge bg-secondary me-1">
             {{ kw }}
           </span>
@@ -65,7 +70,7 @@ export default {
   name: "ProfessorLesson",
   data() {
     return {
-      summaryKeywords: [],
+      summaryTopics: [],
       isRecording: false,
       summaryResult: null,
       renderedSummary: "",
