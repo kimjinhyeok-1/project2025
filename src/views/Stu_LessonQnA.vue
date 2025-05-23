@@ -46,7 +46,8 @@ export default {
     };
   },
   async mounted() {
-    this.q_id = this.$route.query.q_id;
+    const qParam = this.$route.query.q_id;
+    this.q_id = qParam ? parseInt(qParam) : null;
     if (this.q_id) {
       this.loadSelected();
       await this.fetchQuestionsById(this.q_id);
@@ -68,21 +69,28 @@ export default {
       try {
         const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
         const data = await res.json();
-        this.q_id = data.q_id;
+        this.q_id = parseInt(data.q_id);
         if (Array.isArray(data.questions)) {
           this.questions = data.questions.map(q => ({ text: q.text }));
         }
+        this.loadSelected();
       } catch (err) {
         console.error("최신 질문 불러오기 실패:", err);
       }
     },
     selectQuestion(index) {
+      if (!this.q_id || isNaN(this.q_id)) {
+        console.warn("❌ 유효하지 않은 q_id. 좋아요 요청 중단");
+        return;
+      }
+
       this.selected.push(index);
       localStorage.setItem(
-        `selected_questions_${this.q_id || 'latest'}`,
+        `selected_questions_${this.q_id}`,
         JSON.stringify(this.selected)
       );
-      fetch(`https://project2025-backend.onrender.com/question/${this.q_id || 'latest'}/like`, {
+
+      fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/like`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question_id: index })
