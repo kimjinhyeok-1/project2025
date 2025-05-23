@@ -20,7 +20,6 @@
       <h5>📘 수업 요약 결과:</h5>
       <div v-if="loadingSummary" class="text-center">
         <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
         </div>
       </div>
       <div v-else v-html="renderedSummary"></div>
