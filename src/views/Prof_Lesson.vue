@@ -1,5 +1,5 @@
 <template>
-  <div class="lecture-container mt-5">
+  <div class="lecture-container mt-5 mx-7">
     <h2 class="text-center">🎤 수업 녹화 & 음성 인식</h2>
     <p class="text-muted text-center">
       녹음 중 키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드에 전송됩니다.
@@ -12,19 +12,21 @@
     </div>
 
     <!-- 실시간 요약 결과 (로딩 서클 또는 텍스트) -->
-    <div v-for="(summary, idx) in summaries" :key="idx" class="card mt-4">
+    <div class="card mt-4">
       <div class="card-header bg-primary text-white">
-        📘 수업 요약 결과 {{ idx + 1 }}
+        📘 수업 요약 결과
       </div>
       <div class="card-body">
-        <div v-if="loadingSummary" class="text-center">
-          <div class="spinner-border text-primary" role="status"></div>
+        <div v-if="loadingSummary[0]" class="text-center text-muted">
+          요약 제공 준비중입니다.
         </div>
         <div v-else>
-          <div v-html="summary.text"></div>
-          <div v-if="summary.topic" class="mt-3">
-            <h6>📌 주제:</h6>
-            <span class="badge bg-secondary me-1">{{ summary.topic }}</span>
+          <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
+            <div v-html="summary.text"></div>
+            <div v-if="summary.topic" class="mt-2">
+              <h6>📌 주제:</h6>
+              <span class="badge bg-secondary me-1">{{ summary.topic }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -75,7 +77,7 @@ export default {
       triggered: false,
       transcriptCallback: null,
       showFinalSummary: false,
-      loadingSummary: true,
+      loadingSummary: [],
       placeholderQuestions: []
     };
   },
@@ -99,7 +101,7 @@ export default {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
         this.showFinalSummary = false;
-        this.loadingSummary = true;
+        this.loadingSummary = [true];
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
@@ -115,10 +117,10 @@ export default {
                 text: marked.parse(summary.summary || ""),
                 topic: summary.topic || null
               }];
+          this.loadingSummary = [false];
           this.showFinalSummary = true;
-          this.loadingSummary = false;
         } catch (error) {
-          this.loadingSummary = false;
+          this.loadingSummary = [false];
           if (error.response?.status === 404 || error.response?.status === 400) {
             console.warn("📭 요약 없음 또는 잘못된 요청: 충분한 데이터가 없을 수 있습니다.");
           } else {
