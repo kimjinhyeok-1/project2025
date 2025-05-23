@@ -20,6 +20,7 @@
       <h5>📘 수업 요약 결과:</h5>
       <div v-if="loadingSummary" class="text-center">
         <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
       </div>
       <div v-else v-html="renderedSummary"></div>
@@ -71,11 +72,7 @@ export default {
       transcriptCallback: null,
       showFinalSummary: false,
       loadingSummary: true,
-      placeholderQuestions: [
-        { text: "이 이론은 실제로 어떻게 적용되나요?", likes: 3 },
-        { text: "이 개념은 시험에 자주 나옵니까?", likes: 5 },
-        { text: "예시를 좀 더 설명해 주실 수 있나요?", likes: 2 }
-      ]
+      placeholderQuestions: []
     };
   },
   async mounted() {
@@ -123,20 +120,34 @@ export default {
       }
     },
     async testOptions() {
-      const response = await testOptionsRequest();
-      console.log("OPTIONS Response:", response);
+      try {
+        const res = await fetch("https://project2025-backend.onrender.com/upload_text_chunk", {
+          method: "OPTIONS"
+        });
+        const data = await res.json();
+        console.log("OPTIONS Response:", data);
+      } catch (err) {
+        console.error("OPTIONS 요청 실패:", err);
+      }
     },
     async handleTranscript(text) {
       this.latestTranscript = text;
 
-      if (text.includes("질문") || text.includes("?")) {
+      try {
+        await axios.post("https://project2025-backend.onrender.com/upload_text_chunk", {
+          text
+        });
+      } catch (error) {
+        console.error("❌ 텍스트 업로드 실패:", error);
+      }
+
+      if (text.includes("질문") || text.includes("?") || text.includes("확인")) {
         this.triggered = true;
         try {
           const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
           const q_id = res.data.q_id;
           console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
-
-          this.$router.push({ name: 'StudentLessonQnA', query: { q_id } });
+          this.loadPopularQuestions(q_id);
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         }
@@ -148,11 +159,22 @@ export default {
       try {
         const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
         const data = await res.json();
-        if (Array.isArray(data.questions)) {
-          this.placeholderQuestions = data.questions.map(q => ({ text: q.text, likes: q.likes ?? 0 }));
+        if (data && data.q_id) {
+          this.loadPopularQuestions(data.q_id);
         }
       } catch (err) {
-        console.error("질문 불러오기 실패:", err);
+        console.error("최신 질문 세트 조회 실패:", err);
+      }
+    },
+    async loadPopularQuestions(q_id) {
+      try {
+        const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${q_id}`);
+        const data = await res.json();
+        if (Array.isArray(data.results)) {
+          this.placeholderQuestions = data.results.map(q => ({ text: q.text, likes: q.likes ?? 0 }));
+        }
+      } catch (err) {
+        console.error("인기 질문 조회 실패:", err);
       }
     }
   }
