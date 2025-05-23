@@ -11,16 +11,28 @@
       </button>
     </div>
 
-    <!-- 실시간 요약 결과 (로딩 서클 또는 텍스트) -->
+    <!-- 실시간 요약 결과 -->
     <div class="card mt-4">
       <div class="card-header bg-primary text-white">
         📘 수업 요약 결과
       </div>
       <div class="card-body">
-        <div v-if="loadingSummary[0]" class="text-center text-muted">
+        <div v-if="loadingSummary" class="text-center text-muted">
           요약을 준비하고 있습니다.
         </div>
+        <div v-else>
+          <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
+            <div v-if="summary.topic" class="mb-2">
+              <h6 class="mb-1">📌 주제</h6>
+              <span class="badge bg-secondary">{{ summary.topic }}</span>
+            </div>
+            <div v-html="summary.text"></div>
+          </div>
+        </div>
       </div>
+    </div>
+
+    <!-- 질문 감지 출력 -->
     <div class="alert alert-info mt-4">
       <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
       <p v-if="triggered"><strong>🧠 질문 생성 요청이 감지되었습니다!</strong></p>
@@ -48,9 +60,7 @@
 import axios from "axios";
 import recordingManager from "@/managers/RecordingManager";
 import { marked } from "marked";
-import { generateLectureSummary,
-  createLecture
-} from "@/api/snapshotService";
+import { generateLectureSummary, createLecture } from "@/api/snapshotService";
 
 export default {
   name: "ProfessorLesson",
@@ -58,13 +68,10 @@ export default {
     return {
       summaries: [],
       isRecording: false,
-      summaryResult: null,
-      renderedSummary: "",
       latestTranscript: "",
       triggered: false,
       transcriptCallback: null,
-      showFinalSummary: false,
-      loadingSummary: [true],
+      loadingSummary: true,
       placeholderQuestions: []
     };
   },
@@ -87,14 +94,12 @@ export default {
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
-        this.showFinalSummary = false;
-        this.loadingSummary = [true];
+        this.loadingSummary = true;
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
         try {
           const summary = await generateLectureSummary();
-          
           this.summaries = Array.isArray(summary)
             ? summary.map(item => ({
                 text: marked.parse(item.summary || ""),
@@ -104,27 +109,11 @@ export default {
                 text: marked.parse(summary.summary || ""),
                 topic: summary.topic || null
               }];
-          this.loadingSummary = [false];
-          this.showFinalSummary = true;
+          this.loadingSummary = false;
         } catch (error) {
-          this.loadingSummary = [false];
-          if (error.response?.status === 404 || error.response?.status === 400) {
-            console.warn("📭 요약 없음 또는 잘못된 요청: 충분한 데이터가 없을 수 있습니다.");
-          } else {
-            console.error("요약 생성 실패:", error);
-          }
+          this.loadingSummary = false;
+          console.error("요약 생성 실패:", error);
         }
-      }
-    },
-    async testOptions() {
-      try {
-        const res = await fetch("https://project2025-backend.onrender.com/upload_text_chunk", {
-          method: "OPTIONS"
-        });
-        const data = await res.json();
-        console.log("OPTIONS Response:", data);
-      } catch (err) {
-        console.error("OPTIONS 요청 실패:", err);
       }
     },
     async handleTranscript(text) {
@@ -168,7 +157,10 @@ export default {
         const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${q_id}`);
         const data = await res.json();
         if (Array.isArray(data.results)) {
-          this.placeholderQuestions = data.results.map(q => ({ text: q.text, likes: q.likes ?? 0 }));
+          this.placeholderQuestions = data.results.map(q => ({
+            text: q.text,
+            likes: q.likes ?? 0
+          }));
         }
       } catch (err) {
         console.error("인기 질문 조회 실패:", err);
