@@ -147,17 +147,9 @@ export default {
         this.triggered = false;
       }
     },
-    async loadPopularQuestions(q_id = null) {
+    async loadPopularQuestions(q_id) {
       this.loadingQuestions = true;
       try {
-        if (!q_id) {
-          const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
-          const data = await res.json();
-          q_id = data?.q_id;
-        }
-
-        if (!q_id) throw new Error("q_id가 없습니다.");
-
         const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${q_id}`);
         const data = await res.json();
         if (Array.isArray(data.results)) {
