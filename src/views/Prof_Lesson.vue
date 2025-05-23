@@ -22,7 +22,15 @@
         <div class="spinner-border text-primary" role="status">
         </div>
       </div>
-      <div v-else v-html="renderedSummary"></div>
+      <div v-else>
+        <div v-html="renderedSummary"></div>
+        <div v-if="summaryKeywords.length" class="mt-3">
+          <h6 class="mt-3">📌 키워드:</h6>
+          <span v-for="(kw, i) in summaryKeywords" :key="i" class="badge bg-secondary me-1">
+            {{ kw }}
+          </span>
+        </div>
+      </div>
     </div>
 
     <!-- 질문 감지 출력 -->
@@ -61,6 +69,7 @@ export default {
   name: "ProfessorLesson",
   data() {
     return {
+      summaryKeywords: [],
       isRecording: false,
       summaryResult: null,
       renderedSummary: "",
@@ -104,6 +113,11 @@ export default {
 
           this.summaryResult = markdownText;
           this.renderedSummary = marked.parse(markdownText || "");
+          if (Array.isArray(summary) && summary[0]?.keywords) {
+            this.summaryKeywords = summary[0].keywords;
+          } else if (summary?.keywords) {
+            this.summaryKeywords = summary.keywords;
+          }
           this.showFinalSummary = true;
           this.loadingSummary = false;
         } catch (error) {
