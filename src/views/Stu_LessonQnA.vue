@@ -17,14 +17,13 @@
           :class="{ 'bg-primary text-white': selected.includes(idx) }"
         >
           <div class="card-body">
-            <p class="card-text">{{ q.text }}</p>
+            <p class="card-text">{{ q.text }} (👍 {{ q.likes }})</p>
             <button
               class="btn btn-outline-primary mt-3"
               :class="{ 'btn-light text-primary': selected.includes(idx) }"
-              :disabled="selected.includes(idx)"
-              @click="selectQuestion(idx)"
+              @click="toggleLike(idx)"
             >
-              {{ selected.includes(idx) ? '✅ 선택됨' : '선택하기' }}
+              {{ selected.includes(idx) ? '✅ 선택 취소' : '선택하기' }}
             </button>
           </div>
         </div>
@@ -37,64 +36,67 @@
 export default {
   data() {
     return {
-      questions: [
-        { text: "곧 AI가 질문을 생성합니다..." },
-        { text: "이곳에 실시간 질문이 표시됩니다." }
-      ],
+      questions: [],
       q_id: null,
       selected: []
     };
   },
   async mounted() {
-    const qParam = this.$route.query.q_id;
-    this.q_id = qParam ? parseInt(qParam) : null;
-    if (this.q_id) {
-      this.loadSelected();
-      await this.fetchQuestionsById(this.q_id);
-    }
+    await this.loadLatestQuestions();
   },
   methods: {
-    async fetchQuestionsById(q_id) {
-      try {
-        const res = await fetch(`https://project2025-backend.onrender.com/questions/${q_id}`);
-        const data = await res.json();
-        if (Array.isArray(data.questions)) {
-          this.questions = data.questions.map(q => ({ text: q.text }));
-        }
-      } catch (err) {
-        console.error("질문 조회 실패:", err);
-      }
-    },
     async loadLatestQuestions() {
       try {
-        const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
-        const data = await res.json();
-        this.q_id = parseInt(data.q_id);
-        if (Array.isArray(data.questions)) {
-          this.questions = data.questions.map(q => ({ text: q.text }));
-        }
+        const idRes = await fetch("https://project2025-backend.onrender.com/questions/latest_id");
+        const idData = await idRes.json();
+        this.q_id = parseInt(idData.q_id);
         this.loadSelected();
+
+        const questionsRes = await fetch("https://project2025-backend.onrender.com/questions/latest");
+        const questionsData = await questionsRes.json();
+
+        if (Array.isArray(questionsData.questions)) {
+          this.questions = questionsData.questions.map(q => ({
+            text: q.text,
+            likes: 0 // 초기 좋아요 수는 0으로 설정
+          }));
+        }
       } catch (err) {
-        console.error("최신 질문 불러오기 실패:", err);
+        console.error("질문 또는 q_id 불러오기 실패:", err);
       }
     },
-    selectQuestion(index) {
+    toggleLike(index) {
       if (!this.q_id || isNaN(this.q_id)) {
         console.warn("❌ 유효하지 않은 q_id. 좋아요 요청 중단");
         return;
       }
 
-      this.selected.push(index);
-      localStorage.setItem(
-        `selected_questions_${this.q_id}`,
-        JSON.stringify(this.selected)
-      );
+      const alreadySelected = this.selected.includes(index);
+      const endpoint = alreadySelected ? "unlike" : "like";
+      const method = "PATCH";
 
-      fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/like`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/${endpoint}`, {
+        method,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question_id: index })
-      }).catch(err => console.error("선택 전송 실패:", err));
+      }).then(() => {
+        if (alreadySelected) {
+          this.selected = this.selected.filter(i => i !== index);
+          if (this.questions[index].likes > 0) {
+            this.questions[index].likes -= 1;
+          }
+        } else {
+          this.selected.push(index);
+          this.questions[index].likes += 1;
+        }
+
+        localStorage.setItem(
+          `selected_questions_${this.q_id}`,
+          JSON.stringify(this.selected)
+        );
+      }).catch(err => {
+        console.error(`선택 ${endpoint} 전송 실패:`, err);
+      });
     },
     loadSelected() {
       const saved = localStorage.getItem(`selected_questions_${this.q_id}`);

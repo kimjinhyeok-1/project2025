@@ -24,7 +24,7 @@
           <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
             <div v-if="summary.topic" class="mb-2">
               <h6 class="mb-1">📌 주제</h6>
-              <span class="badge bg-secondary">{{ summary.topic }}</span>
+              <span class="display-6 fw-bold text-primary">{{ summary.topic }}</span>
             </div>
             <div v-html="summary.text"></div>
           </div>
@@ -143,7 +143,7 @@ export default {
           const q_id = res.data.q_id;
           this.lastQid = q_id;
           console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
-          this.loadPopularQuestions(q_id); // ✅ 조회는 교수 화면 내에서
+          this.loadPopularQuestions(q_id);
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         }
