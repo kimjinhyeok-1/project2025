@@ -18,7 +18,7 @@
       </div>
       <div class="card-body">
         <div v-if="loadingSummary[0]" class="text-center text-muted">
-          요약 제공 준비중입니다.
+          요약을 준비하고 있습니다.
         </div>
         <div v-else>
           <div class="mb-4">
@@ -28,15 +28,11 @@
                 <span class="badge bg-secondary">{{ summary.topic }}</span>
               </div>
               <div v-html="summary.text"></div>
-              <hr v-if="idx !== summaries.length - 1" class="my-4" />
+              
             </div>
           </div>
         </div>
       </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 질문 감지 출력 -->
     <div class="alert alert-info mt-4">
       <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
@@ -74,7 +70,6 @@ export default {
   data() {
     return {
       summaries: [],
-      summaryTopics: [],
       isRecording: false,
       summaryResult: null,
       renderedSummary: "",
