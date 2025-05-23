@@ -6,32 +6,38 @@
 
     <div v-else-if="summaryData.length">
       <div v-for="(topic, index) in summaryData" :key="index" class="card">
-        <!-- 왼쪽 -->
-        <div class="card-left">
-          <h4 class="card-topic">📘 {{ topic.topic }}</h4>
-          <p class="card-summary">{{ topic.summary }}</p>
-        </div>
+        <div class="card-content">
+          <!-- 왼쪽 -->
+          <div class="card-left">
+            <h4 class="card-topic">📘 {{ topic.topic }}</h4>
+            <p class="card-summary">{{ topic.summary }}</p>
+          </div>
 
-        <!-- 오른쪽 -->
-        <div class="card-right">
-          <div class="label">👨‍🏫 교수님의 한마디</div>
-          <ul class="script-list">
-            <li v-for="(highlight, idx) in topic.highlights" :key="idx" class="script-item">
-              <span
-                v-if="highlight.image_url && highlight.image_url.trim() !== ''"
-                class="script-link"
-                @click="openModal(highlight.image_url)"
+          <!-- 오른쪽 -->
+          <div class="card-right">
+            <div class="label">👨‍🏫 교수님의 한마디</div>
+            <ul class="script-list">
+              <li
+                v-for="(highlight, idx) in topic.highlights"
+                :key="idx"
+                class="script-item"
               >
-                🗣 {{ highlight.text }}
-              </span>
-              <span v-else>🗣 {{ highlight.text }}</span>
-            </li>
-          </ul>
+                <span
+                  v-if="highlight.image_url && highlight.image_url.trim() !== ''"
+                  class="script-link"
+                  @click="openModal(highlight.image_url)"
+                >
+                  🗣 {{ highlight.text }}
+                </span>
+                <span v-else>🗣 {{ highlight.text }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
       <button class="btn btn-outline-secondary back-button" @click="$router.back()">
-        ← 목록으로 돌아가기
+        ← 강의 목록으로 돌아가기
       </button>
     </div>
 
@@ -101,13 +107,19 @@ onMounted(fetchLectureSummary);
   border-radius: 1rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+.card-content {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 2rem;
   gap: 2rem;
+  flex-wrap: wrap;
 }
 .card-left {
-  width: 60%;
+  flex: 1 1 60%;
+}
+.card-right {
+  flex: 0 0 300px;
 }
 .card-topic {
   font-size: 1.2rem;
@@ -116,9 +128,6 @@ onMounted(fetchLectureSummary);
 }
 .card-summary {
   color: #555;
-}
-.card-right {
-  width: 35%;
 }
 .label {
   background-color: #3b4890;
