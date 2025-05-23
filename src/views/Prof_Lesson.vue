@@ -32,6 +32,21 @@
       <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
       <p v-if="triggered"><strong>🧠 질문 생성 요청이 감지되었습니다!</strong></p>
     </div>
+
+    <!-- 교수용 질문 확인 UI -->
+    <div class="card mt-5">
+      <div class="card-header bg-secondary text-white">
+        🧠 AI 생성 질문 및 학생 선택 수
+      </div>
+      <div class="card-body">
+        <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <span>{{ q.text }}</span>
+            <span class="badge bg-info">선택 수: {{ q.likes }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -55,7 +70,12 @@ export default {
       latestTranscript: "",
       triggered: false,
       transcriptCallback: null,
-      showFinalSummary: false  // ✅ 수업 종료 시 요약 표시 플래그
+      showFinalSummary: false,
+      placeholderQuestions: [
+        { text: "이 이론은 실제로 어떻게 적용되나요?", likes: 3 },
+        { text: "이 개념은 시험에 자주 나옵니까?", likes: 5 },
+        { text: "예시를 좀 더 설명해 주실 수 있나요?", likes: 2 }
+      ]
     };
   },
   async mounted() {
@@ -77,7 +97,7 @@ export default {
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
-        this.showFinalSummary = false;  // 🔁 새 세션 시작 시 숨김
+        this.showFinalSummary = false;
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
@@ -113,7 +133,6 @@ export default {
           const q_id = res.data.q_id;
           console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
 
-          // ✅ 학생 페이지로 라우팅 시 q_id 전달
           this.$router.push({ name: 'StudentLessonQnA', query: { q_id } });
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
