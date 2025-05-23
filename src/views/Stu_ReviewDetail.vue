@@ -2,25 +2,19 @@
   <div class="container mt-5">
     <h2>📄 수업 복습 상세보기</h2>
 
-    <!-- 로딩 중 -->
     <div v-if="loading" class="text-muted mt-3">
       요약을 불러오는 중입니다...
     </div>
 
-    <!-- 요약 데이터 있음 -->
     <div v-else-if="summaryData.length">
-      <div
-        v-for="(topic, index) in summaryData"
-        :key="index"
-        class="topic-section mb-5"
-      >
+      <div v-for="(topic, index) in summaryData" :key="index" class="topic-section mb-5">
         <h4>📘 {{ topic.topic }}</h4>
         <p class="mb-2 text-muted">{{ topic.summary }}</p>
 
         <ul>
           <li v-for="(highlight, idx) in topic.highlights" :key="idx">
             <p
-              v-if="highlight.image_url"
+              v-if="highlight.image_url && highlight.image_url.trim() !== ''"
               class="mb-1 clickable-text"
               @click="openModal(highlight.image_url)"
             >
@@ -33,22 +27,15 @@
         </ul>
       </div>
 
-      <button class="btn btn-outline-secondary" @click="$router.back()">
-        ← 목록으로 돌아가기
-      </button>
+      <button class="btn btn-outline-secondary" @click="$router.back()">← 목록으로 돌아가기</button>
     </div>
 
-    <!-- 요약 없음 -->
     <div v-else class="alert alert-warning mt-3">
       📂 수업 요약이 아직 생성되지 않았거나, 해당 lecture_id에 대한 요약 파일이 존재하지 않습니다.
     </div>
 
-    <!-- 팝업 이미지 모달 -->
-    <div
-      v-if="modalImageUrl"
-      class="modal-backdrop"
-      @click.self="closeModal"
-    >
+    <!-- 이미지 팝업 -->
+    <div v-if="modalImageUrl" class="modal-backdrop" @click.self="closeModal">
       <div class="modal-content">
         <img :src="modalImageUrl" alt="확대된 이미지" />
         <button class="close-btn" @click="closeModal">닫기 ✖</button>
@@ -58,16 +45,16 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
-import axios from "axios";
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import axios from 'axios';
 
 const route = useRoute();
 const lectureId = route.params.id;
 
 const summaryData = ref([]);
 const loading = ref(true);
-const modalImageUrl = ref("");
+const modalImageUrl = ref('');
 
 const fetchLectureSummary = async () => {
   try {
@@ -75,9 +62,8 @@ const fetchLectureSummary = async () => {
       `https://project2025-backend.onrender.com/snapshots/lecture_summary?lecture_id=${lectureId}`
     );
     summaryData.value = response.data;
-    console.log("📘 최종 요약 데이터:", summaryData.value);
   } catch (error) {
-    console.error("❌ 최종 요약 불러오기 실패:", error);
+    console.error('❌ 요약 불러오기 실패:', error);
   } finally {
     loading.value = false;
   }
@@ -88,7 +74,7 @@ const openModal = (url) => {
 };
 
 const closeModal = () => {
-  modalImageUrl.value = "";
+  modalImageUrl.value = '';
 };
 
 onMounted(fetchLectureSummary);
@@ -108,12 +94,6 @@ onMounted(fetchLectureSummary);
   padding: 1rem;
   border-radius: 1rem;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
-}
-.screenshot-preview {
-  max-width: 100%;
-  height: auto;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
 }
 .modal-backdrop {
   position: fixed;
