@@ -19,14 +19,12 @@
 
         <ul>
           <li v-for="(highlight, idx) in topic.highlights" :key="idx">
-            <p class="mb-1">🗣 {{ highlight.text }}</p>
-            <img
-              v-if="imageVisibleMap[`${index}-${idx}`] !== false && highlight.image_url"
-              :src="highlight.image_url"
-              alt="스크린샷"
-              class="screenshot-preview"
-              @error="() => imageVisibleMap[`${index}-${idx}`] = false"
-            />
+            <p
+              class="mb-1 link-style"
+              @click="highlight.image_url && openModal(highlight.image_url)"
+            >
+              🗣 {{ highlight.text }}
+            </p>
           </li>
         </ul>
       </div>
@@ -39,6 +37,18 @@
     <!-- 요약 없음 -->
     <div v-else class="alert alert-warning mt-3">
       📂 수업 요약이 아직 생성되지 않았거나, 해당 lecture_id에 대한 요약 파일이 존재하지 않습니다.
+    </div>
+
+    <!-- 팝업 이미지 모달 -->
+    <div
+      v-if="modalImageUrl"
+      class="modal-backdrop"
+      @click.self="closeModal"
+    >
+      <div class="modal-content">
+        <img :src="modalImageUrl" alt="확대된 이미지" />
+        <button class="close-btn" @click="closeModal">닫기 ✖</button>
+      </div>
     </div>
   </div>
 </template>
@@ -53,7 +63,7 @@ const lectureId = route.params.id;
 
 const summaryData = ref([]);
 const loading = ref(true);
-const imageVisibleMap = ref({});
+const modalImageUrl = ref("");
 
 const fetchLectureSummary = async () => {
   try {
@@ -67,6 +77,14 @@ const fetchLectureSummary = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const openModal = (url) => {
+  modalImageUrl.value = url;
+};
+
+const closeModal = () => {
+  modalImageUrl.value = "";
 };
 
 onMounted(fetchLectureSummary);
@@ -92,5 +110,49 @@ onMounted(fetchLectureSummary);
   height: auto;
   border-radius: 0.5rem;
   margin-bottom: 1rem;
+}
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-content {
+  position: relative;
+  background: white;
+  padding: 1rem;
+  border-radius: 1rem;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+}
+.modal-content img {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+  margin: auto;
+}
+.close-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.link-style {
+  cursor: pointer;
+  color: #0d6efd;
+  text-decoration: underline;
+}
+.link-style:hover {
+  text-decoration: none;
 }
 </style>
