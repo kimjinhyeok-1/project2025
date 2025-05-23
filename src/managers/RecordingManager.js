@@ -1,4 +1,3 @@
-// ✅ 수정된 RecordingManager.js
 import { uploadSnapshot, captureScreenshot } from "@/api/snapshotService";
 
 class RecordingManager {
@@ -111,30 +110,6 @@ class RecordingManager {
 
       this.notifyTranscriptListeners(transcript);
 
-      try {
-        await fetch("https://project2025-backend.onrender.com/upload_text_chunk", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: transcript })
-        });
-        console.log("✅ 텍스트 업로드 완료");
-      } catch (err) {
-        console.error("❌ 텍스트 업로드 실패:", err);
-      }
-
-      if (transcript.includes("질문")) {
-        try {
-          await fetch("https://project2025-backend.onrender.com/trigger_question_generation", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({})
-          });
-          console.log("🧠 질문 생성 요청 전송 완료");
-        } catch (err) {
-          console.error("❌ 질문 생성 트리거 실패:", err);
-        }
-      }
-
       const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
       let imageBase64 = "";
 
@@ -142,7 +117,11 @@ class RecordingManager {
         imageBase64 = await captureScreenshot(this.displayStream);
       }
 
-      await uploadSnapshot({ transcript, screenshot_base64: imageBase64, lecture_id: this.lectureId });
+      await uploadSnapshot({
+        transcript,
+        screenshot_base64: imageBase64,
+        lecture_id: this.lectureId
+      });
     };
 
     this.recognition.onerror = (event) => {
