@@ -1,3 +1,7 @@
+# ========================
+# 📦 Backend: FastAPI 코드
+# ========================
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -13,14 +17,14 @@ import re
 router = APIRouter()
 text_buffer: list[str] = []
 
-# ───────── 요청 스키마 ─────────
+# 요청 모델
 class TextChunkRequest(BaseModel):
     text: str
 
 class LikeRequest(BaseModel):
-    question_id: int  # 질문 인덱스 (0~4)
+    question_id: int
 
-# ───────── 공통 유틸: 최신 또는 특정 질문 세트 가져오기 ─────────
+# 질문 세트 조회
 async def get_question_set(db, q_id: Optional[int] = None) -> Optional[GeneratedQuestion]:
     if q_id is not None:
         result = await db.execute(select(GeneratedQuestion).where(GeneratedQuestion.id == q_id))
@@ -28,7 +32,7 @@ async def get_question_set(db, q_id: Optional[int] = None) -> Optional[Generated
         result = await db.execute(select(GeneratedQuestion).order_by(GeneratedQuestion.id.desc()).limit(1))
     return result.scalar_one_or_none()
 
-# ───────── 텍스트 누적 ─────────
+# STT 텍스트 누적
 @router.post("/upload_text_chunk")
 async def upload_text_chunk(body: TextChunkRequest):
     text = body.text.strip()
@@ -37,7 +41,7 @@ async def upload_text_chunk(body: TextChunkRequest):
     text_buffer.append(text)
     return {"message": "텍스트 누적 완료", "buffer_length": len(text_buffer)}
 
-# ───────── 질문 생성 ─────────
+# 질문 생성 트리거
 @router.post("/trigger_question_generation")
 async def trigger_question_generation():
     if not text_buffer:
@@ -75,7 +79,7 @@ async def trigger_question_generation():
         "created_at": obj.created_at.isoformat()
     }
 
-# ───────── 최신 질문 ID 조회 ─────────
+# 최신 q_id 반환
 @router.get("/questions/latest_id")
 async def get_latest_qid():
     async with get_db_context() as db:
@@ -83,7 +87,7 @@ async def get_latest_qid():
         q_id = result.scalar()
     return {"q_id": q_id}
 
-# ───────── 최신 질문 전체 조회 ─────────
+# 최신 질문 세트 반환
 @router.get("/questions/latest")
 async def get_latest_questions():
     async with get_db_context() as db:
@@ -98,16 +102,16 @@ async def get_latest_questions():
         "questions": [
             {"text": q, "likes": question_set.likes[i]} for i, q in enumerate(question_set.questions)
         ],
-        "created_at": question_set.created_at.isoformat() if question_set.created_at else None
+        "created_at": question_set.created_at.isoformat()
     }
 
-# ───────── 좋아요 반영 ─────────
+# 좋아요
 @router.patch("/question/{q_id}/like")
 async def like_question(q_id: int, body: LikeRequest):
     async with get_db_context() as db:
         question_set = await get_question_set(db, q_id)
 
-        if not question_set or body.question_id >= len(question_set.likes):
+        if not question_set or not (0 <= body.question_id < len(question_set.likes)):
             raise HTTPException(404, detail="질문 인덱스를 찾을 수 없습니다.")
 
         question_set.likes[body.question_id] += 1
@@ -115,13 +119,13 @@ async def like_question(q_id: int, body: LikeRequest):
 
     return {"message": "좋아요 반영 완료"}
 
-# ───────── 좋아요 취소 반영 ─────────
+# 좋아요 취소
 @router.patch("/question/{q_id}/unlike")
 async def unlike_question(q_id: int, body: LikeRequest):
     async with get_db_context() as db:
         question_set = await get_question_set(db, q_id)
 
-        if not question_set or body.question_id >= len(question_set.likes):
+        if not question_set or not (0 <= body.question_id < len(question_set.likes)):
             raise HTTPException(404, detail="질문 인덱스를 찾을 수 없습니다.")
 
         if question_set.likes[body.question_id] > 0:
@@ -129,9 +133,9 @@ async def unlike_question(q_id: int, body: LikeRequest):
             await db.commit()
             return {"message": "좋아요 취소 완료"}
         else:
-            return {"message": "이미 좋아요 수가 0입니다. 더 이상 감소할 수 없습니다."}
+            return {"message": "이미 0입니다."}
 
-# ───────── 인기 질문 정렬 조회 ─────────
+# 좋아요 순으로 질문 정렬
 @router.get("/questions/popular_likes")
 async def get_popular_likes(q_id: Optional[int] = None):
     async with get_db_context() as db:
@@ -141,19 +145,15 @@ async def get_popular_likes(q_id: Optional[int] = None):
         return {"results": []}
 
     questions_with_likes = [
-        {"text": q, "likes": question_set.likes[i]}
-        for i, q in enumerate(question_set.questions)
+        {"text": q, "likes": question_set.likes[i]} for i, q in enumerate(question_set.questions)
     ]
     sorted_questions = sorted(questions_with_likes, key=lambda x: x["likes"], reverse=True)
+
+    print(f"[DEBUG] 정렬된 좋아요: {sorted_questions}")
+
     return {"results": sorted_questions}
 
-# ───────── OPTIONS 프리플라이트 ─────────
-@router.options("/upload_text_chunk")
-@router.get("/upload_text_chunk")
-async def dummy_text_route():
-    return JSONResponse({"message": "POST로만 요청 가능합니다."})
-
-# ───────── 유틸 함수 ─────────
+# 문장 유효성 체크
 def split_text_into_sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.?!])\s+|\n", text) if s.strip()]
 
