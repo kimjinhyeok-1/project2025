@@ -1,3 +1,6 @@
+<!-- ==================== -->
+<!-- 🎓 학생용 QnA 페이지 (원래 UI 구조 유지) -->
+<!-- ==================== -->
 <template>
   <div class="container mt-5">
     <h2 class="text-center mb-4">🤖 실시간 질문 확인</h2>
@@ -58,7 +61,7 @@ export default {
         if (Array.isArray(questionsData.questions)) {
           this.questions = questionsData.questions.map(q => ({
             text: q.text,
-            likes: 0 // 초기 좋아요 수는 0으로 설정
+            likes: q.likes
           }));
         }
       } catch (err) {
