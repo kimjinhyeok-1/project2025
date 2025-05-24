@@ -1,3 +1,6 @@
+<!-- ======================= -->
+<!-- 👨‍🏫 교수자용 QnA 페이지 (STT 포함 원형 복원) -->
+<!-- ======================= -->
 <template>
   <div class="lecture-container mt-5 mx-auto px-4" style="max-width: 960px;">
     <h2 class="text-center">🎤 수업 녹화 & 음성 인식</h2>
@@ -92,7 +95,6 @@ export default {
     } catch (err) {
       console.error("강의 세션 생성 실패:", err);
     }
-
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
   },
@@ -142,7 +144,7 @@ export default {
           const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
           const q_id = res.data.q_id;
           this.lastQid = q_id;
-          console.log("🧠 질문 생성 API 호출 완료 - q_id:", q_id);
+          localStorage.setItem("latest_q_id", q_id);
           this.loadPopularQuestions(q_id);
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
@@ -151,9 +153,9 @@ export default {
         this.triggered = false;
       }
     },
-    async loadPopularQuestions(q_id = this.lastQid) {
-      if (!q_id) {
-        console.warn("❌ q_id 없음. 인기 질문 조회 중단");
+    async loadPopularQuestions(q_id = null) {
+      const id = q_id || this.lastQid || localStorage.getItem("latest_q_id");
+      if (!id) {
         this.noQidWarning = true;
         this.loadingQuestions = false;
         return;
@@ -162,7 +164,7 @@ export default {
       this.noQidWarning = false;
       this.loadingQuestions = true;
       try {
-        const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${q_id}`);
+        const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${id}`);
         const data = await res.json();
         if (Array.isArray(data.results)) {
           this.placeholderQuestions = data.results;
