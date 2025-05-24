@@ -1,15 +1,33 @@
-<!-- ==================== -->
-<!-- 🎓 학생용 QnA 페이지 -->
-<!-- ==================== -->
 <template>
-  <div class="qna-student">
-    <h2>🤖 실시간 질문 확인</h2>
-    <button @click="loadLatestQuestions">🔄 질문 불러오기</button>
+  <div class="container mt-5">
+    <h2 class="text-center mb-4">🤖 실시간 질문 확인</h2>
 
-    <div v-for="(q, idx) in questions" :key="idx" class="question-card" :class="{ selected: selected.includes(idx) }">
-      <p>{{ q.text }}</p>
-      <button @click="toggleLike(idx)">{{ selected.includes(idx) ? '✅ 선택 취소' : '선택하기' }}</button>
-      <p class="likes">👍 {{ q.likes }}</p>
+    <div class="text-center mb-4">
+      <button class="btn btn-success" @click="loadLatestQuestions">🔄 질문 불러오기</button>
+    </div>
+
+    <div class="row">
+      <div
+        v-for="(q, idx) in questions"
+        :key="idx"
+        class="col-md-6 mb-4"
+      >
+        <div
+          class="card shadow h-100 p-3"
+          :class="{ 'bg-primary text-white': selected.includes(idx) }"
+        >
+          <div class="card-body">
+            <p class="card-text">{{ q.text }}</p>
+            <button
+              class="btn btn-outline-primary mt-3"
+              :class="{ 'btn-light text-primary': selected.includes(idx) }"
+              @click="toggleLike(idx)"
+            >
+              {{ selected.includes(idx) ? '✅ 선택 취소' : '선택하기' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -19,68 +37,86 @@ export default {
   data() {
     return {
       questions: [],
-      selected: [],
-      q_id: null
+      q_id: null,
+      selected: []
     };
+  },
+  async mounted() {
+    await this.loadLatestQuestions();
   },
   methods: {
     async loadLatestQuestions() {
-      const idRes = await fetch("https://project2025-backend.onrender.com/questions/latest_id");
-      const idData = await idRes.json();
-      this.q_id = parseInt(idData.q_id);
-      localStorage.setItem("latest_q_id", this.q_id);
+      try {
+        const idRes = await fetch("https://project2025-backend.onrender.com/questions/latest_id");
+        const idData = await idRes.json();
+        this.q_id = parseInt(idData.q_id);
+        this.loadSelected();
 
-      const res = await fetch("https://project2025-backend.onrender.com/questions/latest");
-      const data = await res.json();
-      this.questions = data.questions;
+        const questionsRes = await fetch("https://project2025-backend.onrender.com/questions/latest");
+        const questionsData = await questionsRes.json();
 
-      const stored = localStorage.getItem(`selected_questions_${this.q_id}`);
-      this.selected = stored ? JSON.parse(stored) : [];
+        if (Array.isArray(questionsData.questions)) {
+          this.questions = questionsData.questions.map(q => ({
+            text: q.text,
+            likes: 0 // 초기 좋아요 수는 0으로 설정
+          }));
+        }
+      } catch (err) {
+        console.error("질문 또는 q_id 불러오기 실패:", err);
+      }
     },
-    async toggleLike(index) {
-      const alreadySelected = this.selected.includes(index);
-      const endpoint = alreadySelected ? "unlike" : "like";
-      await fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/${endpoint}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question_id: index })
-      });
-
-      if (alreadySelected) {
-        this.selected = this.selected.filter(i => i !== index);
-        this.questions[index].likes -= 1;
-      } else {
-        this.selected.push(index);
-        this.questions[index].likes += 1;
+    toggleLike(index) {
+      if (!this.q_id || isNaN(this.q_id)) {
+        console.warn("❌ 유효하지 않은 q_id. 좋아요 요청 중단");
+        return;
       }
 
-      localStorage.setItem(`selected_questions_${this.q_id}`, JSON.stringify(this.selected));
+      const alreadySelected = this.selected.includes(index);
+      const endpoint = alreadySelected ? "unlike" : "like";
+      const method = "PATCH";
+
+      fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/${endpoint}`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question_id: index })
+      }).then(() => {
+        if (alreadySelected) {
+          this.selected = this.selected.filter(i => i !== index);
+          if (this.questions[index].likes > 0) {
+            this.questions[index].likes -= 1;
+          }
+        } else {
+          this.selected.push(index);
+          this.questions[index].likes += 1;
+        }
+
+        localStorage.setItem(
+          `selected_questions_${this.q_id}`,
+          JSON.stringify(this.selected)
+        );
+      }).catch(err => {
+        console.error(`선택 ${endpoint} 전송 실패:`, err);
+      });
+    },
+    loadSelected() {
+      const saved = localStorage.getItem(`selected_questions_${this.q_id}`);
+      if (saved) {
+        try {
+          this.selected = JSON.parse(saved);
+        } catch {
+          this.selected = [];
+        }
+      }
     }
-  },
-  mounted() {
-    this.loadLatestQuestions();
   }
 };
 </script>
 
 <style scoped>
-.qna-student {
-  max-width: 800px;
-  margin: auto;
-  padding: 1rem;
+.card {
+  transition: all 0.3s ease-in-out;
 }
-.question-card {
-  background: #f9f9f9;
-  margin: 1rem 0;
-  padding: 1rem;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-}
-.selected {
-  background-color: #d0ebff;
-}
-.likes {
-  font-size: 0.85rem;
-  color: #555;
+.card:hover {
+  transform: scale(1.02);
 }
 </style>
