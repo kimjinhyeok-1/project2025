@@ -1,5 +1,5 @@
 # ========================
-# 📦 Backend: FastAPI 코드
+# 📦 Backend: FastAPI 코드 (likes 반영 패치 포함)
 # ========================
 
 from fastapi import APIRouter, HTTPException
@@ -114,10 +114,15 @@ async def like_question(q_id: int, body: LikeRequest):
         if not question_set or not (0 <= body.question_id < len(question_set.likes)):
             raise HTTPException(404, detail="질문 인덱스를 찾을 수 없습니다.")
 
-        question_set.likes[body.question_id] += 1
-        await db.commit()
+        updated_likes = question_set.likes.copy()
+        updated_likes[body.question_id] += 1
+        question_set.likes = updated_likes
 
-    return {"message": "좋아요 반영 완료"}
+        await db.commit()
+        await db.refresh(question_set)
+
+        print(f"[LIKE PATCH] q_id={q_id}, question_id={body.question_id}, likes={question_set.likes}")
+        return {"message": "좋아요 반영 완료"}
 
 # 좋아요 취소
 @router.patch("/question/{q_id}/unlike")
@@ -128,9 +133,13 @@ async def unlike_question(q_id: int, body: LikeRequest):
         if not question_set or not (0 <= body.question_id < len(question_set.likes)):
             raise HTTPException(404, detail="질문 인덱스를 찾을 수 없습니다.")
 
-        if question_set.likes[body.question_id] > 0:
-            question_set.likes[body.question_id] -= 1
+        updated_likes = question_set.likes.copy()
+        if updated_likes[body.question_id] > 0:
+            updated_likes[body.question_id] -= 1
+            question_set.likes = updated_likes
             await db.commit()
+            await db.refresh(question_set)
+            print(f"[UNLIKE PATCH] q_id={q_id}, question_id={body.question_id}, likes={question_set.likes}")
             return {"message": "좋아요 취소 완료"}
         else:
             return {"message": "이미 0입니다."}
@@ -149,7 +158,7 @@ async def get_popular_likes(q_id: Optional[int] = None):
     ]
     sorted_questions = sorted(questions_with_likes, key=lambda x: x["likes"], reverse=True)
 
-    print(f"[DEBUG] 정렬된 좋아요: {sorted_questions}")
+    print(f"[POPULAR GET] q_id={q_id}, sorted={sorted_questions}")
 
     return {"results": sorted_questions}
 
