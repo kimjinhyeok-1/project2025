@@ -41,19 +41,16 @@ async def summarize_snapshot_transcript(context: str) -> str:
     )
     return response.choices[0].message.content.strip()
 
-async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot]) -> list[int]:
-    """
-    topic과 관련해 가장 적절한 2개의 snapshot index를 GPT에게 물어봐서 받는다.
-    """
+async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2) -> list[int]:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     prompt = (
         f"다음은 강의 주제입니다:\n\n'{topic}'\n\n"
-        f"그리고 아래는 교수님의 설명 요약입니다:\n\n" +
+        f"아래는 교수님의 설명 요약입니다:\n\n" +
         "\n".join([f"{i+1}. {snap.summary_text}" for i, snap in enumerate(snapshots)]) +
-        "\n\n위 주제와 가장 관련 있는 설명을 2개 선택하세요. "
-        "중요하거나 중심이 되는 장면을 고려해 판단하고, 번호만 콤마로 구분해서 출력하세요 (예: 1,4)"
+        f"\n\n위 주제와 가장 관련 있는 설명을 1개 또는 2개 선택하세요. "
+        f"중복되는 경우는 1개만 선택하고, 번호만 콤마 없이 한 줄에 출력하세요 (예: 1 또는 1,2)"
     )
 
     res = await client.chat.completions.create(
@@ -64,7 +61,8 @@ async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot]) ->
     )
     text = res.choices[0].message.content.strip()
     try:
-        indices = [int(x.strip()) - 1 for x in text.split(",")]
-        return [i for i in indices if 0 <= i < len(snapshots)]
+        indices = [int(x.strip()) - 1 for x in text.split(",") if x.strip().isdigit()]
+        unique_indices = list(dict.fromkeys([i for i in indices if 0 <= i < len(snapshots)]))
+        return unique_indices[:max_count]  # 최대 max_count개
     except Exception:
         return []
