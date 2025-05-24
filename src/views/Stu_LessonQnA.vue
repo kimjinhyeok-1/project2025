@@ -1,6 +1,3 @@
-<!-- ==================== -->
-<!-- 🎓 학생용 QnA 페이지 (원래 UI 구조 유지) -->
-<!-- ==================== -->
 <template>
   <div class="container mt-5">
     <h2 class="text-center mb-4">🤖 실시간 질문 확인</h2>
@@ -17,11 +14,14 @@
       >
         <div
           class="card shadow h-100 p-3"
-          :class="{ 'bg-primary text-white': selected.includes(idx) }"
+          :class="{ 'bg-primary text-white': selected.includes(idx) && !q.dummy }"
         >
           <div class="card-body">
             <p class="card-text">{{ q.text }}</p>
+
+            <!-- 버튼은 더미 아닐 때만 표시 -->
             <button
+              v-if="!q.dummy"
               class="btn btn-outline-primary mt-3"
               :class="{ 'btn-light text-primary': selected.includes(idx) }"
               @click="toggleLike(idx)"
@@ -39,9 +39,9 @@
 export default {
   data() {
     return {
-      questions: [],
       q_id: null,
-      selected: []
+      selected: [],
+      questions: Array(5).fill({ text: "질문 로딩 중...", likes: 0, dummy: true })
     };
   },
   async mounted() {
@@ -61,7 +61,8 @@ export default {
         if (Array.isArray(questionsData.questions)) {
           this.questions = questionsData.questions.map(q => ({
             text: q.text,
-            likes: q.likes
+            likes: q.likes ?? 0,
+            dummy: false
           }));
         }
       } catch (err) {
