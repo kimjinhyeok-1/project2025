@@ -138,7 +138,7 @@ export default {
         console.error("❌ 텍스트 업로드 실패:", error);
       }
 
-      if (text.includes("질문") || text.includes("?") || text.includes("확인")) {
+      if (text.includes("질문")) {
         this.triggered = true;
         try {
           const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
