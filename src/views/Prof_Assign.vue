@@ -1,6 +1,6 @@
 <template>
   <div class="qna-wrapper">
-    <!-- 제목 + 버튼 한 줄 정렬 -->
+    <!-- 제목 + 버튼 -->
     <div class="title-bar d-flex justify-content-between align-items-center mb-3" style="width: 950px;">
       <h2 class="title m-0">📝 교수용 과제 공지 목록</h2>
       <button @click="toggleForm" class="btn btn-primary">
@@ -20,7 +20,7 @@
           <input v-model="title" type="text" class="form-control" required />
         </div>
         <div class="mb-3">
-          <label class="form-label">설명</label>
+          <label class="form-label">설명 (마크다운 지원)</label>
           <textarea v-model="description" class="form-control" required></textarea>
         </div>
         <div class="mb-3">
@@ -57,7 +57,8 @@
       <div v-for="assignment in assignments" :key="assignment.id">
         <div class="card-title">
           <h5>{{ assignment.title }}</h5>
-          <p class="card-text">{{ assignment.description }}</p>
+          <!-- ✅ 마크다운으로 렌더링된 HTML 출력 -->
+          <div class="card-text markdown-body" v-html="renderedDescriptions[assignment.id]"></div>
           <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
 
           <div class="d-flex justify-content-between align-items-center mt-3">
@@ -74,6 +75,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import MarkdownIt from 'markdown-it'
 
 const router = useRouter()
 const assignments = ref([])
@@ -86,6 +88,9 @@ const description = ref('')
 const deadline = ref('')
 const sampleAnswer = ref('')
 const file = ref(null)
+
+const renderedDescriptions = ref({})
+const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 
 const formatDate = (datetime) => {
   if (!datetime) return 'N/A'
@@ -102,6 +107,13 @@ const fixDatetimeFormat = (dt) => {
   return dt.length === 16 ? dt + ':00' : dt
 }
 
+const renderAllDescriptions = () => {
+  renderedDescriptions.value = {}
+  for (const assignment of assignments.value) {
+    renderedDescriptions.value[assignment.id] = md.render(assignment.description || '')
+  }
+}
+
 const fetchAssignments = async () => {
   loading.value = true
   try {
@@ -110,6 +122,7 @@ const fetchAssignments = async () => {
       headers: { Authorization: `Bearer ${token}` },
     })
     assignments.value = res.data
+    renderAllDescriptions()
   } catch (err) {
     console.error('❌ 과제 목록 불러오기 실패:', err)
   } finally {
@@ -140,7 +153,6 @@ const handleFileChange = (e) => {
 const submitAssignment = async () => {
   const formData = new FormData()
   const formattedDeadline = fixDatetimeFormat(deadline.value)
-  console.log('📤 [제출] 마감일:', formattedDeadline)
 
   formData.append('title', title.value)
   formData.append('description', description.value)
@@ -177,12 +189,9 @@ const editAssignment = (assignment) => {
 
 const updateAssignment = async () => {
   const formattedDeadline = fixDatetimeFormat(deadline.value)
-  console.log('🔧 [수정] 과제 ID:', editingAssignmentId.value)
-  console.log('🔧 [수정] 마감일:', formattedDeadline)
 
   try {
     const token = localStorage.getItem('access_token')
-
     const form = new URLSearchParams()
     form.append('title', title.value)
     form.append('description', description.value)
@@ -214,16 +223,6 @@ const goToFeedback = (id) => {
   router.push(`/professor/feedback/${id}`)
 }
 </script>
-
-<style>
-.fade-enter-active, .fade-leave-active {
-  transition: all 0.3s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-</style>
 
 <style scoped>
 .qna-wrapper {
@@ -267,7 +266,23 @@ const goToFeedback = (id) => {
   color: #34495e;
 }
 
-.description-text {
-  white-space: pre-line;
+.markdown-body {
+  font-family: 'Noto Sans', sans-serif;
+  line-height: 1.6;
+  word-break: break-word;
+  margin-bottom: 1rem;
+}
+
+.markdown-body pre {
+  background-color: #f6f8fa;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.markdown-body code {
+  background-color: #f6f8fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
 }
 </style>
