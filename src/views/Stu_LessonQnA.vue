@@ -1,8 +1,8 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🤖 실시간 질문 확인</h2>
-
-    <div class="text-center mb-4">
+    <!-- 타이틀 + 버튼을 한 줄에 정렬 -->
+    <div class="header-row">
+      <h2 class="title">🤖 실시간 질문 확인</h2>
       <button class="btn btn-success" @click="loadLatestQuestions">🔄 질문 불러오기</button>
     </div>
 
@@ -110,16 +110,24 @@ export default {
   margin-top: 5rem;
 }
 
+/* 타이틀 + 버튼 배치용 */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 950px;
+  margin-bottom: 1.5rem;
+}
+
 .title {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 1rem;
-  text-align: left;
+  margin: 0;
   color: #2c3e50;
-  width: 100%;
-  max-width: 950px;
 }
 
+/* 질문 카드 */
 .answer-wrapper {
   position: relative;
   width: 100%;
@@ -137,11 +145,12 @@ export default {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
 
+/* 선택된 카드 */
 .selected-card {
   background-color: #e0edff;
-  /* 텍스트 색상 변경 없음 → 그대로 유지 */
 }
 
+/* 텍스트 */
 .card-text {
   font-size: 1.1rem;
   line-height: 1.6;
