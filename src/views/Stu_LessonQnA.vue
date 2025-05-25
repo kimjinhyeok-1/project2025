@@ -14,7 +14,7 @@
       >
         <div
           class="answer-wrapper"
-          :class="{ 'bg-primary text-white': selected.includes(idx) && !q.dummy }"
+          :class="{ 'selected-card': selected.includes(idx) && !q.dummy }"
         >
           <div class="card-body">
             <p class="card-text">{{ q.text }}</p>
@@ -165,4 +165,10 @@ export default {
 .description-text {
   white-space: pre-line;
 }
+
+.selected-card {
+  background-color: #007bff !important; /* Bootstrap의 primary 색상 */
+  color: white !important;
+}
+
 </style>
