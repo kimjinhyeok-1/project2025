@@ -13,13 +13,11 @@
       <p class="text-muted description-text">{{ truncateText(assignment.description, 150) }}</p>
       <p><strong>마감일:</strong> {{ assignment.deadline }}</p>
 
-      <!-- ✅ 이미 제출된 경우 안내 및 버튼 -->
       <div v-if="alreadySubmitted" class="alert alert-info d-flex justify-content-between align-items-center">
         <span>이 과제는 이미 제출되었습니다.</span>
         <button class="btn btn-outline-primary btn-sm" @click="goToFeedback">📄 피드백 다시 보기</button>
       </div>
 
-      <!-- ✅ 제출 폼 -->
       <form @submit.prevent="handleSubmit">
         <div class="mb-3">
           <label for="file" class="form-label">파일 업로드 (PDF만 가능)</label>
@@ -55,6 +53,11 @@ const selectedFile = ref(null)
 const submitting = ref(false)
 const alreadySubmitted = ref(false)
 
+const truncateText = (text, length) => {
+  if (!text) return ''
+  return text.length > length ? text.slice(0, length) + '...' : text
+}
+
 const handleFileChange = (e) => {
   const file = e.target.files[0]
   if (file && file.type !== 'application/pdf') {
@@ -76,11 +79,6 @@ const handleSubmit = async () => {
   if (!token) {
     alert('🔐 로그인이 필요합니다.')
     return
-  }
-
-  const truncateText = (text, length) => {
-  if (!text) return ''
-  return text.length > length ? text.slice(0, length) + '...' : text
   }
 
   submitting.value = true
@@ -123,7 +121,7 @@ const goToFeedback = () => {
 
   const today = new Date()
   const dueDate = new Date(assignment.value.deadline)
-  dueDate.setDate(dueDate.getDate() + 1) // 마감일 다음 날부터 가능
+  dueDate.setDate(dueDate.getDate() + 1)
 
   if (today < dueDate) {
     alert('📅 과제 제출 마감일이 아직 지나지 않았습니다.')
@@ -155,52 +153,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ===== 기본 레이아웃 ===== */
-.qna-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 800px;
-  margin-top: 5rem auto;
-}
-
-.title {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 2rem;
-  text-align: left;
-  color: #2c3e50;
-}
-
-/* ===== 카드 스타일 (과제 항목) ===== */
-.answer-wrapper {
-  position: relative;
-  width: 950px;
-  margin: 2rem auto;
-  background: linear-gradient(145deg, #f9fafb, #ffffff);
-  padding: 2rem;
-  border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  transition: box-shadow 0.3s ease;
-}
-
-.answer-wrapper:hover {
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
-}
-
-.card-title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.card-text {
-  font-size: 1.1rem;
-  line-height: 1.7;
-  color: #34495e;
-}
-
 .description-text {
   white-space: pre-line;
 }
-
 </style>
