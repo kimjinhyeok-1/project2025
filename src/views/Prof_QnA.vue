@@ -26,17 +26,9 @@
 
     <!-- 탭 내용 -->
     <div class="tab-content mt-3">
-      <!-- 요약 탭 -->
+      <!-- 📋 SUMMARY -->
       <div v-if="activeTab === 'summary'" class="answer-wrapper">
         <h5 class="card-title">📋 SUMMARY</h5>
-
-        <button
-          v-if="!summary.summary_for_professor && !summaryLoading"
-          class="btn btn-primary mb-3"
-          @click="loadSummary"
-        >
-          📥 요약 불러오기
-        </button>
 
         <div v-if="summaryLoading" class="d-flex align-items-center justify-content-center my-3">
           <strong role="status">불러오는 중...</strong>
@@ -53,7 +45,7 @@
         </div>
       </div>
 
-      <!-- 전체 대화 탭 -->
+      <!-- 💬 전체 대화 -->
       <div v-if="activeTab === 'fullchat'" class="answer-wrapper">
         <h5 class="card-title">💬 전체 대화 내용</h5>
 
@@ -69,7 +61,8 @@
             class="card-text mb-4 border-bottom pb-3"
           >
             <p class="mb-1"><strong>🧑 질문:</strong> {{ msg.question }}</p>
-            <p class="mb-1"><strong>🤖 답변:</strong> {{ msg.answer }}</p>
+            <p class="mb-1"><strong>🤖 답변:</strong></p>
+            <div class="markdown-body" v-html="renderMarkdown(msg.answer)" />
             <p class="text-muted small mb-0">{{ formatDate(msg.created_at) }}</p>
           </li>
         </ul>
@@ -83,8 +76,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import MarkdownIt from 'markdown-it'
 
 const activeTab = ref('summary')
 
@@ -97,6 +91,12 @@ const fullChat = ref([])
 const summaryLoading = ref(false)
 const chatLoading = ref(false)
 const hasLoadedChat = ref(false)
+
+const md = new MarkdownIt()
+
+function renderMarkdown(text) {
+  return md.render(text || '')
+}
 
 function formatDate(dateStr) {
   const d = new Date(dateStr)
@@ -159,6 +159,10 @@ const loadFullChat = async () => {
     chatLoading.value = false
   }
 }
+
+onMounted(() => {
+  loadSummary()
+})
 </script>
 
 <style scoped>
@@ -206,5 +210,25 @@ const loadFullChat = async () => {
 
 .text-muted {
   font-size: 0.9rem;
+}
+
+.markdown-body {
+  font-family: 'Noto Sans', sans-serif;
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.markdown-body pre {
+  background-color: #f6f8fa;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.markdown-body code {
+  background-color: #f6f8fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
 }
 </style>
