@@ -1,6 +1,6 @@
 <template>
-  <div class="container mt-5">
-    <h2 class="mb-4">📋 과제</h2>
+  <div class="qna-wrapper">
+    <h2 class="title">📋 과제</h2>
 
     <div v-if="loading" class="text-center">
       <div class="spinner-border" role="status"></div>
@@ -15,24 +15,21 @@
         <div
           v-for="assignment in assignments"
           :key="assignment.id"
-          class="col-12" 
+          class="col-12"
         >
           <router-link
             :to="`/student/assignments/${assignment.id}`"
             class="text-decoration-none"
           >
-            <div class="card shadow-sm h-100">
-              <div class="card-body p-4">
-                <h5 class="card-title text-dark">{{ assignment.title }}</h5>
-                <p class="card-text text-muted">
-                  {{ truncateText(assignment.description, 150) }}
-                </p>
-                <p class="card-text">
-                  📅 마감일:
-                  <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong>
-                </p>
-                <!-- ❌ 작성일 제거 -->
-              </div>
+            <div class="answer-wrapper">
+              <h5 class="card-title text-dark">{{ assignment.title }}</h5>
+              <p class="card-text text-muted">
+                {{ truncateText(assignment.description, 150) }}
+              </p>
+              <p class="card-text">
+                📅 마감일:
+                <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong>
+              </p>
             </div>
           </router-link>
         </div>
@@ -81,3 +78,48 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+/* ===== 기본 레이아웃 ===== */
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  text-align: center;
+  color: #2c3e50;
+}
+
+/* ===== 카드 스타일 (과제 항목) ===== */
+.answer-wrapper {
+  position: relative;
+  max-width: 950px;
+  margin: 2rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.answer-wrapper:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #34495e;
+}
+</style>
