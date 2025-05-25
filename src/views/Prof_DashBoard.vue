@@ -2,8 +2,8 @@
   <div class="qna-wrapper">
     <h2 class="title">📊 Professor Dashboard</h2>
 
-    <div class="row g-4">
-      <div class="col-md-6">
+    <div class="row">
+      <div>
         <router-link to="/professor/qna" class="answer-wrapper">
           <div>
             <h5 class="card-title">❓ Q&A</h5>
@@ -12,7 +12,7 @@
         </router-link>
       </div>
 
-      <div class="col-md-6">
+      <div>
         <router-link to="/professor/lesson" class="answer-wrapper">
           <div>
             <h5 class="card-title">🎥 수업하기</h5>
@@ -21,7 +21,7 @@
         </router-link>
       </div>
 
-      <div class="col-md-6">
+      <div>
         <router-link to="/professor/review" class="answer-wrapper">
           <div>
             <h5 class="card-title">📼 수업 복습</h5>
@@ -30,7 +30,7 @@
         </router-link>
       </div>
 
-      <div class="col-md-6">
+      <div>
         <router-link to="/professor/assignments" class="answer-wrapper">
           <div>
             <h5 class="card-title">📝 과제</h5>
