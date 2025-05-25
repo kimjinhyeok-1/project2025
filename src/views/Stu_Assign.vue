@@ -84,9 +84,8 @@ onMounted(async () => {
 .qna-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  width: 800px;
-  margin-top: 5rem auto;
+  align-items: center;
+  margin-top: 5rem;
 }
 
 .title {
@@ -95,6 +94,7 @@ onMounted(async () => {
   margin-bottom: 2rem;
   text-align: left;
   color: #2c3e50;
+  width: 800px;
 }
 
 /* ===== 카드 스타일 (과제 항목) ===== */
