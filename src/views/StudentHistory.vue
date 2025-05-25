@@ -11,7 +11,6 @@
         <li
           v-for="(msg, index) in chatHistory"
           :key="index"
-          class="answer-wrapper"
         >
           <p class="card-text"><strong>🧑 질문:</strong> {{ msg.question }}</p>
           <p class="card-text"><strong>🤖 답변:</strong> {{ msg.answer }}</p>
