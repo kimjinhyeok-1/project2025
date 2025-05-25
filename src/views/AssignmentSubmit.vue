@@ -14,8 +14,8 @@
       <hr class="my-divider" />
       <p class="card-text description-text">{{ assignment.description }}</p>
       <hr class="my-divider" />
-
       <p class="card-text"><strong>마감일:</strong> {{ assignment.deadline }}</p>
+      <hr class="my-divider" />
 
       <div v-if="alreadySubmitted" class="card-text alert alert-info d-flex justify-content-between align-items-center">
         <span>이 과제는 이미 제출되었습니다.</span>
@@ -33,6 +33,8 @@
             @change="handleFileChange"
           />
         </div>
+        
+        <hr class="my-divider" />
 
         <!-- ✅ 수정된 버튼 -->
         <button type="submit" class="submit-button" :disabled="submitting">
