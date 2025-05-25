@@ -2,7 +2,7 @@
   <div class="qna-wrapper">
     <h2 class="title">📊 Professor Dashboard</h2>
 
-    <div class="row">
+    <div>
       <div>
         <router-link to="/professor/qna" class="answer-wrapper">
           <div>
