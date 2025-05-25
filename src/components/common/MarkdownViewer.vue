@@ -2,7 +2,7 @@
     <div>
       <div
         class="markdown-body"
-        :style="{ maxHeight: expanded ? 'none' : '300px', overflow: expanded ? 'visible' : 'hidden' }"
+        :style="{ maxHeight: expanded ? 'none' : '100px', overflow: expanded ? 'visible' : 'hidden' }"
         v-html="renderedHtml"
       ></div>
   
@@ -44,7 +44,7 @@
     renderedHtml.value = md.render(props.markdown)
     setTimeout(() => {
       const el = document.querySelector('.markdown-body')
-      if (el && el.scrollHeight > 300) {
+      if (el && el.scrollHeight > 100) {
         isOverflowing.value = true
       } else {
         isOverflowing.value = false
