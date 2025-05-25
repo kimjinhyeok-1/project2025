@@ -1,82 +1,119 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">📋 과제</h2>
+    <h2 class="title">🤖 실시간 질문 확인</h2>
 
-    <div v-if="loading" class="text-center">
-      <div class="spinner-border" role="status"></div>
+    <div class="text-center mb-4">
+      <button class="btn btn-success" @click="loadLatestQuestions">🔄 질문 불러오기</button>
     </div>
 
-    <div v-else-if="assignments.length === 0" class="alert alert-info">
-      등록된 과제 공지가 없습니다.
-    </div>
-
-    <div v-else>
-      <div class="row g-4">
+    <div>
+      <div
+        v-for="(q, idx) in questions"
+        :key="idx"
+        class="mb-4"
+      >
         <div
-          v-for="assignment in assignments"
-          :key="assignment.id"
-          class="col-12"
+          class="answer-wrapper"
+          :class="{ 'bg-primary text-white': selected.includes(idx) && !q.dummy }"
         >
-          <router-link
-            :to="`/student/assignments/${assignment.id}`"
-            class="text-decoration-none"
-          >
-            <div class="answer-wrapper">
-              <h5 class="card-title text-dark">{{ assignment.title }}</h5>
-              <p class="card-text text-muted description-text">
-                {{ truncateText(assignment.description, 150) }}
-              </p>
-              <p class="card-text">
-                📅 마감일:
-                <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong>
-              </p>
-            </div>
-          </router-link>
+          <div class="card-body">
+            <p class="card-text">{{ q.text }}</p>
+
+            <!-- 버튼은 더미 아닐 때만 표시 -->
+            <button
+              v-if="!q.dummy"
+              class="btn btn-outline-primary mt-3"
+              :class="{ 'btn-light text-primary': selected.includes(idx) }"
+              @click="toggleLike(idx)"
+            >
+              {{ selected.includes(idx) ? '✅ 선택 취소' : '선택하기' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
+<script>
+export default {
+  data() {
+    return {
+      q_id: null,
+      selected: [],
+      questions: Array(5).fill({ text: "질문 로딩 중...", likes: 0, dummy: true })
+    };
+  },
+  async mounted() {
+    await this.loadLatestQuestions();
+  },
+  methods: {
+    async loadLatestQuestions() {
+      try {
+        const idRes = await fetch("https://project2025-backend.onrender.com/questions/latest_id");
+        const idData = await idRes.json();
+        this.q_id = parseInt(idData.q_id);
+        this.loadSelected();
 
-const assignments = ref([])
-const loading = ref(true)
+        const questionsRes = await fetch("https://project2025-backend.onrender.com/questions/latest");
+        const questionsData = await questionsRes.json();
 
-const formatDate = (datetime) => {
-  if (!datetime) return 'N/A'
-  const date = new Date(datetime)
-  return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
+        if (Array.isArray(questionsData.questions)) {
+          this.questions = questionsData.questions.map(q => ({
+            text: q.text,
+            likes: q.likes ?? 0,
+            dummy: false
+          }));
+        }
+      } catch (err) {
+        console.error("질문 또는 q_id 불러오기 실패:", err);
+      }
+    },
+    toggleLike(index) {
+      if (!this.q_id || isNaN(this.q_id)) {
+        console.warn("❌ 유효하지 않은 q_id. 좋아요 요청 중단");
+        return;
+      }
 
-const truncateText = (text, length) => {
-  if (!text) return ''
-  return text.length > length ? text.slice(0, length) + '...' : text
-}
+      const alreadySelected = this.selected.includes(index);
+      const endpoint = alreadySelected ? "unlike" : "like";
+      const method = "PATCH";
 
-onMounted(async () => {
-  try {
-    const res = await axios.get('https://project2025-backend.onrender.com/assignments/')
-    if (Array.isArray(res.data)) {
-      assignments.value = res.data
-    } else if (res.data && Array.isArray(res.data.assignments)) {
-      assignments.value = res.data.assignments
-    } else {
-      assignments.value = []
+      fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/${endpoint}`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question_id: index })
+      }).then(() => {
+        if (alreadySelected) {
+          this.selected = this.selected.filter(i => i !== index);
+          if (this.questions[index].likes > 0) {
+            this.questions[index].likes -= 1;
+          }
+        } else {
+          this.selected.push(index);
+          this.questions[index].likes += 1;
+        }
+
+        localStorage.setItem(
+          `selected_questions_${this.q_id}`,
+          JSON.stringify(this.selected)
+        );
+      }).catch(err => {
+        console.error(`선택 ${endpoint} 전송 실패:`, err);
+      });
+    },
+    loadSelected() {
+      const saved = localStorage.getItem(`selected_questions_${this.q_id}`);
+      if (saved) {
+        try {
+          this.selected = JSON.parse(saved);
+        } catch {
+          this.selected = [];
+        }
+      }
     }
-  } catch (err) {
-    console.error('❌ 과제 공지 로딩 실패:', err)
-    assignments.value = []
-  } finally {
-    loading.value = false
   }
-})
+};
 </script>
 
 <style scoped>
@@ -97,7 +134,7 @@ onMounted(async () => {
   width: 950px;
 }
 
-/* ===== 카드 스타일 (과제 항목) ===== */
+/* ===== 카드 스타일 (질문 항목) ===== */
 .answer-wrapper {
   position: relative;
   width: 950px;
@@ -127,5 +164,4 @@ onMounted(async () => {
 .description-text {
   white-space: pre-line;
 }
-
 </style>
