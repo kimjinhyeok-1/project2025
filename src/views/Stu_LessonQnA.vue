@@ -138,6 +138,7 @@ export default {
 .answer-wrapper {
   position: relative;
   width: 950px;
+  height: 180px;
   margin: 2rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 2rem;
