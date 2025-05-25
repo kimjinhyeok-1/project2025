@@ -134,19 +134,8 @@ async def upload_snapshot(
     rel_url = f"/static/{settings.image_dir}/{filename}"
     abs_url = f"{settings.base_url.rstrip('/')}{rel_url}"
 
+    # 텍스트 로그 파일에 기록 (요약은 생성하지 않음)
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
-    recent_lines = []
-    if os.path.exists(log_path):
-        async with aiofiles.open(log_path, "r", encoding="utf-8") as log_file:
-            all_lines = await log_file.readlines()
-            recent_lines = all_lines[-5:]
-
-    context_lines = [line.split(" - ", 1)[-1].strip() for line in recent_lines]
-    context_lines.append(data.transcript)
-    context = "\n".join(context_lines)
-
-    summary = await summarize_snapshot_transcript(context)
-
     async with aiofiles.open(log_path, "a", encoding="utf-8") as log_file:
         await log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
 
@@ -155,7 +144,7 @@ async def upload_snapshot(
         date=dt.strftime("%Y-%m-%d"),
         time=dt.strftime("%H:%M:%S"),
         text=data.transcript,
-        summary_text=summary,
+        summary_text=None,  # ❗ 요약은 나중에 생성
         image_path=rel_url
     )
     db.add(snapshot)
@@ -166,7 +155,7 @@ async def upload_snapshot(
         "lecture_id": lecture_id,
         "date": snapshot.date,
         "time": snapshot.time,
-        "summary": summary,
+        "summary": None,
         "image_url": abs_url
     }
 
@@ -188,13 +177,16 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         {
             "role": "system",
             "content": (
-                "당신은 Java 강의 내용을 바탕으로 수업 마무리 요약을 작성하는 비서입니다.\n"
+                "당신은 Java 강의의 핵심 내용을 정리해주는 요약 비서입니다.\n"
                 "다음 지침을 반드시 따르세요:\n"
-                "1. 핵심 키워드 **3개만** 정확히 작성하세요. 3개를 초과하거나 미만으로 작성하지 마세요.\n"
-                "2. 각 키워드는 Java 문법 또는 개념 중심으로 선정하고, **각 키워드마다 2~3문장 정도로 자세하게 설명**하세요.\n"
-                "3. 출력 형식은 아래 예시처럼 하세요. 번호와 키워드로 시작하고, 설명은 자연어 문장으로 서술하세요.\n"
-                "4. 요약 내용 외의 추가 설명, 인사말, 해설은 절대 작성하지 마세요. 반드시 키워드 3개와 설명만 출력하세요.\n"
-                "이 요약은 교수님이 수업 마무리 5분 동안 핵심을 전달하기 위해 사용합니다."
+                "1. 핵심 키워드는 정확히 **3개만** 작성해야 하며, 3개를 초과하거나 미만으로 작성하면 안 됩니다.\n"
+                "2. 각 키워드는 Java 문법이나 개념 중심이어야 하며, 예시 없이 **2~3문장으로 설명**합니다.\n"
+                "3. 출력 형식 예시:\n"
+                "   1. 클래스: Java에서 클래스를 정의하는 방법과 구성 요소(필드, 메서드 등)에 대해 설명합니다. 클래스는 객체 지향의 핵심 단위입니다.\n"
+                "   2. 상속: 상속은 코드 재사용을 가능하게 하며, 자식 클래스가 부모 클래스의 속성과 메서드를 사용할 수 있도록 합니다.\n"
+                "   3. 오버라이딩: 부모 클래스의 메서드를 자식 클래스에서 재정의하여 사용하는 기법입니다. 다형성을 구현할 때 활용됩니다.\n"
+                "4. 키워드 외의 내용(서론, 결론, 인사말 등)은 절대 포함하지 말고, 위 형식을 엄격히 따라야 합니다.\n"
+                "이 요약은 교수님이 수업 마지막 5분에 학생들에게 핵심만 전달하는 데 사용됩니다."
             )
         },
         {
@@ -221,7 +213,6 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 # API: POST /lecture_summary
 # ─────────────────────────────
 
-@router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def generate_lecture_summary(
     lecture_id: int = Query(...),
     db: AsyncSession = Depends(get_db)
@@ -260,13 +251,19 @@ async def generate_lecture_summary(
     used_paths = set()
 
     for topic_obj in topics:
-        top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots, used_paths=used_paths) 
+        top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots, used_paths=used_paths)
         highlights = []
         for idx in top2_indices:
             snap = snapshots[idx]
+            full_url = settings.base_url.rstrip("/") + snap.image_path
+            if not await is_valid_image_url(full_url):
+                continue  # 이미지가 깨졌거나 없으면 무시
+            if not snap.summary_text:
+                snap.summary_text = await summarize_snapshot_transcript(snap.text)
+                db.add(snap)  # 요약이 새로 생성된 경우 DB 업데이트
             highlights.append({
                 "image_url": snap.image_path,
-                "text": snap.summary_text or ""
+                "text": snap.summary_text
             })
 
         db.add(LectureSummary(
