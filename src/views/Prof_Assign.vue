@@ -1,18 +1,18 @@
 <template>
-  <div class="container mt-5">
-    <h2 class="mb-4">📝 교수용 과제 공지 목록</h2>
+  <div class="qna-wrapper">
+    <h2 class="title">📝 교수용 과제 공지 목록</h2>
 
-    <div class="d-flex justify-content-end mb-3">
+    <div class="card-text d-flex justify-content-end mb-3">
       <button @click="toggleForm" class="btn btn-primary">
         {{ formVisible ? '✖ 닫기' : editingAssignmentId ? '✏ 수정 취소' : '➕ 새 과제 작성' }}
       </button>
     </div>
 
-    <transition name="fade">
+    <transition name="fade" class="answer-wrapper">
       <form
         v-if="formVisible"
         @submit.prevent="editingAssignmentId ? updateAssignment() : submitAssignment()"
-        class="card card-body mb-4 shadow-sm"
+        class="card-text card card-body mb-4 shadow-sm"
       >
         <div class="mb-3">
           <label class="form-label">제목</label>
@@ -40,20 +40,20 @@
       </form>
     </transition>
 
-    <div v-if="loading" class="d-flex align-items-center justify-content-center my-5">
+    <div v-if="loading" class="card-text d-flex align-items-center justify-content-center my-5">
       <strong role="status">불러오는 중...  </strong>
       <div class="spinner-border ms-3" aria-hidden="true"></div>
     </div>
 
-    <div v-else-if="assignments.length === 0" class="alert alert-info">
+    <div v-else-if="assignments.length === 0" class="card-text alert alert-info">
       등록된 과제 공지가 없습니다.
     </div>
 
-    <div v-else>
-      <div v-for="assignment in assignments" :key="assignment.id" class="card mb-3 shadow-sm">
-        <div class="card-body">
+    <div v-else class="answer-wrapper">
+      <div v-for="assignment in assignments" :key="assignment.id">
+        <div class="card-title">
           <h5>{{ assignment.title }}</h5>
-          <p class="text-muted">{{ assignment.description }}</p>
+          <p class="card-text">{{ assignment.description }}</p>
           <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
 
           <div class="d-flex justify-content-between align-items-center mt-3">
@@ -218,5 +218,53 @@ const goToFeedback = (id) => {
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+</style>
+
+<style scoped>
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-align: left;
+  color: #2c3e50;
+  width: 950px;
+}
+
+.answer-wrapper {
+  position: relative;
+  width: 950px;
+  margin: 1rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.answer-wrapper:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #34495e;
+}
+
+.description-text {
+  white-space: pre-line;
 }
 </style>
