@@ -2,16 +2,16 @@
   <div class="qna-wrapper">
     <h2 class="title">📊 전체 AI 피드백 목록</h2>
 
-    <div v-if="loading" class="text-center">
+    <div v-if="loading" class="answer-wrapper text-center">
       <div class="spinner-border" role="status"></div>
       <p class="mt-3 text-muted">피드백을 불러오는 중입니다...</p>
     </div>
 
-    <div v-else-if="feedbackList.length === 0" class="alert alert-info">
+    <div v-else-if="feedbackList.length === 0" class="answer-wrapper alert alert-info">
       아직 제출된 피드백이 없습니다.
     </div>
 
-    <div v-else class="d-flex flex-column gap-4">
+    <div v-else class="answer-wrapper d-flex flex-column gap-4">
       <div
         v-for="(entry, index) in feedbackList"
         :key="index"
