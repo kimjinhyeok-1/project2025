@@ -84,7 +84,7 @@ class Snapshot(Base):
     text = Column(Text, nullable=False)
     image_path = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    summary_text = Column(Text, nullable=False)  
+    summary_text = Column(Text, nullable=True)  
 
     lecture = relationship("Lecture", back_populates="snapshots")
 
