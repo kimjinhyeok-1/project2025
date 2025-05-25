@@ -12,9 +12,9 @@
         style="cursor: pointer"
       >
         <div>
-          <p class="card-text mb-0 fw-bold">{{ formatDate(summary.created_at) }} 수업 요약보러 가기</p>
+          <p class="card-text mb-0 fw-bold">  {{ formatDate(summary.created_at) }} 수업 요약보러 가기</p>
         </div>
-        <div class="card-text text-end">Click</div>
+        <div class="card-text text-end">Click  </div>
       </div>
 
       <div v-if="loading" class="card-text text-muted mt-4 text-center">
@@ -132,7 +132,7 @@ export default {
 }
 
 .card-text {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   line-height: 1.7;
   color: #34495e;
 }
