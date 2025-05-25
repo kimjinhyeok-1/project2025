@@ -1,9 +1,8 @@
 <template>
-  <div class="review-container mt-5">
-    <h2 class="text-center">📚 수업 복습 보기</h2>
-    <p class="text-center text-muted">완료된 수업 요약을 확인할 수 있습니다.</p>
+  <div class="qna-wrapper">
+    <h2 class="title">📚 수업 복습 보기</h2>
 
-    <div class="mt-5">
+    <div class="answer-wrapper">
       <!-- lecture_id별로 하나의 카드만 표시 -->
       <div
         v-for="(summary, lectureId) in sortedSummaries"
@@ -15,7 +14,7 @@
         <div>
           <p class="mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업 요약본</p>
         </div>
-        <div class="text-muted text-end">➡️ 클릭하여 상세 보기</div>
+        <div class="text-muted text-end">➡️ 클릭하여 요약 보기</div>
       </div>
 
       <div v-if="loading" class="text-muted mt-4 text-center">
@@ -94,6 +93,28 @@ export default {
 </script>
 
 <style scoped>
+.review-container {
+  max-width: 900px;
+  margin: auto;
+  padding: 30px;
+}
+
+.review-item {
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.review-item:hover {
+  background-color: #e9ecef;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+</style>
+
+<style scoped>
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -122,7 +143,7 @@ export default {
   width: 100%;
   max-width: 950px;
   margin: 1rem auto;
-  background-color: #f9fafb;
+  background-color: #f9fafb; /* gradient 제거하고 단색 배경 */
   padding: 1.5rem 2rem;
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
