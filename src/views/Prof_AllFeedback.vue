@@ -4,10 +4,10 @@
 
     <div v-if="loading" class="answer-wrapper">
       <div class="spinner-border" role="status"></div>
-      <p class="mt-3 text-muted">피드백을 불러오는 중입니다...</p>
+      <p class="card-title">피드백을 불러오는 중입니다...</p>
     </div>
 
-    <div v-else-if="feedbackList.length === 0" class="answer-wrapper">
+    <div v-else-if="feedbackList.length === 0" class="answer-wrapper card-title">
       아직 제출된 피드백이 없습니다.
     </div>
 
@@ -27,7 +27,7 @@
 
         <!-- 교수 피드백 -->
         <div v-if="entry.gpt_feedback">
-          <p class="card-title">👨‍🏫 교수 피드백:</p>
+          <p class="card-text">👨‍🏫 교수 피드백:</p>
           <div v-if="entry.professor_feedback">{{ entry.professor_feedback }}</div>
           <div v-else class="card-text">작성된 교수 피드백 없음</div>
 
