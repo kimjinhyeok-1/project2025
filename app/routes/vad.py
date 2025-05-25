@@ -21,7 +21,7 @@ class LikeRequest(BaseModel):
     question_id: int
 
 class StudentQuestionRequest(BaseModel):
-    user_id: int
+    q_id: int
     text: str
 
 # 질문 세트 조회
@@ -84,7 +84,7 @@ async def trigger_question_generation():
 async def post_student_question(data: StudentQuestionRequest):
     async with get_db_context() as db:
         question = StudentQuestion(
-            user_id=data.user_id,
+            q_id=data.q_id,
             text=data.text,
             created_at=datetime.utcnow()
         )
@@ -100,15 +100,18 @@ async def post_student_question(data: StudentQuestionRequest):
 
 # 학생 직접 질문 전체 조회
 @router.get("/student_questions")
-async def get_student_questions():
+async def get_student_questions(q_id: Optional[int] = None):
     async with get_db_context() as db:
-        result = await db.execute(select(StudentQuestion).order_by(StudentQuestion.created_at.desc()))
+        if q_id is not None:
+            result = await db.execute(select(StudentQuestion).where(StudentQuestion.q_id == q_id).order_by(StudentQuestion.created_at.desc()))
+        else:
+            result = await db.execute(select(StudentQuestion).order_by(StudentQuestion.created_at.desc()))
         questions = result.scalars().all()
         return {
             "results": [
                 {
                     "id": q.id,
-                    "user_id": q.user_id,
+                    "q_id": q.q_id,
                     "text": q.text,
                     "created_at": q.created_at.isoformat()
                 } for q in questions

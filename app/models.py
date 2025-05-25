@@ -158,5 +158,9 @@ class LectureSummary(Base):
 class StudentQuestion(Base):
     __tablename__ = "student_questions"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
+    q_id = Column(Integer, ForeignKey("generated_questions.id", ondelete="CASCADE"), nullable=False)
     text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+    question_set = relationship("GeneratedQuestion", backref="student_questions")
