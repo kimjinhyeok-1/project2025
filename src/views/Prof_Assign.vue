@@ -55,8 +55,8 @@
     <!-- 과제 목록 -->
     <div v-else class="answer-wrapper">
       <div v-for="assignment in assignments" :key="assignment.id">
-        <div class="card-title">
-          <h5>{{ assignment.title }}</h5>
+        <div>
+          <h5 class="card-title">{{ assignment.title }}</h5>
           <!-- ✅ 마크다운으로 렌더링된 HTML 출력 -->
           <div class="card-text markdown-body" v-html="renderedDescriptions[assignment.id]"></div>
           <p>📅 마감일: <strong>{{ assignment.deadline ? formatDate(assignment.deadline) : 'N/A' }}</strong></p>
