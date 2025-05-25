@@ -39,7 +39,7 @@ async def summarize_snapshot_transcript(context: str) -> str:
             },
             {"role": "user", "content": context}
         ],
-        max_tokens=70,
+        max_tokens=100,
         temperature=0.3,
     )
     return response.choices[0].message.content.strip()
