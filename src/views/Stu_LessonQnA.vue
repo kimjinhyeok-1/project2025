@@ -3,7 +3,7 @@
     <!-- 타이틀 + 버튼을 한 줄에 정렬 -->
     <div class="header-row">
       <h2 class="title">🤖 실시간 질문 확인</h2>
-      <button class="btn btn-secondary" @click="loadLatestQuestions">Loading</button>
+      <button class="btn btn-secondary" @click="loadLatestQuestions">🔄 질문 불러오기</button>
     </div>
 
     <div>
@@ -131,7 +131,7 @@ export default {
 .answer-wrapper {
   position: relative;
   width: 100%;
-  width: 950px;
+  max-width: 950px;
   margin: 1rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 1.5rem 2rem;
@@ -145,9 +145,10 @@ export default {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
 
-/* 선택된 카드 */
+/* 선택된 카드 (더 눈에 띄는 색상) */
 .selected-card {
-  background-color: #e0edff;
+  background-color: #a8cfff;
+  box-shadow: 0 0 0 3px #7bb7ff inset;
 }
 
 /* 텍스트 */
