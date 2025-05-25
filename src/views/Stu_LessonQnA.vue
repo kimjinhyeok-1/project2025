@@ -1,6 +1,6 @@
 <template>
-  <div class="container mt-5">
-    <h2 class="text-center mb-4">🤖 실시간 질문 확인</h2>
+  <div class="qna-wrapper">
+    <h2 class="title">🤖 실시간 질문 확인</h2>
 
     <div class="text-center mb-4">
       <button class="btn btn-success" @click="loadLatestQuestions">🔄 질문 불러오기</button>
@@ -13,7 +13,7 @@
         class="col-md-6 mb-4"
       >
         <div
-          class="card shadow h-100 p-3"
+          class="answer-wrapper"
           :class="{ 'bg-primary text-white': selected.includes(idx) && !q.dummy }"
         >
           <div class="card-body">
@@ -117,10 +117,51 @@ export default {
 </script>
 
 <style scoped>
-.card {
-  transition: all 0.3s ease-in-out;
+/* ===== 기본 레이아웃 ===== */
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
 }
-.card:hover {
-  transform: scale(1.02);
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-align: left;
+  color: #2c3e50;
+  width: 950px;
+}
+
+/* ===== 카드 스타일 (과제 항목) ===== */
+.answer-wrapper {
+  position: relative;
+  width: 950px;
+  margin: 2rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.answer-wrapper:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #34495e;
+}
+
+.description-text {
+  white-space: pre-line;
 }
 </style>
