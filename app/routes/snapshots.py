@@ -322,7 +322,7 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
         select(Snapshot).where(Snapshot.lecture_id == lecture_id)
     )).scalars().all()
 
-    # ✅ 요약문으로 반환
+    # ✅ 요약문 반환
     image_path_to_summary_text = {s.image_path: s.summary_text or "" for s in snapshots}
 
     # 3. 응답 구성
