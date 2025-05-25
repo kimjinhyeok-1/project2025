@@ -10,7 +10,7 @@
 
     <div v-else>
       <h2 class="mb-4">📝 과제 제출: {{ assignment.title }}</h2>
-      <p class="text-muted description-text">{{ truncateText(assignment.description, 150) }}</p>
+      <p class="text-muted description-text">{{ assignment.description }}</p>
       <p><strong>마감일:</strong> {{ assignment.deadline }}</p>
 
       <div v-if="alreadySubmitted" class="alert alert-info d-flex justify-content-between align-items-center">
@@ -53,10 +53,6 @@ const selectedFile = ref(null)
 const submitting = ref(false)
 const alreadySubmitted = ref(false)
 
-const truncateText = (text, length) => {
-  if (!text) return ''
-  return text.length > length ? text.slice(0, length) + '...' : text
-}
 
 const handleFileChange = (e) => {
   const file = e.target.files[0]
