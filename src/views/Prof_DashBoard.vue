@@ -4,7 +4,7 @@
       <h2 class="title">📊 Professor Dashboard</h2>
     </div>
 
-    <div style="width: 950px;">
+    <div class="dashboard-grid">
       <router-link to="/professor/qna" class="dashboard-card">
         <div class="card-inner">
           <h5 class="card-title">❓ Q&A</h5>
@@ -52,11 +52,19 @@
   color: #2c3e50;
 }
 
+/* ✅ 카드 2열로 구성하는 Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 20px;
+  width: 950px;
+}
+
+/* ✅ 카드 스타일 */
 .dashboard-card {
   display: block;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 2rem;
-  margin-bottom: 1.5rem;
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   text-decoration: none;
