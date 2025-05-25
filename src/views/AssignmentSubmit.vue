@@ -34,8 +34,6 @@
           />
         </div>
         
-        <hr class="my-divider" />
-
         <!-- ✅ 수정된 버튼 -->
         <button type="submit" class="submit-button" :disabled="submitting">
           {{ submitting ? '제출 중입니다...' : '제출하기' }}
