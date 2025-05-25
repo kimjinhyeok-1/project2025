@@ -206,9 +206,10 @@ const copyAnswer = async () => {
 .answer-wrapper {
   position: relative;
   max-width: 950px; /* ✅ 카드 폭 넓힘 */
-  margin: 10rem auto;
+  margin: 2rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 2.5rem;
+  padding-top: 3.5rem;
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.3s ease;
