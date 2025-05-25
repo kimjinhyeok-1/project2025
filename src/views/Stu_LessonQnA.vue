@@ -138,12 +138,8 @@ export default {
 }
 
 .selected-card {
-  background-color: #2d6cdf;
-  color: white;
-}
-
-.selected-card .card-text {
-  color: white;
+  background-color: #e0edff;
+  /* 텍스트 색상 변경 없음 → 그대로 유지 */
 }
 
 .card-text {
