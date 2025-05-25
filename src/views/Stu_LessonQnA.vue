@@ -6,11 +6,11 @@
       <button class="btn btn-success" @click="loadLatestQuestions">🔄 질문 불러오기</button>
     </div>
 
-    <div class="row">
+    <div>
       <div
         v-for="(q, idx) in questions"
         :key="idx"
-        class="col-md-6 mb-4"
+        class="mb-4"
       >
         <div
           class="answer-wrapper"
@@ -134,10 +134,10 @@ export default {
   width: 950px;
 }
 
-/* ===== 카드 스타일 (과제 항목) ===== */
+/* ===== 카드 스타일 (질문 항목) ===== */
 .answer-wrapper {
   position: relative;
-  width: 500px;
+  width: 950px;
   margin: 2rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 2rem;
