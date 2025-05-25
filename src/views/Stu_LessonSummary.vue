@@ -12,16 +12,16 @@
         style="cursor: pointer"
       >
         <div>
-          <p class="mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업</p>
+          <p class="card-text mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업</p>
         </div>
-        <div class="text-muted text-end">➡️ 클릭하여 요약 보기</div>
+        <div class="card-text text-muted text-end">Click</div>
       </div>
 
-      <div v-if="loading" class="text-muted mt-4 text-center">
+      <div v-if="loading" class="card-text text-muted mt-4 text-center">
         📡 수업 목록을 불러오는 중입니다...
       </div>
 
-      <div v-if="!loading && Object.keys(latestSummaries).length === 0" class="text-danger mt-4 text-center">
+      <div v-if="!loading && Object.keys(latestSummaries).length === 0" class="card-text text-danger mt-4 text-center">
         ⚠️ 현재 확인 가능한 수업 요약이 없습니다.
       </div>
     </div>
