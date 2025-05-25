@@ -10,9 +10,7 @@
 
     <div v-else class="answer-wrapper">
       <h2 class="title">📝 과제 제출: {{ assignment.title }}</h2>
-      <hr class="my-divider" v-if="index !== Object.keys(sortedSummaries).length - 1" />
       <p class="card-text description-text">{{ assignment.description }}</p>
-      <hr class="my-divider" v-if="index !== Object.keys(sortedSummaries).length - 1" />
       <p class="card-text"><strong>마감일:</strong> {{ assignment.deadline }}</p>
 
       <div v-if="alreadySubmitted" class="card-text alert alert-info d-flex justify-content-between align-items-center">
