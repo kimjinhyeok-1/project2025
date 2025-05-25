@@ -1,6 +1,6 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">수업 복습 보기</h2>
+    <h2 class="title">📘 수업 복습 보기</h2>
 
     <div class>
       <!-- lecture_id별로 하나의 카드만 표시 -->
