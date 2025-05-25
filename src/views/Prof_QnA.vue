@@ -1,9 +1,9 @@
 <template>
-  <div class="container mt-5">
-    <h2 class="text-center">❓ 학생들의 질문</h2>
+  <div class="qna-wrapper">
+    <h2 class="title">❓ 학생들의 질문</h2>
 
     <!-- 탭 -->
-    <ul class="nav nav-tabs mt-4" style="justify-content: flex-start;">
+    <ul class="nav nav-tabs mt-4" style="justify-content: flex-start; width: 950px;">
       <li class="nav-item">
         <a
           class="nav-link"
@@ -25,51 +25,52 @@
     </ul>
 
     <!-- 탭 내용 -->
-    <div class="tab-content mt-3 border p-4 rounded bg-white shadow-sm">
+    <div class="tab-content mt-3">
       <!-- 요약 탭 -->
-      <div v-if="activeTab === 'summary'">
-        <h5>📋 SUMMARY</h5>
+      <div v-if="activeTab === 'summary'" class="answer-wrapper">
+        <h5 class="card-title">📋 SUMMARY</h5>
 
-        <button v-if="!summary.summary_for_professor && !summaryLoading" class="btn btn-primary mb-3" @click="loadSummary">
+        <button
+          v-if="!summary.summary_for_professor && !summaryLoading"
+          class="btn btn-primary mb-3"
+          @click="loadSummary"
+        >
           📥 요약 불러오기
         </button>
 
-        <div v-if="summaryLoading" class="d-flex align-items-center">
+        <div v-if="summaryLoading" class="d-flex align-items-center justify-content-center my-3">
           <strong role="status">불러오는 중...</strong>
-          <div class="spinner-border ms-auto" aria-hidden="true"></div>
+          <div class="spinner-border ms-3" aria-hidden="true"></div>
         </div>
 
         <div v-else-if="summary.summary_for_professor">
-          <p style="white-space: pre-line;">{{ summary.summary_for_professor }}</p>
-          <ul>
+          <p class="card-text" style="white-space: pre-line;">{{ summary.summary_for_professor }}</p>
+          <ul class="card-text mt-3">
             <li v-for="(q, index) in summary.most_common_questions" :key="index">
               {{ index + 1 }}. {{ q }}
             </li>
           </ul>
         </div>
-
-        <div v-else-if="!summaryLoading">
-        </div>
       </div>
 
       <!-- 전체 대화 탭 -->
-      <div v-if="activeTab === 'fullchat'">
-        <h5>💬 전체 대화 내용</h5>
+      <div v-if="activeTab === 'fullchat'" class="answer-wrapper">
+        <h5 class="card-title">💬 전체 대화 내용</h5>
 
-        <div v-if="chatLoading" class="d-flex align-items-center">
-          <strong role="status">불러오는 중...  </strong>
-          <div class="spinner-border ms-auto" aria-hidden="true"></div>
+        <div v-if="chatLoading" class="d-flex align-items-center justify-content-center my-3">
+          <strong role="status">불러오는 중...</strong>
+          <div class="spinner-border ms-3" aria-hidden="true"></div>
         </div>
 
-        <ul v-else class="list-group">
+        <ul v-else class="list-unstyled">
           <li
             v-for="(msg, index) in fullChat"
             :key="index"
-            class="list-group-item"
+            class="card-text mb-4 border-bottom pb-3"
           >
-            <p><strong>🧑 질문:</strong> {{ msg.question }}</p>
-            <p><strong>🤖 답변:</strong> {{ msg.answer }}</p>
-            <p class="text-muted small">{{ formatDate(msg.created_at) }}</p>
+            <p class="mb-1"><strong>🧑 질문:</strong> {{ msg.question }}</p>
+            <p class="mb-1"><strong>🤖 답변:</strong> {{ msg.answer }}</p>
+            <p class="text-muted small mb-0">{{ formatDate(msg.created_at) }}</p>
           </li>
         </ul>
 
@@ -161,10 +162,49 @@ const loadFullChat = async () => {
 </script>
 
 <style scoped>
-.nav-link {
-  cursor: pointer;
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
 }
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: left;
+  color: #2c3e50;
+  width: 950px;
+}
+
 .tab-content {
-  min-height: 200px;
+  width: 950px;
+}
+
+.answer-wrapper {
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.answer-wrapper:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-text {
+  font-size: 1.1rem;
+  color: #34495e;
+}
+
+.text-muted {
+  font-size: 0.9rem;
 }
 </style>
