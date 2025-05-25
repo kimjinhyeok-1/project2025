@@ -1,5 +1,5 @@
 <template>
-  <div class="container mt-5">
+  <div class="qna-wrapper">
     <div v-if="loading" class="text-center">
       <div class="spinner-border" role="status"></div>
     </div>
@@ -9,17 +9,17 @@
     </div>
 
     <div v-else>
-      <h2 class="mb-4">📝 과제 제출: {{ assignment.title }}</h2>
-      <p class="text-muted description-text">{{ assignment.description }}</p>
-      <p><strong>마감일:</strong> {{ assignment.deadline }}</p>
+      <h2 class="title">📝 과제 제출: {{ assignment.title }}</h2>
+      <p class="card-text description-text">{{ assignment.description }}</p>
+      <p class="card-text"><strong>마감일:</strong> {{ assignment.deadline }}</p>
 
-      <div v-if="alreadySubmitted" class="alert alert-info d-flex justify-content-between align-items-center">
+      <div v-if="alreadySubmitted" class="card-text alert alert-info d-flex justify-content-between align-items-center">
         <span>이 과제는 이미 제출되었습니다.</span>
         <button class="btn btn-outline-primary btn-sm" @click="goToFeedback">📄 피드백 다시 보기</button>
       </div>
 
       <form @submit.prevent="handleSubmit">
-        <div class="mb-3">
+        <div class="card-text mb-3">
           <label for="file" class="form-label">파일 업로드 (PDF만 가능)</label>
           <input
             type="file"
@@ -30,7 +30,7 @@
           />
         </div>
 
-        <button type="submit" class="btn btn-primary" :disabled="submitting">
+        <button type="submit" class="card-text btn btn-primary" :disabled="submitting">
           {{ submitting ? '제출 중입니다...' : '제출하기' }}
         </button>
       </form>
@@ -149,6 +149,47 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-align: left;
+  color: #2c3e50;
+  width: 950px;
+}
+
+.answer-wrapper {
+  position: relative;
+  width: 950px;
+  margin: 1rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.answer-wrapper:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #34495e;
+}
+
+.text-muted {
+  font-size: 0.9rem;
+}
+
 .description-text {
   white-space: pre-line;
 }
