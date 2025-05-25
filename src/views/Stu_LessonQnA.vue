@@ -3,7 +3,7 @@
     <!-- 타이틀 + 버튼을 한 줄에 정렬 -->
     <div class="header-row">
       <h2 class="title">🤖 실시간 질문 확인</h2>
-      <button class="btn btn-success" @click="loadLatestQuestions">🔄 질문 불러오기</button>
+      <button class="btn btn-light" @click="loadLatestQuestions">🔄 질문 불러오기</button>
     </div>
 
     <div>
@@ -131,7 +131,7 @@ export default {
 .answer-wrapper {
   position: relative;
   width: 100%;
-  max-width: 950px;
+  width: 950px;
   margin: 1rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 1.5rem 2rem;
