@@ -23,7 +23,7 @@
           >
             <div class="answer-wrapper">
               <h5 class="card-title text-dark">{{ assignment.title }}</h5>
-              <p class="card-text text-muted">
+              <p class="card-text text-muted description-text">
                 {{ truncateText(assignment.description, 150) }}
               </p>
               <p class="card-text">
@@ -93,13 +93,14 @@ onMounted(async () => {
   font-weight: bold;
   margin-bottom: 2rem;
   text-align: left;
+  align-self: flex-start;
   color: #2c3e50;
 }
 
 /* ===== 카드 스타일 (과제 항목) ===== */
 .answer-wrapper {
   position: relative;
-  max-width: 950px;
+  width: 950px;
   margin: 2rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 2rem;
@@ -121,6 +122,10 @@ onMounted(async () => {
   font-size: 1.1rem;
   line-height: 1.7;
   color: #34495e;
+}
+
+.description-text {
+  white-space: pre-line;
 }
 
 </style>
