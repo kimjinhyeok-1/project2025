@@ -22,11 +22,11 @@
       >
         <!-- 접기/펼치기 토글 헤더 -->
         <div
-          class="card-title d-flex justify-content-between align-items-center"
+          class="card-text d-flex justify-content-between align-items-center"
           style="cursor: pointer"
           @click="toggle(entry.student_id)"
         >
-          <span>👤 학생 ID: {{ entry.student_id }} - {{ entry.student_name }}</span>
+          <span>👤 {{ entry.student_name }}</span>
           <span>{{ openId === entry.student_id ? '▲' : '▼' }}</span>
         </div>
 
