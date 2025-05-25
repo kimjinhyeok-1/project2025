@@ -112,8 +112,20 @@ async def file_exists(path: str) -> bool:
     return await asyncio.to_thread(os.path.exists, path)
 
 # ───────────────────────────────
-# 2. POST /snapshots
+# 1. POST /lectures
 # ───────────────────────────────
+
+@router.post("/lectures", response_model=LectureSessionResponse)
+async def create_lecture(db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        result = await db.execute(text("SELECT COALESCE(MAX(id), 0) FROM lectures"))
+        max_id = result.scalar_one()
+        await db.execute(text("SELECT setval('lectures_id_seq', :new_val, false)").bindparams(new_val=max_id + 1))
+        lecture = Lecture()
+        db.add(lecture)
+    await db.refresh(lecture)
+    return LectureSessionResponse(lecture_id=lecture.id, created_at=lecture.created_at)
+
 
 # ───────────────────────────────
 # 2. POST /snapshots
