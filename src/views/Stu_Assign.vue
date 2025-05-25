@@ -23,7 +23,7 @@
           >
             <div class="answer-wrapper">
               <h5 class="card-title text-dark">{{ assignment.title }}</h5>
-              <p class="card-text text-muted description-text">
+              <p class="card-text text-muted">
                 {{ truncateText(assignment.description, 150) }}
               </p>
               <p class="card-text">
@@ -92,7 +92,7 @@ onMounted(async () => {
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 2rem;
-  text-align: center;
+  text-align: left;
   color: #2c3e50;
 }
 
@@ -123,7 +123,4 @@ onMounted(async () => {
   color: #34495e;
 }
 
-.description-text {
-  white-space: pre-line;
-}
 </style>
