@@ -186,8 +186,21 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 
     truncated = truncate_by_token(text)
     messages = [
-        {"role": "system", "content": "당신은 강의 마무리 리마인더를 작성합니다.\n- 이번 수업에서 중요하다고 생각한 핵심 키워드 3개를 정하고 각각 요약하세요.\n- JAVA 용어 사용을 우선하세요."},
-        {"role": "user", "content": f"강의 내용:\n```\n{truncated}\n```"},
+        {
+            "role": "system",
+            "content": (
+                "당신은 Java 강의 내용을 바탕으로 수업 마무리 리마인드 요약을 작성합니다.\n"
+                "- 오늘 강의에서 가장 중요한 핵심 키워드 3개만 선정하세요.\n"
+                "- 각 키워드에 대해 핵심 개념을 2~3문장으로 요약하세요.\n"
+                "- 덜 중요한 개념은 제외하세요.\n"
+                "- JAVA 용어와 코드 예시 중심으로 간결하게 요약하세요.\n"
+                "- 교수님이 이 요약을 읽고 5분 안에 학생들에게 핵심 내용을 전달할 수 있어야 합니다."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"강의 내용:\n```\n{truncated}\n```",
+        },
     ]
 
     from openai import AsyncOpenAI
@@ -196,9 +209,11 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         model="gpt-4o",
         messages=messages,
         temperature=0.3,
-        max_tokens=1200,
+        max_tokens=1000,
     )
+
     return SummaryResponse(lecture_id=lecture_id, summary=res.choices[0].message.content.strip())
+
 
 # ───────────────────────────────
 # 4. POST /lecture_summary
