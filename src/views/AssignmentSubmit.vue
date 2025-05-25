@@ -10,7 +10,7 @@
 
     <div v-else>
       <h2 class="mb-4">📝 과제 제출: {{ assignment.title }}</h2>
-      <p class="text-muted">{{ assignment.description }}</p>
+      <p class="text-muted description-text">{{ truncateText(assignment.description, 150) }}</p>
       <p><strong>마감일:</strong> {{ assignment.deadline }}</p>
 
       <!-- ✅ 이미 제출된 경우 안내 및 버튼 -->
@@ -76,6 +76,11 @@ const handleSubmit = async () => {
   if (!token) {
     alert('🔐 로그인이 필요합니다.')
     return
+  }
+
+  const truncateText = (text, length) => {
+  if (!text) return ''
+  return text.length > length ? text.slice(0, length) + '...' : text
   }
 
   submitting.value = true
@@ -148,3 +153,54 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+/* ===== 기본 레이아웃 ===== */
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 800px;
+  margin-top: 5rem auto;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  text-align: left;
+  color: #2c3e50;
+}
+
+/* ===== 카드 스타일 (과제 항목) ===== */
+.answer-wrapper {
+  position: relative;
+  width: 950px;
+  margin: 2rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.answer-wrapper:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #34495e;
+}
+
+.description-text {
+  white-space: pre-line;
+}
+
+</style>

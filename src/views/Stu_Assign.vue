@@ -94,7 +94,7 @@ onMounted(async () => {
   margin-bottom: 2rem;
   text-align: left;
   color: #2c3e50;
-  width: 800px;
+  width: 950px;
 }
 
 /* ===== 카드 스타일 (과제 항목) ===== */
