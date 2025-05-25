@@ -13,6 +13,7 @@ from typing import Optional, List, Dict
 # 서드파티 라이브러리
 # ───────────────────────────────
 import aiofiles
+import aiofiles.os
 import numpy as np
 import tiktoken
 from sklearn.metrics.pairwise import cosine_similarity
@@ -178,11 +179,11 @@ async def upload_snapshot(data: SnapshotRequest, lecture_id: int = Query(...), d
 
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
 async def generate_markdown_summary(lecture_id: int = Query(...)):
-    path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
-    if not os.path.exists(path):
+    log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
+    if not await aiofiles.os.path.exists(log_path):
         raise HTTPException(404, "요약할 텍스트 없음")
 
-    async with aiofiles.open(path, "r", encoding="utf-8") as f:
+    async with aiofiles.open(log_path, "r", encoding="utf-8") as f:
         text = await f.read()
 
     truncated = truncate_by_token(text)
@@ -215,7 +216,6 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 
     return SummaryResponse(lecture_id=lecture_id, summary=res.choices[0].message.content.strip())
 
-
 # ───────────────────────────────
 # 4. POST /lecture_summary
 # ───────────────────────────────
@@ -223,7 +223,7 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 @router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)):
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
-    if not os.path.exists(log_path):
+    if not await aiofiles.os.path.exists(log_path):
         raise HTTPException(404, "텍스트 로그 없음")
     async with aiofiles.open(log_path, "r", encoding="utf-8") as f:
         full_text = await f.read()
@@ -248,7 +248,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
 
     valid_snapshots = [
         s for s in all_snapshots
-        if s.image_path and os.path.exists(os.path.join("static", s.image_path.lstrip("/")))
+        if s.image_path and await aiofiles.os.path.exists(os.path.join("static", s.image_path.lstrip("/")))
     ]
     if not valid_snapshots:
         raise HTTPException(404, "유효한 스크린샷 없음")
@@ -298,8 +298,9 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
     return output
 
 
+
 # ───────────────────────────────
-# 5. GET /lecture_summary (단일)
+# 5. GET /lecture_summary
 # ───────────────────────────────
 
 @router.get("/lecture_summary", response_model=List[LectureSummaryResponse])
@@ -335,15 +336,11 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
 
     return output
 
-
 # ───────────────────────────────
-# 6. ✅ GET /snapshots/lecture_summaries (전체)
+# 6. GET /snapshots/lecture_summaries
 # ───────────────────────────────
 
-@router.get(
-    "/snapshots/lecture_summaries",
-    response_model=Dict[int, List[LectureSummaryListItem]]
-)
+@router.get("/snapshots/lecture_summaries", response_model=Dict[int, List[LectureSummaryListItem]])
 async def get_all_lecture_summaries_grouped(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LectureSummary))
     summaries = result.scalars().all()
