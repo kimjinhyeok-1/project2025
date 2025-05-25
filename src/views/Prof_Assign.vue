@@ -1,13 +1,14 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">📝 교수용 과제 공지 목록</h2>
-
-    <div class="card-text d-flex justify-content-end mb-3">
+    <!-- 제목 + 버튼 한 줄 정렬 -->
+    <div class="title-bar d-flex justify-content-between align-items-center mb-3" style="width: 950px;">
+      <h2 class="title m-0">📝 교수용 과제 공지 목록</h2>
       <button @click="toggleForm" class="btn btn-primary">
         {{ formVisible ? '✖ 닫기' : editingAssignmentId ? '✏ 수정 취소' : '➕ 새 과제 작성' }}
       </button>
     </div>
 
+    <!-- 과제 작성 폼 -->
     <transition name="fade" class="answer-wrapper">
       <form
         v-if="formVisible"
@@ -40,15 +41,18 @@
       </form>
     </transition>
 
+    <!-- 로딩 -->
     <div v-if="loading" class="card-text d-flex align-items-center justify-content-center my-5">
       <strong role="status">불러오는 중...  </strong>
       <div class="spinner-border ms-3" aria-hidden="true"></div>
     </div>
 
+    <!-- 과제 없음 -->
     <div v-else-if="assignments.length === 0" class="card-text alert alert-info">
       등록된 과제 공지가 없습니다.
     </div>
 
+    <!-- 과제 목록 -->
     <div v-else class="answer-wrapper">
       <div v-for="assignment in assignments" :key="assignment.id">
         <div class="card-title">
@@ -232,10 +236,9 @@ const goToFeedback = (id) => {
 .title {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 1rem;
+  margin: 0;
   text-align: left;
   color: #2c3e50;
-  width: 950px;
 }
 
 .answer-wrapper {
