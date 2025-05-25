@@ -91,6 +91,9 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     )
     return [e.embedding for e in resp.data]
 
+async def file_exists(path: str) -> bool:
+    return await asyncio.to_thread(os.path.exists, path)
+
 # ───────────────────────────────
 # 1. POST /lectures
 # ───────────────────────────────
@@ -105,7 +108,7 @@ async def create_lecture(db: AsyncSession = Depends(get_db)):
         db.add(lecture)
     await db.refresh(lecture)
     return LectureSessionResponse(lecture_id=lecture.id, created_at=lecture.created_at)
-
+    
 # ───────────────────────────────
 # 2. POST /snapshots
 # ───────────────────────────────
@@ -115,9 +118,8 @@ async def upload_snapshot(data: SnapshotRequest, lecture_id: int = Query(...), d
     try:
         dt = datetime.strptime(data.timestamp, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        raise HTTPException(400, "timestamp 형식 오류 (YYYY-MM-DD HH:MM:SS)")
+        raise HTTPException(400, "timestamp \ud615\uc2dd \uc624\ub958 (YYYY-MM-DD HH:MM:SS)")
 
-    # 1. 이미지 저장
     try:
         _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
         image_bytes = base64.b64decode(encoded)
@@ -126,12 +128,11 @@ async def upload_snapshot(data: SnapshotRequest, lecture_id: int = Query(...), d
         async with aiofiles.open(save_path, "wb") as f:
             await f.write(image_bytes)
     except Exception as e:
-        raise HTTPException(400, f"이미지 저장 실패: {e}")
+        raise HTTPException(400, f"\uc774\ubbf8\uc9c0 \uc800\uc7a5 \uc2e4\ud328: {e}")
 
     rel_url = f"/static/{settings.image_dir}/{filename}"
     abs_url = f"{settings.base_url}{rel_url}"
 
-    # 2. 최근 STT 5줄 + 현재 문장 조합
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     recent_lines = []
     if os.path.exists(log_path):
@@ -140,37 +141,32 @@ async def upload_snapshot(data: SnapshotRequest, lecture_id: int = Query(...), d
             recent_lines = all_lines[-5:]
     context_lines = [line.split(" - ", 1)[-1].strip() for line in recent_lines]
     context_lines.append(data.transcript)
-    context = "\n".join(context_lines)
+    context = truncate_by_token("\n".join(context_lines), max_tokens=300)
 
-    # 3. GPT 요약 (Chat Completions API 사용)
     summary = await summarize_snapshot_transcript(context)
 
-    # 4. 로그 파일에 STT 원문 저장 (DB용)
     async with aiofiles.open(log_path, "a", encoding="utf-8") as log_file:
         await log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
 
-    # 5. DB에 저장 (요약 포함, STT 원문 포함)
     snapshot = Snapshot(
         lecture_id=lecture_id,
         date=dt.strftime("%Y-%m-%d"),
         time=dt.strftime("%H:%M:%S"),
-        text=data.transcript,       # STT 원문 저장
-        summary_text=summary,       # 요약 저장
+        text=data.transcript,
+        summary_text=summary,
         image_path=rel_url
     )
     db.add(snapshot)
     await db.commit()
 
-    # 6. 프론트엔드에 반환 (STT 원문 제외)
     return {
-        "message": "스냅샷 저장 완료",
+        "message": "\uc2a4\ub0ed\uc0f7 \uc800\uc7a5 \uc644\ub8cc",
         "lecture_id": lecture_id,
         "date": snapshot.date,
         "time": snapshot.time,
-        "summary": summary,       # ✅ 프론트로 전송
-        "image_url": abs_url      # ✅ 프론트로 전송
+        "summary": summary,
+        "image_url": abs_url
     }
-
 # ───────────────────────────────
 # 3. GET /generate_markdown_summary
 # ───────────────────────────────
@@ -221,14 +217,12 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 
 @router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)):
-    # 1. 전체 로그 불러오기
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(log_path):
-        raise HTTPException(404, "텍스트 로그 없음")
+        raise HTTPException(404, "\ud14d\uc2a4\ud2b8 \ub85c\uadf8 \uc5c6\uc74c")
     async with aiofiles.open(log_path, "r", encoding="utf-8") as f:
         full_text = await f.read()
 
-    # 2. Assistant 요약 호출
     markdown = await summarize_text_with_gpt(full_text)
     topic_blocks = markdown.split("### ")[1:]
     topics = []
@@ -241,47 +235,54 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         if title and summary:
             topics.append({"topic": title, "summary": summary})
     if not topics:
-        raise HTTPException(400, "요약 토픽 없음")
+        raise HTTPException(400, "\uc694\uc57d \ud1a0\ud53c\uac00 \uc5c6\uc74c")
 
-    # 3. Snapshot 목록 불러오기
-    snapshots = (await db.execute(
+    all_snapshots = (await db.execute(
         select(Snapshot).where(Snapshot.lecture_id == lecture_id)
     )).scalars().all()
-    if not snapshots:
-        raise HTTPException(404, "스냅샷 없음")
+
+    valid_snapshots = [
+        s for s in all_snapshots
+        if s.image_path and await file_exists(os.path.join("static", s.image_path.lstrip("/")))
+    ]
+    if not valid_snapshots:
+        raise HTTPException(404, "\uc720\ud6a8\ud55c \uc2a4\ud06c\ub9ac\ub4dc\uc0f7 \uc5c6\uc74c")
 
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
     output = []
 
     for topic_obj in topics:
-        top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots)
+        top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], valid_snapshots)
         highlights = []
         for idx in top2_indices:
-            snap = snapshots[idx]
-            highlights.append({
-                "image_url": snap.image_path,
-                "text": snap.summary_text or ""
+            snap = valid_snapshots[idx]
+            img_path = os.path.join("static", snap.image_path.lstrip("/"))
+            if await file_exists(img_path):
+                highlights.append({
+                    "image_url": snap.image_path,
+                    "text": snap.summary_text or ""
+                })
+
+        if highlights:
+            db.add(LectureSummary(
+                lecture_id=lecture_id,
+                topic=topic_obj["topic"],
+                summary=topic_obj["summary"],
+                image_url_1=highlights[0]["image_url"] if len(highlights) > 0 else None,
+                image_text_1=highlights[0]["text"] if len(highlights) > 0 else None,
+                image_url_2=highlights[1]["image_url"] if len(highlights) > 1 else None,
+                image_text_2=highlights[1]["text"] if len(highlights) > 1 else None,
+            ))
+            output.append({
+                "topic": topic_obj["topic"],
+                "summary": topic_obj["summary"],
+                "created_at": datetime.utcnow(),
+                "highlights": highlights
             })
-
-        db.add(LectureSummary(
-            lecture_id=lecture_id,
-            topic=topic_obj["topic"],
-            summary=topic_obj["summary"],
-            image_url_1=highlights[0]["image_url"] if len(highlights) > 0 else None,
-            image_text_1=highlights[0]["text"] if len(highlights) > 0 else None,
-            image_url_2=highlights[1]["image_url"] if len(highlights) > 1 else None,
-            image_text_2=highlights[1]["text"] if len(highlights) > 1 else None,
-        ))
-
-        output.append({
-            "topic": topic_obj["topic"],
-            "summary": topic_obj["summary"],
-            "created_at": datetime.utcnow(),
-            "highlights": highlights
-        })
 
     await db.commit()
     return output
+
 
 # ───────────────────────────────
 # 5. GET /lecture_summary (단일)
