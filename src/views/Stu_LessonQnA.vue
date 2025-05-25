@@ -22,7 +22,7 @@
             <!-- 버튼은 더미 아닐 때만 표시 -->
             <button
               v-if="!q.dummy"
-              class="btn btn-outline-primary mt-3"
+              class="btn btn-outline-primary w-100 mt-3"
               :class="{ 'btn-light text-primary': selected.includes(idx) }"
               @click="toggleLike(idx)"
             >
