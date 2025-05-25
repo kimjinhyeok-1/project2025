@@ -6,7 +6,6 @@ from sqlalchemy.future import select
 from sqlalchemy import text, delete
 from typing import Optional, List, Dict
 from datetime import datetime
-from collections import defaultdict
 import os, aiofiles, uuid, base64
 import numpy as np
 import tiktoken
@@ -133,7 +132,7 @@ async def upload_snapshot(
         raise HTTPException(400, f"이미지 저장 실패: {e}")
 
     rel_url = f"/static/{settings.image_dir}/{filename}"
-    abs_url = f"{settings.base_url}{rel_url}"
+    abs_url = f"{settings.base_url.rstrip('/')}{rel_url}"
 
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     recent_lines = []
@@ -189,11 +188,13 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         {
             "role": "system",
             "content": (
-                "당신은 Java 강의 내용을 바탕으로 수업 마무리 리마인드 요약을 작성합니다.\n"
-                "- 오늘 강의에서 가장 중요한 핵심 키워드 3개만 선정하세요.\n"
-                "- 각 키워드에 대해 핵심 개념을 2~3문장으로 요약하세요.\n"
-                "- JAVA 용어와 코드 예시 중심으로 간결하게 요약하세요.\n"
-                "- 교수님이 이 요약을 읽고 5분 안에 핵심 내용을 전달할 수 있어야 합니다."
+                "당신은 Java 강의 내용을 바탕으로 수업 마무리 요약을 작성하는 비서입니다.\n"
+                "다음 지침을 반드시 따르세요:\n"
+                "1. 핵심 키워드 **3개만** 정확히 작성하세요. 3개를 초과하거나 미만으로 작성하지 마세요.\n"
+                "2. 각 키워드는 Java 문법 또는 개념 중심으로 선정하고, **각 키워드마다 2~3문장 정도로 자세하게 설명**하세요.\n"
+                "3. 출력 형식은 아래 예시처럼 하세요. 번호와 키워드로 시작하고, 설명은 자연어 문장으로 서술하세요.\n"
+                "4. 요약 내용 외의 추가 설명, 인사말, 해설은 절대 작성하지 마세요. 반드시 키워드 3개와 설명만 출력하세요.\n"
+                "이 요약은 교수님이 수업 마무리 5분 동안 핵심을 전달하기 위해 사용합니다."
             )
         },
         {
@@ -210,18 +211,21 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         temperature=0.3,
         max_tokens=1000,
     )
+
     return SummaryResponse(
         lecture_id=lecture_id,
         summary=res.choices[0].message.content.strip()
     )
 
+# ─────────────────────────────
+# API: POST /lecture_summary
+# ─────────────────────────────
 
 @router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def generate_lecture_summary(
     lecture_id: int = Query(...),
     db: AsyncSession = Depends(get_db)
 ):
-    # 1. 텍스트 로그 로드
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(log_path):
         raise HTTPException(404, "텍스트 로그 없음")
@@ -229,7 +233,6 @@ async def generate_lecture_summary(
     async with aiofiles.open(log_path, "r", encoding="utf-8") as f:
         full_text = await f.read()
 
-    # 2. GPT 요약 호출 (Markdown 기반)
     markdown = await summarize_text_with_gpt(full_text)
     topic_blocks = markdown.split("### ")[1:]
 
@@ -246,19 +249,18 @@ async def generate_lecture_summary(
     if not topics:
         raise HTTPException(400, "요약 토픽 없음")
 
-    # 3. 관련 스냅샷 조회
     snapshots = (await db.execute(
         select(Snapshot).where(Snapshot.lecture_id == lecture_id)
     )).scalars().all()
     if not snapshots:
         raise HTTPException(404, "스냅샷 없음")
 
-    # 4. 기존 요약 삭제 후 재생성
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
     output = []
+    used_paths = set()
 
     for topic_obj in topics:
-        top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots)
+        top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots, used_paths=used_paths) 
         highlights = []
         for idx in top2_indices:
             snap = snapshots[idx]

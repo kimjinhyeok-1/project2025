@@ -1,9 +1,11 @@
 import os
+import aiohttp
 from openai import AsyncOpenAI
 from app.models import Snapshot
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ASSISTANT_ID = os.getenv("OPENAI_SUMMARY_ASSISTANT_ID")
+BASE_URL = os.getenv("BASE_URL", "")
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
@@ -22,8 +24,6 @@ async def summarize_text_with_gpt(text: str) -> str:
     return messages.data[0].content[0].text.value.strip()
 
 async def summarize_snapshot_transcript(context: str) -> str:
-    from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = await client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -43,20 +43,22 @@ async def summarize_snapshot_transcript(context: str) -> str:
     )
     return response.choices[0].message.content.strip()
 
-def is_valid_image_path(path: str) -> bool:
-    return os.path.exists(path)
+async def is_valid_image_url(url: str) -> bool:
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=3) as response:
+                return response.status == 200 and response.content_type.startswith("image")
+    except Exception:
+        return False
 
 async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2, used_paths: set[str] = set()) -> list[int]:
-    from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
     valid_snapshots = []
     snapshot_map = []
     for i, snap in enumerate(snapshots):
         if not snap.image_path or snap.image_path in used_paths:
             continue
-        fs_path = snap.image_path.lstrip("/")  # e.g., static/tmp/snapshots/xxx.png
-        if is_valid_image_path(fs_path):
+        full_url = BASE_URL.rstrip("/") + snap.image_path  # 절대 URL로 변환
+        if await is_valid_image_url(full_url):
             valid_snapshots.append(snap)
             snapshot_map.append(i)
 
