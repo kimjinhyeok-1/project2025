@@ -15,19 +15,10 @@
         <div
           class="answer-wrapper"
           :class="{ 'selected-card': selected.includes(idx) && !q.dummy }"
+          @click="toggleLike(idx)"
         >
           <div class="card-body">
             <p class="card-text">{{ q.text }}</p>
-
-            <!-- 버튼은 더미 아닐 때만 표시 -->
-            <button
-              v-if="!q.dummy"
-              class="btn btn-outline-primary w-100 mt-3"
-              :class="{ 'btn-light text-primary': selected.includes(idx) }"
-              @click="toggleLike(idx)"
-            >
-              {{ selected.includes(idx) ? '✅ 선택 취소' : '선택하기' }}
-            </button>
           </div>
         </div>
       </div>
@@ -77,21 +68,16 @@ export default {
 
       const alreadySelected = this.selected.includes(index);
       const endpoint = alreadySelected ? "unlike" : "like";
-      const method = "PATCH";
 
       fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/${endpoint}`, {
-        method,
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question_id: index })
       }).then(() => {
         if (alreadySelected) {
           this.selected = this.selected.filter(i => i !== index);
-          if (this.questions[index].likes > 0) {
-            this.questions[index].likes -= 1;
-          }
         } else {
           this.selected.push(index);
-          this.questions[index].likes += 1;
         }
 
         localStorage.setItem(
@@ -117,7 +103,6 @@ export default {
 </script>
 
 <style scoped>
-/* ===== 기본 레이아웃 ===== */
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -131,44 +116,40 @@ export default {
   margin-bottom: 1rem;
   text-align: left;
   color: #2c3e50;
-  width: 950px;
+  width: 100%;
+  max-width: 950px;
 }
 
-/* ===== 카드 스타일 (질문 항목) ===== */
 .answer-wrapper {
   position: relative;
-  width: 950px;
-  height: 180px;
-  margin: 2rem auto;
+  width: 100%;
+  max-width: 950px;
+  margin: 1rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
-  padding: 2rem;
+  padding: 1.5rem 2rem;
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
+  cursor: pointer;
 }
 
 .answer-wrapper:hover {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
 
-.card-title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
+.selected-card {
+  background-color: #2d6cdf;
+  color: white;
+}
+
+.selected-card .card-text {
+  color: white;
 }
 
 .card-text {
   font-size: 1.1rem;
-  line-height: 1.7;
+  line-height: 1.6;
   color: #34495e;
+  margin: 0;
 }
-
-.description-text {
-  white-space: pre-line;
-}
-
-.selected-card {
-  background-color: #007bff !important; /* Bootstrap의 primary 색상 */
-  color: white !important;
-}
-
 </style>
