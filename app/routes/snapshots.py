@@ -108,9 +108,6 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     )
     return [e.embedding for e in resp.data]
 
-async def file_exists(path: str) -> bool:
-    return await asyncio.to_thread(os.path.exists, path)
-
 # ───────────────────────────────
 # 1. POST /lectures
 # ───────────────────────────────
@@ -251,7 +248,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
 
     valid_snapshots = [
         s for s in all_snapshots
-        if s.image_path and await file_exists(os.path.join("static", s.image_path.lstrip("/")))
+        if s.image_path and os.path.exists(os.path.join("static", s.image_path.lstrip("/")))
     ]
     if not valid_snapshots:
         raise HTTPException(404, "유효한 스크린샷 없음")
@@ -260,7 +257,6 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
     output = []
 
     for topic_obj in topics:
-        # 임시 요약 없으면 gpt-3.5로 생성 (저장하지 않음)
         for s in valid_snapshots:
             if not s.summary_text:
                 try:
@@ -272,7 +268,6 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         highlights = []
         for idx in top2_indices:
             snap = valid_snapshots[idx]
-            # 실제 저장용 요약 수행 (gpt-4o)
             if not snap.summary_text or snap.summary_text.strip() == "":
                 snap.summary_text = await summarize_snapshot_transcript(snap.text, model="gpt-4o")
                 db.add(snap)
@@ -303,29 +298,24 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
     return output
 
 
-
 # ───────────────────────────────
 # 5. GET /lecture_summary (단일)
 # ───────────────────────────────
 
 @router.get("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)):
-    # 1. 요약된 주제 가져오기
     summaries = (await db.execute(
         select(LectureSummary).where(LectureSummary.lecture_id == lecture_id)
     )).scalars().all()
     if not summaries:
         raise HTTPException(404, "저장된 요약 없음")
 
-    # 2. 관련된 snapshot 전부 가져오기 (STT 요약 포함)
     snapshots = (await db.execute(
         select(Snapshot).where(Snapshot.lecture_id == lecture_id)
     )).scalars().all()
 
-    # ✅ 요약문 반환
     image_path_to_summary_text = {s.image_path: s.summary_text or "" for s in snapshots}
 
-    # 3. 응답 구성
     output = []
     for s in summaries:
         highlights = []
@@ -333,7 +323,7 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
             if image_url:
                 highlights.append({
                     "image_url": image_url,
-                    "text": image_path_to_summary_text.get(image_url, "")  # ✅ STT 요약 반환
+                    "text": image_path_to_summary_text.get(image_url, "")
                 })
 
         output.append({
@@ -344,7 +334,6 @@ async def get_stored_summary(lecture_id: int, db: AsyncSession = Depends(get_db)
         })
 
     return output
-
 
 
 # ───────────────────────────────
