@@ -2,7 +2,7 @@
   <div class="qna-wrapper">
     <!-- 제목 + 버튼 -->
     <div class="title-bar d-flex justify-content-between align-items-center mb-3" style="width: 950px;">
-      <h2 class="title m-0">📝 교수용 과제 공지 목록</h2>
+      <h2 class="title">📝 교수용 과제 공지 목록</h2>
       <button @click="toggleForm" class="btn btn-primary">
         {{ formVisible ? '✖ 닫기' : editingAssignmentId ? '✏ 수정 취소' : '➕ 새 과제 작성' }}
       </button>
