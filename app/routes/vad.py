@@ -1,14 +1,10 @@
-# ========================
-# 📦 Backend: FastAPI 코드 (likes 반영 패치 포함)
-# ========================
-
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 from app.services.gpt import generate_expected_questions
 from app.database import get_db_context
-from app.models import GeneratedQuestion
+from app.models import GeneratedQuestion, StudentQuestion
 from sqlalchemy import select
 from datetime import datetime
 import asyncio
@@ -23,6 +19,10 @@ class TextChunkRequest(BaseModel):
 
 class LikeRequest(BaseModel):
     question_id: int
+
+class StudentQuestionRequest(BaseModel):
+    user_id: int
+    text: str
 
 # 질문 세트 조회
 async def get_question_set(db, q_id: Optional[int] = None) -> Optional[GeneratedQuestion]:
@@ -78,6 +78,42 @@ async def trigger_question_generation():
         "questions": obj.questions,
         "created_at": obj.created_at.isoformat()
     }
+
+# 학생 직접 질문 등록
+@router.post("/student_question")
+async def post_student_question(data: StudentQuestionRequest):
+    async with get_db_context() as db:
+        question = StudentQuestion(
+            user_id=data.user_id,
+            text=data.text,
+            created_at=datetime.utcnow()
+        )
+        db.add(question)
+        await db.commit()
+        await db.refresh(question)
+        return {
+            "message": "학생 질문 저장 완료",
+            "id": question.id,
+            "text": question.text,
+            "created_at": question.created_at.isoformat()
+        }
+
+# 학생 직접 질문 전체 조회
+@router.get("/student_questions")
+async def get_student_questions():
+    async with get_db_context() as db:
+        result = await db.execute(select(StudentQuestion).order_by(StudentQuestion.created_at.desc()))
+        questions = result.scalars().all()
+        return {
+            "results": [
+                {
+                    "id": q.id,
+                    "user_id": q.user_id,
+                    "text": q.text,
+                    "created_at": q.created_at.isoformat()
+                } for q in questions
+            ]
+        }
 
 # 최신 q_id 반환
 @router.get("/questions/latest_id")
