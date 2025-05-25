@@ -9,6 +9,7 @@ BASE_URL = os.getenv("BASE_URL", "")
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
+# 📌 GPT 기반 마크다운 요약 (Assistant API 버전)
 async def summarize_text_with_gpt(text: str) -> str:
     thread = await client.beta.threads.create()
     await client.beta.threads.messages.create(
@@ -23,7 +24,8 @@ async def summarize_text_with_gpt(text: str) -> str:
     messages = await client.beta.threads.messages.list(thread_id=thread.id)
     return messages.data[0].content[0].text.value.strip()
 
-async def summarize_snapshot_transcript(context: str) -> str:
+# ✅ 개선된 스냅샷 STT 요약 함수 (한 문장 요약)
+async def summarize_snapshot_transcript(transcript: str) -> str:
     response = await client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -34,21 +36,20 @@ async def summarize_snapshot_transcript(context: str) -> str:
                     "📌 다음 원칙을 반드시 따르세요:\n"
                     "1. **한 문장으로 요약**하며, **중요 개념이나 비교 설명을 반드시 반영**하세요.\n"
                     "2. '~에 대해 설명했습니다'와 같은 일반적 문장은 피하고, **교수님의 강조점이나 설명 방식을 드러내세요.**\n"
-                    "3. **35단어 이내**의 자연스러운 설명문을 작성하세요.\n"
-                    "4. 설명 내용이 단순하더라도 임의로 보완하지 말고, **주어진 내용 안에서 가장 핵심만 압축**하세요.\n\n"
+                    "3. 설명 내용이 단순하더라도 임의로 보완하지 말고, **주어진 내용 안에서 가장 핵심만 압축**하세요.\n\n"
                     "✍️ 예시:\n"
                     "- '클래스와 객체의 개념을 구분하며, 객체는 클래스에서 생성되는 실체임을 강조하셨습니다.'\n"
                     "- '값 전달과 참조 전달의 차이를 설명하며, 메모리 관점에서의 동작을 시각적으로 보여주셨습니다.'"
                 )
             },
-            {"role": "user", "content": context}
+            {"role": "user", "content": transcript}
         ],
         max_tokens=150,
         temperature=0.3,
     )
     return response.choices[0].message.content.strip()
 
-
+# ✅ 이미지 URL이 실제로 유효한지 확인
 async def is_valid_image_url(url: str) -> bool:
     try:
         async with aiohttp.ClientSession() as session:
@@ -57,13 +58,14 @@ async def is_valid_image_url(url: str) -> bool:
     except Exception:
         return False
 
+# ✅ 주제별 관련성 높은 스냅샷 1~2개 선택 (유효 이미지만)
 async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2, used_paths: set[str] = set()) -> list[int]:
     valid_snapshots = []
     snapshot_map = []
     for i, snap in enumerate(snapshots):
         if not snap.image_path or snap.image_path in used_paths:
             continue
-        full_url = BASE_URL.rstrip("/") + snap.image_path  # 절대 URL로 변환
+        full_url = BASE_URL.rstrip("/") + snap.image_path
         if await is_valid_image_url(full_url):
             valid_snapshots.append(snap)
             snapshot_map.append(i)
