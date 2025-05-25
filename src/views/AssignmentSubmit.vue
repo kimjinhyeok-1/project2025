@@ -11,10 +11,8 @@
     <div v-else class="answer-wrapper">
       <h2 class="title">📝 과제 제출: {{ assignment.title }}</h2>
 
-      <!-- ✅ 수업 구분선 위 -->
       <hr class="my-divider" />
       <p class="card-text description-text">{{ assignment.description }}</p>
-      <!-- ✅ 수업 구분선 아래 -->
       <hr class="my-divider" />
 
       <p class="card-text"><strong>마감일:</strong> {{ assignment.deadline }}</p>
@@ -36,7 +34,8 @@
           />
         </div>
 
-        <button type="submit" class="card-text btn btn-primary" :disabled="submitting">
+        <!-- ✅ 수정된 버튼 -->
+        <button type="submit" class="submit-button" :disabled="submitting">
           {{ submitting ? '제출 중입니다...' : '제출하기' }}
         </button>
       </form>
@@ -191,18 +190,34 @@ onMounted(async () => {
   color: #34495e;
 }
 
-.text-muted {
-  font-size: 0.9rem;
-}
-
 .description-text {
   white-space: pre-line;
 }
 
-/* ✅ 구분선 스타일 */
 .my-divider {
   border: none;
   border-top: 1px solid #ccc;
   margin: 1rem 0;
+}
+
+/* ✅ 연한 파란색 제출 버튼 */
+.submit-button {
+  background-color: #a5c9f1;
+  color: #fff;
+  padding: 0.5rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.submit-button:hover {
+  background-color: #91bce8;
+}
+
+.submit-button:disabled {
+  background-color: #d0e3f7;
+  cursor: not-allowed;
 }
 </style>
