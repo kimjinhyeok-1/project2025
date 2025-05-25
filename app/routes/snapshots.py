@@ -212,7 +212,7 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 # ─────────────────────────────
 # API: POST /lecture_summary
 # ─────────────────────────────
-
+@router.post("/lecture_summary", response_model=List[LectureSummaryResponse])
 async def generate_lecture_summary(
     lecture_id: int = Query(...),
     db: AsyncSession = Depends(get_db)
