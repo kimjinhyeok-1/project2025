@@ -137,7 +137,7 @@ export default {
 /* ===== 카드 스타일 (과제 항목) ===== */
 .answer-wrapper {
   position: relative;
-  width: 450px;
+  width: 500px;
   margin: 2rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 2rem;
