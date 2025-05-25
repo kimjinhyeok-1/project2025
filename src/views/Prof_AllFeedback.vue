@@ -2,19 +2,23 @@
   <div class="qna-wrapper">
     <h2 class="title">📊 전체 AI 피드백 목록</h2>
 
+    <!-- 로딩 상태 -->
     <div v-if="loading" class="answer-wrapper">
       <div class="spinner-border" role="status"></div>
       <p class="card-title">피드백을 불러오는 중입니다...</p>
     </div>
 
+    <!-- 피드백 없음 -->
     <div v-else-if="feedbackList.length === 0" class="answer-wrapper card-title">
       아직 제출된 피드백이 없습니다.
     </div>
 
-    <div v-else class="answer-wrapper">
+    <!-- 학생 개별 카드 -->
+    <div v-else>
       <div
         v-for="(entry, index) in feedbackList"
         :key="index"
+        class="answer-wrapper"
       >
         <h5 class="card-title">👤 학생 ID: {{ entry.student_id }} - {{ entry.student_name }}</h5>
 
@@ -31,7 +35,7 @@
           <div v-if="entry.professor_feedback">{{ entry.professor_feedback }}</div>
           <div v-else class="card-text">작성된 교수 피드백 없음</div>
 
-          <!-- 추가 피드백 작성 -->
+          <!-- 피드백 작성 폼 -->
           <div v-if="editingId === entry.student_id" class="card-text">
             <textarea
               v-model="feedbackInputs[entry.student_id]"
@@ -51,7 +55,8 @@
       </div>
     </div>
 
-    <div class="card-text text-end">
+    <!-- 돌아가기 버튼 -->
+    <div class="card-text text-end mt-4" style="width: 950px;">
       <button class="btn btn-outline-secondary" @click="router.back()">← 돌아가기</button>
     </div>
   </div>
@@ -121,7 +126,6 @@ onMounted(loadFeedbacks)
 </script>
 
 <style scoped>
-/* ===== 기본 레이아웃 ===== */
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -138,11 +142,10 @@ onMounted(loadFeedbacks)
   width: 950px;
 }
 
-/* ===== 카드 스타일 (과제 항목) ===== */
 .answer-wrapper {
   position: relative;
   width: 950px;
-  margin: 2rem auto;
+  margin: 1rem auto;
   background: linear-gradient(145deg, #f9fafb, #ffffff);
   padding: 2rem;
   border-radius: 20px;
@@ -168,5 +171,4 @@ onMounted(loadFeedbacks)
 .description-text {
   white-space: pre-line;
 }
-
 </style>
