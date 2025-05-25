@@ -1,6 +1,6 @@
 <template>
-  <div class="container py-5">
-    <h2 class="mb-4 fw-bold">📊 전체 AI 피드백 목록</h2>
+  <div class="qna-wrapper">
+    <h2 class="title">📊 전체 AI 피드백 목록</h2>
 
     <div v-if="loading" class="text-center">
       <div class="spinner-border" role="status"></div>
@@ -17,23 +17,23 @@
         :key="index"
         class="p-4 bg-light rounded-3 shadow-sm"
       >
-        <h5 class="text-primary mb-2">👤 학생 ID: {{ entry.student_id }} - {{ entry.student_name }}</h5>
+        <h5 class="card-title">👤 학생 ID: {{ entry.student_id }} - {{ entry.student_name }}</h5>
 
         <!-- AI 피드백 -->
         <div v-if="entry.gpt_feedback">
-          <p class="mb-1 fw-bold">📌 AI 피드백:</p>
+          <p class="card-text">📌 AI 피드백:</p>
           <MarkdownViewer :markdown="entry.gpt_feedback" />
         </div>
-        <div v-else class="text-muted">제출된 과제 없음.</div>
+        <div v-else class="card-text">제출된 과제 없음.</div>
 
         <!-- 교수 피드백 -->
         <div v-if="entry.gpt_feedback">
-          <p class="mb-1 fw-bold mt-3">👨‍🏫 교수 피드백:</p>
+          <p class="card-title">👨‍🏫 교수 피드백:</p>
           <div v-if="entry.professor_feedback">{{ entry.professor_feedback }}</div>
-          <div v-else class="text-muted">작성된 교수 피드백 없음</div>
+          <div v-else class="card-text">작성된 교수 피드백 없음</div>
 
           <!-- 추가 피드백 작성 -->
-          <div v-if="editingId === entry.student_id" class="mt-2">
+          <div v-if="editingId === entry.student_id" class="card-text">
             <textarea
               v-model="feedbackInputs[entry.student_id]"
               class="form-control mb-2"
@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <div class="mt-5 text-end">
+    <div class="card-text text-end">
       <button class="btn btn-outline-secondary" @click="router.back()">← 돌아가기</button>
     </div>
   </div>
@@ -120,3 +120,54 @@ const loadFeedbacks = async () => {
 
 onMounted(loadFeedbacks)
 </script>
+
+<style scoped>
+/* ===== 기본 레이아웃 ===== */
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-align: left;
+  color: #2c3e50;
+  width: 950px;
+}
+
+/* ===== 카드 스타일 (과제 항목) ===== */
+.answer-wrapper {
+  position: relative;
+  width: 950px;
+  margin: 2rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.answer-wrapper:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #34495e;
+}
+
+.description-text {
+  white-space: pre-line;
+}
+
+</style>
