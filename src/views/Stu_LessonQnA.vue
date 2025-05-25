@@ -133,7 +133,7 @@ export default {
   width: 100%;
   max-width: 950px;
   margin: 1rem auto;
-  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  background-color: #f9fafb; /* gradient 제거하고 단색 배경 */
   padding: 1.5rem 2rem;
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -146,8 +146,7 @@ export default {
 }
 
 .selected-card {
-  background-color: #a8cfff;
-  box-shadow: 0 0 0 3px #7bb7ff inset;
+  background-color: #a8cfff !important;
 }
 
 .card-text {
