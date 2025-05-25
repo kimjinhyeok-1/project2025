@@ -10,7 +10,13 @@
 
     <div v-else class="answer-wrapper">
       <h2 class="title">📝 과제 제출: {{ assignment.title }}</h2>
+
+      <!-- ✅ 수업 구분선 위 -->
+      <hr class="my-divider" />
       <p class="card-text description-text">{{ assignment.description }}</p>
+      <!-- ✅ 수업 구분선 아래 -->
+      <hr class="my-divider" />
+
       <p class="card-text"><strong>마감일:</strong> {{ assignment.deadline }}</p>
 
       <div v-if="alreadySubmitted" class="card-text alert alert-info d-flex justify-content-between align-items-center">
@@ -52,7 +58,6 @@ const loading = ref(true)
 const selectedFile = ref(null)
 const submitting = ref(false)
 const alreadySubmitted = ref(false)
-
 
 const handleFileChange = (e) => {
   const file = e.target.files[0]
@@ -192,5 +197,12 @@ onMounted(async () => {
 
 .description-text {
   white-space: pre-line;
+}
+
+/* ✅ 구분선 스타일 */
+.my-divider {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 1rem 0;
 }
 </style>
