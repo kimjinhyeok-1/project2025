@@ -1,22 +1,39 @@
+# ───────────────────────────────
+# 표준 라이브러리
+# ───────────────────────────────
+import os
+import uuid
+import base64
+import asyncio
+from datetime import datetime
+from collections import defaultdict
+from typing import Optional, List, Dict
+
+# ───────────────────────────────
+# 서드파티 라이브러리
+# ───────────────────────────────
+import aiofiles
+import numpy as np
+import tiktoken
+from sklearn.metrics.pairwise import cosine_similarity
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from sqlalchemy import text, delete
-from typing import Optional, List, Dict
-from datetime import datetime
-import os
-import aiofiles
-import uuid
-import base64
-import numpy as np
-from collections import defaultdict
-from sklearn.metrics.pairwise import cosine_similarity
-import tiktoken
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# ───────────────────────────────
+# 내부 앱 모듈
+# ───────────────────────────────
 from app.database import get_db
 from app.models import Lecture, Snapshot, LectureSummary
-from app.utils.gpt import summarize_text_with_gpt, summarize_snapshot_transcript, pick_top2_snapshots_by_topic
+from app.utils.gpt import (
+    summarize_text_with_gpt,
+    summarize_snapshot_transcript,
+    pick_top2_snapshots_by_topic,
+    summarize_brief_with_gpt35,
+)
 
 router = APIRouter()
 
@@ -95,20 +112,9 @@ async def file_exists(path: str) -> bool:
     return await asyncio.to_thread(os.path.exists, path)
 
 # ───────────────────────────────
-# 1. POST /lectures
+# 2. POST /snapshots
 # ───────────────────────────────
 
-@router.post("/lectures", response_model=LectureSessionResponse)
-async def create_lecture(db: AsyncSession = Depends(get_db)):
-    async with db.begin():
-        result = await db.execute(text("SELECT COALESCE(MAX(id), 0) FROM lectures"))
-        max_id = result.scalar_one()
-        await db.execute(text("SELECT setval('lectures_id_seq', :new_val, false)").bindparams(new_val=max_id + 1))
-        lecture = Lecture()
-        db.add(lecture)
-    await db.refresh(lecture)
-    return LectureSessionResponse(lecture_id=lecture.id, created_at=lecture.created_at)
-    
 # ───────────────────────────────
 # 2. POST /snapshots
 # ───────────────────────────────
@@ -118,7 +124,7 @@ async def upload_snapshot(data: SnapshotRequest, lecture_id: int = Query(...), d
     try:
         dt = datetime.strptime(data.timestamp, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        raise HTTPException(400, "timestamp \ud615\uc2dd \uc624\ub958 (YYYY-MM-DD HH:MM:SS)")
+        raise HTTPException(400, "timestamp 형식 오류 (YYYY-MM-DD HH:MM:SS)")
 
     try:
         _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
@@ -128,23 +134,12 @@ async def upload_snapshot(data: SnapshotRequest, lecture_id: int = Query(...), d
         async with aiofiles.open(save_path, "wb") as f:
             await f.write(image_bytes)
     except Exception as e:
-        raise HTTPException(400, f"\uc774\ubbf8\uc9c0 \uc800\uc7a5 \uc2e4\ud328: {e}")
+        raise HTTPException(400, f"이미지 저장 실패: {e}")
 
     rel_url = f"/static/{settings.image_dir}/{filename}"
     abs_url = f"{settings.base_url}{rel_url}"
 
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
-    recent_lines = []
-    if os.path.exists(log_path):
-        async with aiofiles.open(log_path, "r", encoding="utf-8") as log_file:
-            all_lines = await log_file.readlines()
-            recent_lines = all_lines[-5:]
-    context_lines = [line.split(" - ", 1)[-1].strip() for line in recent_lines]
-    context_lines.append(data.transcript)
-    context = truncate_by_token("\n".join(context_lines), max_tokens=300)
-
-    summary = await summarize_snapshot_transcript(context)
-
     async with aiofiles.open(log_path, "a", encoding="utf-8") as log_file:
         await log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
 
@@ -153,20 +148,21 @@ async def upload_snapshot(data: SnapshotRequest, lecture_id: int = Query(...), d
         date=dt.strftime("%Y-%m-%d"),
         time=dt.strftime("%H:%M:%S"),
         text=data.transcript,
-        summary_text=summary,
+        summary_text="",
         image_path=rel_url
     )
     db.add(snapshot)
     await db.commit()
 
     return {
-        "message": "\uc2a4\ub0ed\uc0f7 \uc800\uc7a5 \uc644\ub8cc",
+        "message": "스냅샷 저장 완료",
         "lecture_id": lecture_id,
         "date": snapshot.date,
         "time": snapshot.time,
-        "summary": summary,
         "image_url": abs_url
     }
+
+
 # ───────────────────────────────
 # 3. GET /generate_markdown_summary
 # ───────────────────────────────
@@ -219,7 +215,7 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
 async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSession = Depends(get_db)):
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(log_path):
-        raise HTTPException(404, "\ud14d\uc2a4\ud2b8 \ub85c\uadf8 \uc5c6\uc74c")
+        raise HTTPException(404, "텍스트 로그 없음")
     async with aiofiles.open(log_path, "r", encoding="utf-8") as f:
         full_text = await f.read()
 
@@ -235,7 +231,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         if title and summary:
             topics.append({"topic": title, "summary": summary})
     if not topics:
-        raise HTTPException(400, "\uc694\uc57d \ud1a0\ud53c\uac00 \uc5c6\uc74c")
+        raise HTTPException(400, "요약 토픽 없음")
 
     all_snapshots = (await db.execute(
         select(Snapshot).where(Snapshot.lecture_id == lecture_id)
@@ -246,22 +242,33 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
         if s.image_path and await file_exists(os.path.join("static", s.image_path.lstrip("/")))
     ]
     if not valid_snapshots:
-        raise HTTPException(404, "\uc720\ud6a8\ud55c \uc2a4\ud06c\ub9ac\ub4dc\uc0f7 \uc5c6\uc74c")
+        raise HTTPException(404, "유효한 스크린샷 없음")
 
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
     output = []
 
     for topic_obj in topics:
+        # 임시 요약 없으면 gpt-3.5로 생성 (저장하지 않음)
+        for s in valid_snapshots:
+            if not s.summary_text:
+                try:
+                    s.summary_text = await summarize_brief_with_gpt35(s.text)
+                except Exception:
+                    s.summary_text = ""
+
         top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], valid_snapshots)
         highlights = []
         for idx in top2_indices:
             snap = valid_snapshots[idx]
-            img_path = os.path.join("static", snap.image_path.lstrip("/"))
-            if await file_exists(img_path):
-                highlights.append({
-                    "image_url": snap.image_path,
-                    "text": snap.summary_text or ""
-                })
+            # 실제 저장용 요약 수행 (gpt-4o)
+            if not snap.summary_text or snap.summary_text.strip() == "":
+                snap.summary_text = await summarize_snapshot_transcript(snap.text, model="gpt-4o")
+                db.add(snap)
+
+            highlights.append({
+                "image_url": snap.image_path,
+                "text": snap.summary_text
+            })
 
         if highlights:
             db.add(LectureSummary(
@@ -282,6 +289,7 @@ async def generate_lecture_summary(lecture_id: int = Query(...), db: AsyncSessio
 
     await db.commit()
     return output
+
 
 
 # ───────────────────────────────

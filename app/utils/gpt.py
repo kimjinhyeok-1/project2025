@@ -7,6 +7,7 @@ ASSISTANT_ID = os.getenv("OPENAI_SUMMARY_ASSISTANT_ID")
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
+
 async def summarize_text_with_gpt(text: str) -> str:
     thread = await client.beta.threads.create()
     await client.beta.threads.messages.create(
@@ -14,7 +15,7 @@ async def summarize_text_with_gpt(text: str) -> str:
         role="user",
         content=text
     )
-    run = await client.beta.threads.runs.create_and_poll(
+    await client.beta.threads.runs.create_and_poll(
         thread_id=thread.id,
         assistant_id=ASSISTANT_ID
     )
@@ -22,11 +23,9 @@ async def summarize_text_with_gpt(text: str) -> str:
     return messages.data[0].content[0].text.value.strip()
 
 
-async def summarize_snapshot_transcript(context: str) -> str:
-    from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+async def summarize_snapshot_transcript(context: str, model: str = "gpt-4o") -> str:
     response = await client.chat.completions.create(
-        model="gpt-4o",
+        model=model,
         messages=[
             {
                 "role": "system",
@@ -44,10 +43,31 @@ async def summarize_snapshot_transcript(context: str) -> str:
     )
     return response.choices[0].message.content.strip()
 
-async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2) -> list[int]:
-    from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+async def summarize_brief_with_gpt35(text: str) -> str:
+    response = await client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "아래 문장은 Java 강의에서 교수님이 설명한 한 부분입니다.\n"
+                    "이 설명의 핵심 개념 또는 비교 설명, 코드 관련 개념이 있다면 간단히 정리하세요.\n"
+                    "- 일반적인 말투는 피하고, 핵심 용어나 개념 중심으로 요약하세요.\n"
+                    "- 너무 짧거나 '~장면입니다' 식으로 끝내지 마세요.\n"
+                    "- 예: '교수님은 String과 int의 차이를 설명하며, String이 참조 타입임을 강조하셨습니다.'"
+                )
+            },
+            {"role": "user", "content": text}
+        ],
+        max_tokens=70,
+        temperature=0.3,
+    )
+    return response.choices[0].message.content.strip()
+
+
+
+async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2) -> list[int]:
     prompt = (
         f"다음은 강의 주제입니다:\n\n'{topic}'\n\n"
         f"아래는 교수님의 설명 요약입니다:\n\n" +
@@ -56,16 +76,16 @@ async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], ma
         f"중복되는 경우는 1개만 선택하고, 번호만 콤마 없이 한 줄에 출력하세요 (예: 1 또는 1,2)"
     )
 
-    res = await client.chat.completions.create(
+    response = await client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         max_tokens=20,
     )
-    text = res.choices[0].message.content.strip()
+    text = response.choices[0].message.content.strip()
     try:
         indices = [int(x.strip()) - 1 for x in text.split(",") if x.strip().isdigit()]
         unique_indices = list(dict.fromkeys([i for i in indices if 0 <= i < len(snapshots)]))
-        return unique_indices[:max_count]  # 최대 max_count개
+        return unique_indices[:max_count]
     except Exception:
         return []
