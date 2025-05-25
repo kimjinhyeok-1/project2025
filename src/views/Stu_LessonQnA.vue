@@ -3,7 +3,7 @@
     <!-- 타이틀 + 버튼을 한 줄에 정렬 -->
     <div class="header-row">
       <h2 class="title">🤖 실시간 질문 확인</h2>
-      <button class="btn btn-light" @click="loadLatestQuestions">🔄 질문 불러오기</button>
+      <button class="btn btn-secondary" @click="loadLatestQuestions">Loading</button>
     </div>
 
     <div>
