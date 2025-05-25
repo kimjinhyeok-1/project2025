@@ -84,8 +84,9 @@ onMounted(async () => {
 .qna-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin-top: 5rem;
+  align-items: flex-start;
+  width: 800px;
+  margin-top: 5rem auto;
 }
 
 .title {
@@ -93,7 +94,6 @@ onMounted(async () => {
   font-weight: bold;
   margin-bottom: 2rem;
   text-align: left;
-  align-self: flex-start;
   color: #2c3e50;
 }
 
