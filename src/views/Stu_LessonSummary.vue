@@ -12,7 +12,7 @@
         style="cursor: pointer"
       >
         <div>
-          <p class="mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업 요약본</p>
+          <p class="mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업</p>
         </div>
         <div class="text-muted text-end">➡️ 클릭하여 요약 보기</div>
       </div>
@@ -93,28 +93,7 @@ export default {
 </script>
 
 <style scoped>
-.review-container {
-  max-width: 900px;
-  margin: auto;
-  padding: 30px;
-}
-
-.review-item {
-  background-color: #f8f9fa;
-  border-radius: 12px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
-  text-align: left;
-}
-
-.review-item:hover {
-  background-color: #e9ecef;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-</style>
-
-<style scoped>
+/* ===== 기본 레이아웃 ===== */
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -122,47 +101,45 @@ export default {
   margin-top: 5rem;
 }
 
-.header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  max-width: 950px;
-  margin-bottom: 1.5rem;
-}
-
 .title {
   font-size: 2rem;
   font-weight: bold;
-  margin: 0;
+  margin-bottom: 1rem;
+  text-align: left;
   color: #2c3e50;
+  width: 950px;
 }
 
+/* ===== 카드 스타일 (과제 항목) ===== */
 .answer-wrapper {
   position: relative;
-  width: 100%;
-  max-width: 950px;
-  margin: 1rem auto;
-  background-color: #f9fafb; /* gradient 제거하고 단색 배경 */
-  padding: 1.5rem 2rem;
+  width: 950px;
+  margin: 2rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2rem;
   border-radius: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  transition: box-shadow 0.3s ease, background-color 0.3s ease;
-  cursor: pointer;
+  transition: box-shadow 0.3s ease;
 }
 
 .answer-wrapper:hover {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
 
-.selected-card {
-  background-color: #a8cfff !important;
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .card-text {
   font-size: 1.1rem;
-  line-height: 1.6;
+  line-height: 1.7;
   color: #34495e;
-  margin: 0;
 }
+
+.description-text {
+  white-space: pre-line;
+}
+
 </style>
+
