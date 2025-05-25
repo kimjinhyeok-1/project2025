@@ -1,6 +1,5 @@
 <template>
   <div class="qna-wrapper">
-    <!-- 타이틀 + 버튼을 한 줄에 정렬 -->
     <div class="header-row">
       <h2 class="title">🤖 실시간 질문 확인</h2>
       <button class="btn btn-secondary" @click="loadLatestQuestions">🔄 질문 불러오기</button>
@@ -14,7 +13,7 @@
       >
         <div
           class="answer-wrapper"
-          :class="{ 'selected-card': selected.includes(idx) && !q.dummy }"
+          :class="{ 'selected-card': isSelected(idx) && !q.dummy }"
           @click="toggleLike(idx)"
         >
           <div class="card-body">
@@ -60,13 +59,16 @@ export default {
         console.error("질문 또는 q_id 불러오기 실패:", err);
       }
     },
+    isSelected(index) {
+      return this.selected.includes(index);
+    },
     toggleLike(index) {
       if (!this.q_id || isNaN(this.q_id)) {
         console.warn("❌ 유효하지 않은 q_id. 좋아요 요청 중단");
         return;
       }
 
-      const alreadySelected = this.selected.includes(index);
+      const alreadySelected = this.isSelected(index);
       const endpoint = alreadySelected ? "unlike" : "like";
 
       fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/${endpoint}`, {
@@ -77,7 +79,7 @@ export default {
         if (alreadySelected) {
           this.selected = this.selected.filter(i => i !== index);
         } else {
-          this.selected.push(index);
+          this.selected = [...this.selected, index];
         }
 
         localStorage.setItem(
@@ -110,7 +112,6 @@ export default {
   margin-top: 5rem;
 }
 
-/* 타이틀 + 버튼 배치용 */
 .header-row {
   display: flex;
   justify-content: space-between;
@@ -127,7 +128,6 @@ export default {
   color: #2c3e50;
 }
 
-/* 질문 카드 */
 .answer-wrapper {
   position: relative;
   width: 100%;
@@ -145,13 +145,11 @@ export default {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
 
-/* 선택된 카드 (더 눈에 띄는 색상) */
 .selected-card {
   background-color: #a8cfff;
   box-shadow: 0 0 0 3px #7bb7ff inset;
 }
 
-/* 텍스트 */
 .card-text {
   font-size: 1.1rem;
   line-height: 1.6;
