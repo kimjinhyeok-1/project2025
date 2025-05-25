@@ -12,7 +12,7 @@
         style="cursor: pointer"
       >
         <div>
-          <p class="card-text mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업</p>
+          <p class="card-text mb-0 fw-bold">{{ formatDate(summary.created_at) }} 수업 요약보러 가기</p>
         </div>
         <div class="card-text text-end">Click</div>
       </div>
