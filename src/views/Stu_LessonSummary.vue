@@ -12,16 +12,16 @@
         style="cursor: pointer"
       >
         <div>
-          <p class="card-title mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업</p>
+          <p class="card-text mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업</p>
         </div>
-        <div class="card-title text-muted text-end">Click</div>
+        <div class="card-text text-end">Click</div>
       </div>
 
-      <div v-if="loading" class="card-title text-muted mt-4 text-center">
+      <div v-if="loading" class="card-text text-muted mt-4 text-center">
         📡 수업 목록을 불러오는 중입니다...
       </div>
 
-      <div v-if="!loading && Object.keys(latestSummaries).length === 0" class="card-title text-danger mt-4 text-center">
+      <div v-if="!loading && Object.keys(latestSummaries).length === 0" class="card-text text-danger mt-4 text-center">
         ⚠️ 현재 확인 가능한 수업 요약이 없습니다.
       </div>
     </div>
@@ -132,7 +132,7 @@ export default {
 }
 
 .card-text {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   line-height: 1.7;
   color: #34495e;
 }
