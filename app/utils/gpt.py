@@ -21,7 +21,6 @@ async def summarize_text_with_gpt(text: str) -> str:
     messages = await client.beta.threads.messages.list(thread_id=thread.id)
     return messages.data[0].content[0].text.value.strip()
 
-
 async def summarize_snapshot_transcript(context: str) -> str:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -44,14 +43,30 @@ async def summarize_snapshot_transcript(context: str) -> str:
     )
     return response.choices[0].message.content.strip()
 
-async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2) -> list[int]:
+def is_valid_image_path(path: str) -> bool:
+    return os.path.exists(path)
+
+async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2, used_paths: set[str] = set()) -> list[int]:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    valid_snapshots = []
+    snapshot_map = []
+    for i, snap in enumerate(snapshots):
+        if not snap.image_path or snap.image_path in used_paths:
+            continue
+        fs_path = snap.image_path.lstrip("/")  # e.g., static/tmp/snapshots/xxx.png
+        if is_valid_image_path(fs_path):
+            valid_snapshots.append(snap)
+            snapshot_map.append(i)
+
+    if not valid_snapshots:
+        return []
 
     prompt = (
         f"다음은 강의 주제입니다:\n\n'{topic}'\n\n"
         f"아래는 교수님의 설명 요약입니다:\n\n" +
-        "\n".join([f"{i+1}. {snap.summary_text}" for i, snap in enumerate(snapshots)]) +
+        "\n".join([f"{i+1}. {snap.summary_text}" for i, snap in enumerate(valid_snapshots)]) +
         f"\n\n위 주제와 가장 관련 있는 설명을 1개 ~ 2개 선택하세요. "
         f"중복되는 경우는 1개만 선택하고, 번호만 콤마 없이 한 줄에 출력하세요 (예: 1 또는 1,2)"
     )
@@ -65,7 +80,10 @@ async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], ma
     text = res.choices[0].message.content.strip()
     try:
         indices = [int(x.strip()) - 1 for x in text.split(",") if x.strip().isdigit()]
-        unique_indices = list(dict.fromkeys([i for i in indices if 0 <= i < len(snapshots)]))
-        return unique_indices[:max_count]  # 최대 max_count개
+        unique_indices = list(dict.fromkeys([i for i in indices if 0 <= i < len(valid_snapshots)]))
+        result = [snapshot_map[i] for i in unique_indices[:max_count]]
+        for i in result:
+            used_paths.add(snapshots[i].image_path)
+        return result
     except Exception:
         return []
