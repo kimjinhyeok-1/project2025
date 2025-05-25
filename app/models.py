@@ -35,6 +35,7 @@ class User(Base):
 
     questions = relationship("QuestionAnswer", back_populates="user", cascade="all, delete-orphan")
     submissions = relationship("AssignmentSubmission", back_populates="student", cascade="all, delete-orphan")
+    student_questions = relationship("StudentQuestion", back_populates="user", cascade="all, delete-orphan")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 일반 Q&A 기록
@@ -158,7 +159,9 @@ class LectureSummary(Base):
 class StudentQuestion(Base):
     __tablename__ = "student_questions"
 
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
-    text = Column(String)
-    created_at = Column(DateTime)
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+    user = relationship("User", back_populates="student_questions")
