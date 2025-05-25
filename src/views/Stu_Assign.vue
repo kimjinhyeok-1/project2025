@@ -92,7 +92,7 @@ onMounted(async () => {
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 2rem;
-  text-align: center;
+  text-align: left;
   color: #2c3e50;
 }
 
