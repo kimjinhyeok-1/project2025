@@ -2,36 +2,40 @@
   <div class="markdown-body" v-html="renderedHtml"></div>
 </template>
 
-<script setup>
-import { ref, onMounted, watch } from 'vue'
+<script>
+import { ref, watch, onMounted } from 'vue'
 import MarkdownIt from 'markdown-it'
 
-// props
-const props = defineProps({
-  markdown: {
-    type: String,
-    required: true,
+export default {
+  name: 'MarkdownViewer',
+  props: {
+    markdown: {
+      type: String,
+      required: true
+    }
   },
-})
+  setup(props) {
+    const renderedHtml = ref('')
 
-// 상태
-const renderedHtml = ref('')
+    const md = new MarkdownIt({
+      html: false,       // 보안: HTML 차단
+      linkify: true,     // URL 자동 링크
+      typographer: true  // 따옴표 등 자동 수정
+    })
 
-// 마크다운 렌더러
-const md = new MarkdownIt({
-  html: false,       // 보안 강화 (XSS 방지)
-  linkify: true,      // URL 자동 링크화
-  typographer: true,  // 더 나은 문장 부호
-})
+    const renderMarkdown = () => {
+      renderedHtml.value = md.render(props.markdown)
+    }
 
-// 렌더 함수
-const renderMarkdown = () => {
-  renderedHtml.value = md.render(props.markdown)
+    onMounted(renderMarkdown)
+
+    watch(() => props.markdown, renderMarkdown)
+
+    return {
+      renderedHtml
+    }
+  }
 }
-
-onMounted(renderMarkdown)
-
-watch(() => props.markdown, renderMarkdown)
 </script>
 
 <style scoped>
