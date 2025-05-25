@@ -13,30 +13,37 @@
       아직 제출된 피드백이 없습니다.
     </div>
 
-    <!-- 학생 개별 카드 -->
+    <!-- 학생별 아코디언 카드 -->
     <div v-else>
       <div
         v-for="(entry, index) in feedbackList"
         :key="index"
         class="answer-wrapper"
       >
-        <h5 class="card-title">👤 학생 ID: {{ entry.student_id }} - {{ entry.student_name }}</h5>
-
-        <!-- AI 피드백 -->
-        <div v-if="entry.gpt_feedback">
-          <p class="card-text">📌 AI 피드백:</p>
-          <MarkdownViewer :markdown="entry.gpt_feedback" />
+        <!-- 접기/펼치기 토글 헤더 -->
+        <div
+          class="card-title d-flex justify-content-between align-items-center"
+          style="cursor: pointer"
+          @click="toggle(entry.student_id)"
+        >
+          <span>👤 학생 ID: {{ entry.student_id }} - {{ entry.student_name }}</span>
+          <span>{{ openId === entry.student_id ? '▲' : '▼' }}</span>
         </div>
-        <div v-else class="card-text">제출된 과제 없음.</div>
 
-        <!-- 교수 피드백 -->
-        <div v-if="entry.gpt_feedback">
-          <p class="card-text">👨‍🏫 교수 피드백:</p>
+        <!-- 펼쳐진 내용 영역 -->
+        <div v-show="openId === entry.student_id">
+          <div v-if="entry.gpt_feedback">
+            <p class="card-text">📌 AI 피드백:</p>
+            <MarkdownViewer :markdown="entry.gpt_feedback" />
+          </div>
+          <div v-else class="card-text">제출된 과제 없음.</div>
+
+          <p class="card-text mt-3">👨‍🏫 교수 피드백:</p>
           <div v-if="entry.professor_feedback">{{ entry.professor_feedback }}</div>
           <div v-else class="card-text">작성된 교수 피드백 없음</div>
 
-          <!-- 피드백 작성 폼 -->
-          <div v-if="editingId === entry.student_id" class="card-text">
+          <!-- 교수 피드백 작성 -->
+          <div v-if="editingId === entry.student_id" class="card-text mt-2">
             <textarea
               v-model="feedbackInputs[entry.student_id]"
               class="form-control mb-2"
@@ -76,6 +83,11 @@ const loading = ref(true)
 const feedbackList = ref([])
 const editingId = ref(null)
 const feedbackInputs = ref({})
+const openId = ref(null) // 👈 현재 열린 학생 ID
+
+const toggle = (studentId) => {
+  openId.value = openId.value === studentId ? null : studentId
+}
 
 const startEditing = (studentId, current) => {
   editingId.value = studentId
