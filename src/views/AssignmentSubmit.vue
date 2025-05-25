@@ -8,7 +8,7 @@
       과제를 불러오는 데 실패했습니다.
     </div>
 
-    <div v-else>
+    <div v-else class="answer-wrapper">
       <h2 class="title">📝 과제 제출: {{ assignment.title }}</h2>
       <p class="card-text description-text">{{ assignment.description }}</p>
       <p class="card-text"><strong>마감일:</strong> {{ assignment.deadline }}</p>
