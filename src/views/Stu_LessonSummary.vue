@@ -15,7 +15,7 @@
         <div>
           <p class="mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업 요약본</p>
         </div>
-        <div class="text-muted text-end">➡️ 클릭하여 상세 보기</div>
+        <div class="text-muted text-end">➡️ 클릭하여 요약 보기</div>
       </div>
 
       <div v-if="loading" class="text-muted mt-4 text-center">

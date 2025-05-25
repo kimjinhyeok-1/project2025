@@ -1,6 +1,6 @@
 <template>
   <div class="container mt-5">
-    <h2 class="text-center">❓ 학생들의 질문Y</h2>
+    <h2 class="text-center">❓ 학생들의 질문</h2>
 
     <!-- 탭 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start;">
@@ -49,7 +49,6 @@
         </div>
 
         <div v-else-if="!summaryLoading">
-          <p class="text-muted">📭 아직 요약을 불러오지 않았습니다.</p>
         </div>
       </div>
 
