@@ -2,32 +2,26 @@
   <div class="qna-wrapper">
     <h2 class="title">📚 수업 복습 보기</h2>
 
-    <div class="answer-wrapper">
+    <div class>
       <!-- lecture_id별로 하나의 카드만 표시 -->
       <div
-        v-for="(summary, lectureId, index) in sortedSummaries"
+        v-for="(summary, lectureId) in sortedSummaries"
         :key="lectureId"
+        class="answer-wrapper review-item mb-3 p-3 d-flex justify-content-between align-items-center"
+        @click="goToDetail(summary.lecture_id)"
+        style="cursor: pointer"
       >
-        <div
-          class="review-item mb-3 p-3 d-flex justify-content-between align-items-center"
-          @click="goToDetail(summary.lecture_id)"
-          style="cursor: pointer"
-        >
-          <div>
-            <p class="card-text mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업</p>
-          </div>
-          <div class="card-text text-muted text-end">Click</div>
+        <div>
+          <p class="card-title mb-0 fw-bold">📘 {{ formatDate(summary.created_at) }} 수업</p>
         </div>
-
-        <!-- 수업 간 구분선 -->
-        <hr class="my-divider" v-if="index !== Object.keys(sortedSummaries).length - 1" />
+        <div class="card-title text-muted text-end">Click</div>
       </div>
 
-      <div v-if="loading" class="card-text text-muted mt-4 text-center">
+      <div v-if="loading" class="card-title text-muted mt-4 text-center">
         📡 수업 목록을 불러오는 중입니다...
       </div>
 
-      <div v-if="!loading && Object.keys(latestSummaries).length === 0" class="card-text text-danger mt-4 text-center">
+      <div v-if="!loading && Object.keys(latestSummaries).length === 0" class="card-title text-danger mt-4 text-center">
         ⚠️ 현재 확인 가능한 수업 요약이 없습니다.
       </div>
     </div>
@@ -41,13 +35,14 @@ export default {
   name: "StudentLessonSummary",
   data() {
     return {
-      groupedSummaries: {},
-      latestSummaries: {},
+      groupedSummaries: {},     // 전체 수업 요약
+      latestSummaries: {},      // lecture_id별 최신 하나만 저장
       loading: true,
     };
   },
   computed: {
     sortedSummaries() {
+      // lecture_id 숫자 내림차순 정렬
       return Object.keys(this.latestSummaries)
         .sort((a, b) => Number(b) - Number(a))
         .reduce((acc, key) => {
@@ -64,6 +59,7 @@ export default {
         const data = res.data;
         this.groupedSummaries = data;
 
+        // 각 lecture_id 그룹 내 가장 최신 created_at 항목만 추출
         const latest = {};
         for (const [lectureId, items] of Object.entries(data)) {
           if (items.length > 0) {
@@ -78,12 +74,14 @@ export default {
         this.loading = false;
       }
     },
+
     formatDate(rawDate) {
       if (!rawDate) return "날짜 미상";
       const date = new Date(rawDate);
       if (isNaN(date.getTime())) return "날짜 오류";
       return `${date.getMonth() + 1}월 ${date.getDate()}일`;
     },
+
     goToDetail(id) {
       this.$router.push({ name: "StudentReviewDetail", params: { id } });
     },
@@ -95,6 +93,7 @@ export default {
 </script>
 
 <style scoped>
+/* ===== 기본 레이아웃 ===== */
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -111,6 +110,7 @@ export default {
   width: 950px;
 }
 
+/* ===== 카드 스타일 (과제 항목) ===== */
 .answer-wrapper {
   position: relative;
   width: 950px;
@@ -141,10 +141,5 @@ export default {
   white-space: pre-line;
 }
 
-/* ✅ 수업 간 구분선 스타일 */
-.my-divider {
-  border: none;
-  border-top: 1px solid #ccc;
-  margin: 12px 0;
-}
 </style>
+
