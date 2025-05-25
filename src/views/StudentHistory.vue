@@ -7,7 +7,6 @@
       <div class="spinner-border ms-auto" aria-hidden="true"></div>
     </div>
 
-    <!-- 각 대화를 개별 카드로 -->
     <div
       v-else
       v-for="(msg, index) in chatHistory"
@@ -15,7 +14,10 @@
       class="answer-wrapper"
     >
       <p class="card-text"><strong>🧑 질문:</strong> {{ msg.question }}</p>
-      <p class="card-text"><strong>🤖 답변:</strong> {{ msg.answer }}</p>
+      <p class="card-text">
+        <strong>🤖 답변:</strong>
+        <span v-html="renderMarkdown(msg.answer)" />
+      </p>
       <p class="text-muted small">{{ formatDate(msg.created_at) }}</p>
     </div>
 
@@ -28,9 +30,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import MarkdownIt from 'markdown-it'
 
 const chatHistory = ref([])
 const loading = ref(true)
+const md = new MarkdownIt()
+
+function renderMarkdown(text) {
+  return md.render(text || '')
+}
 
 function formatDate(dateStr) {
   const d = new Date(dateStr)
@@ -68,7 +76,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ===== 기본 레이아웃 ===== */
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -85,7 +92,6 @@ onMounted(async () => {
   width: 950px;
 }
 
-/* ===== 카드 스타일 ===== */
 .answer-wrapper {
   position: relative;
   width: 950px;
