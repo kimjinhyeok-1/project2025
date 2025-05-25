@@ -159,9 +159,5 @@ class LectureSummary(Base):
 class StudentQuestion(Base):
     __tablename__ = "student_questions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    id = Column(Integer, primary_key=True)
     text = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=func.now())
-
-    user = relationship("User", back_populates="student_questions")
