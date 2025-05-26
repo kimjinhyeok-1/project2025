@@ -26,7 +26,7 @@ async def summarize_text_with_gpt(text: str) -> str:
 # ✅ 개선된 스냅샷 STT 요약 함수 (한 문장 요약)
 async def summarize_snapshot_transcript(transcript: str) -> str:
     response = await client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
@@ -64,7 +64,7 @@ async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], ma
     prompt = (
         f"다음은 강의 주제입니다:\n\n'{topic}'\n\n"
         f"아래는 교수님의 설명 요약입니다:\n\n" +
-        "\n".join([f"{i+1}. {snap.summary_text}" for i, snap in enumerate(valid_snapshots)]) +
+        "\n".join([f"{i+1}. {snap.text}" for i, snap in enumerate(valid_snapshots)]) +
         f"\n\n위 주제와 가장 관련 있는 설명을 1개 ~ 2개 선택하세요. "
         f"중복되는 경우는 1개만 선택하고, 번호만 콤마 없이 한 줄에 출력하세요 (예: 1 또는 1,2)"
     )
