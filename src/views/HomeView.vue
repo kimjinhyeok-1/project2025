@@ -72,11 +72,13 @@ export default {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           },
-          withCredentials: true   // ✅ 여기로 와야 함!
+          withCredentials: true
         })
 
         const token = response.data.access_token
         localStorage.setItem('access_token', token)
+        localStorage.setItem('user_id', userId.value)
+        localStorage.setItem('student_number', password.value)
 
         const payload = JSON.parse(atob(token.split('.')[1]))
         const role = payload.role

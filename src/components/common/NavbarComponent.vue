@@ -9,6 +9,7 @@
 
       <!-- 오른쪽 메뉴 -->
       <div class="d-flex align-items-center ms-auto gap-3">
+        <span>{{ displayName }}</span>
         <router-link to="/" class="btn btn-danger">로그아웃</router-link>
       </div>
     </div>
@@ -18,6 +19,18 @@
 <script>
 export default {
   name: 'NavbarComponent',
+  data() {
+    return {
+      displayName: ''
+    }
+  },
+  mounted() {
+    const userId = localStorage.getItem('user_id')
+    const studentNumber = localStorage.getItem('student_number')
+    if (userId && studentNumber) {
+      this.displayName = `${userId}님 (${studentNumber})`
+    }
+  }
 }
 </script>
 
