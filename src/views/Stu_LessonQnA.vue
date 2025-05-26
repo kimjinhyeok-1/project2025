@@ -2,6 +2,7 @@
   <div class="qna-wrapper">
     <div class="header-row">
       <h2 class="title">🤖 실시간 질문 확인</h2>
+      <button class="btn btn-secondary" @click="loadLatestQuestions">🔄 질문 불러오기</button>
     </div>
 
     <!-- 질문 입력 창 -->
@@ -56,46 +57,61 @@ export default {
   methods: {
     async loadLatestQuestions() {
       try {
+        console.log("🔄 질문 ID 및 목록 불러오는 중...");
         const idRes = await fetch("https://project2025-backend.onrender.com/questions/latest_id");
         const idData = await idRes.json();
         this.q_id = parseInt(idData.q_id);
+        console.log("✅ q_id 가져옴:", this.q_id);
         this.loadSelected();
 
         const questionsRes = await fetch("https://project2025-backend.onrender.com/questions/latest");
         const questionsData = await questionsRes.json();
 
         if (Array.isArray(questionsData.questions)) {
+          console.log("✅ 질문 목록 수신:", questionsData.questions.length);
           this.questions = questionsData.questions.map(q => ({
             text: q.text,
             likes: q.likes ?? 0,
             dummy: false
           }));
+        } else {
+          console.warn("⚠️ 질문 목록이 배열이 아닙니다:", questionsData);
         }
       } catch (err) {
-        console.error("질문 또는 q_id 불러오기 실패:", err);
+        console.error("❌ 질문 또는 q_id 불러오기 실패:", err);
       }
     },
     async submitQuestion() {
       const trimmed = this.newQuestion.trim();
       if (!trimmed || !this.q_id) {
+        console.warn("⚠️ 질문 내용이 비어있거나 q_id 없음");
         alert("질문 내용을 입력해주세요.");
         return;
       }
 
       try {
-        await fetch("https://project2025-backend.onrender.com/student_question", {
+        const payload = {
+          q_id: this.q_id,
+          text: trimmed
+        };
+        console.log("📤 질문 전송 요청:", payload);
+
+        const res = await fetch("https://project2025-backend.onrender.com/student_question", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            q_id: this.q_id,
-            text: trimmed
-          })
+          body: JSON.stringify(payload)
         });
 
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(`서버 응답 오류: ${res.status} ${msg}`);
+        }
+
+        console.log("✅ 질문 성공적으로 전송됨");
         this.newQuestion = "";
         await this.loadLatestQuestions();
       } catch (err) {
-        console.error("질문 전송 실패:", err);
+        console.error("❌ 질문 전송 실패:", err);
         alert("질문을 전송하는 데 실패했습니다.");
       }
     },
@@ -111,11 +127,14 @@ export default {
       const alreadySelected = this.isSelected(index);
       const endpoint = alreadySelected ? "unlike" : "like";
 
+      console.log(`📡 ${endpoint.toUpperCase()} 요청 전송 중... (index: ${index})`);
+
       fetch(`https://project2025-backend.onrender.com/question/${this.q_id}/${endpoint}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question_id: index })
       }).then(() => {
+        console.log(`✅ ${endpoint.toUpperCase()} 성공`);
         if (alreadySelected) {
           this.selected = this.selected.filter(i => i !== index);
         } else {
@@ -127,7 +146,7 @@ export default {
           JSON.stringify(this.selected)
         );
       }).catch(err => {
-        console.error(`선택 ${endpoint} 전송 실패:`, err);
+        console.error(`❌ ${endpoint.toUpperCase()} 실패:`, err);
       });
     },
     loadSelected() {
@@ -135,6 +154,7 @@ export default {
       if (saved) {
         try {
           this.selected = JSON.parse(saved);
+          console.log("📦 로컬 스토리지 선택 질문 불러오기:", this.selected);
         } catch {
           this.selected = [];
         }
@@ -168,16 +188,13 @@ export default {
   color: #2c3e50;
 }
 
-/* 입력창과 질문 목록 사이 여백 추가 */
 .question-input-container {
-  margin-top: 2rem;
   margin-bottom: 2rem;
   display: flex;
   justify-content: center;
   width: 100%;
 }
 
-/* 입력 UI 스타일 */
 .input-row {
   display: flex;
   align-items: center;
@@ -211,7 +228,6 @@ export default {
   background-color: #0056b3;
 }
 
-/* 질문 카드 */
 .answer-wrapper {
   position: relative;
   width: 100%;
