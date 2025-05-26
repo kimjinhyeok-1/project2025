@@ -39,7 +39,7 @@ async function captureScreenshot(displayStream) {
   }
 }
 
-async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
+async function uploadSnapshot({ transcript = "", screenshot_base64 = "", isKeywordTriggered = false }) {
   const lecture_id = localStorage.getItem("lecture_id");
   if (!lecture_id) {
     console.error("❌ lecture_id 없음. 세션을 먼저 시작하세요.");
@@ -49,10 +49,19 @@ async function uploadSnapshot({ transcript = "", screenshot_base64 = "" }) {
   const cleanedTranscript = transcript.trim();
   const timestamp = getFormattedTimestamp();
 
+  const is_image = isKeywordTriggered && screenshot_base64 && screenshot_base64 !== "";
+
+  const payload = {
+    timestamp,
+    transcript: cleanedTranscript,
+    screenshot_base64: screenshot_base64 || "",
+    is_image
+  };
+
   try {
     const response = await axios.post(
       `${BASE_URL}/snapshots/snapshots?lecture_id=${lecture_id}`,
-      { timestamp, transcript: cleanedTranscript, screenshot_base64 },
+      payload,
       { withCredentials: true }
     );
     console.log("✅ 스냅샷 업로드 성공:", response.data);

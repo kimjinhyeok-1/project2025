@@ -12,7 +12,9 @@
         <div class="user-info">
           <span class="user-id">{{ userId }}님</span>
           <span class="user-number">({{ studentNumber }})</span>
-          <i class="fas fa-user user-icon"></i> <!-- 아이콘 -->
+          <div class="avatar-circle">
+            <i class="fas fa-user"></i>
+          </div>
         </div>
         <router-link to="/" class="btn btn-danger">로그아웃</router-link>
       </div>
@@ -51,8 +53,8 @@ export default {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-right: 16px; /* 버튼과의 간격 약간 넓힘 */
+  gap: 6px;
+  margin-right: 16px;
 }
 
 .user-id {
@@ -64,8 +66,19 @@ export default {
   color: #6c757d;
 }
 
-.user-icon {
-  font-size: 18px;
+/* ✅ 동그란 아이콘 스타일 */
+.avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-circle i {
   color: #6c757d;
+  font-size: 16px;
 }
 </style>

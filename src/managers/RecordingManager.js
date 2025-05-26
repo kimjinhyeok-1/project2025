@@ -13,14 +13,7 @@ class RecordingManager {
     this.lectureId = null;
 
     this.triggerKeywords = [
-      "보면",
-      "보게 되면",
-      "이 부분",
-      "이걸 보면",
-      "코드",
-      "화면",
-      "여기",
-      "이쪽"
+      "보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"
     ];
   }
 
@@ -46,13 +39,11 @@ class RecordingManager {
   }
 
   unsubscribeFromTranscript(cb) {
-    this.transcriptListeners = this.transcriptListeners.filter(
-      (fn) => fn !== cb
-    );
+    this.transcriptListeners = this.transcriptListeners.filter(fn => fn !== cb);
   }
 
   notifyTranscriptListeners(transcript) {
-    this.transcriptListeners.forEach((cb) => cb(transcript));
+    this.transcriptListeners.forEach(cb => cb(transcript));
   }
 
   async startRecording() {
@@ -79,8 +70,8 @@ class RecordingManager {
     if (!this.isRecording) return;
 
     this.audioRecorder?.stop();
-    this.audioStream?.getTracks().forEach((track) => track.stop());
-    this.displayStream?.getTracks().forEach((track) => track.stop());
+    this.audioStream?.getTracks().forEach(track => track.stop());
+    this.displayStream?.getTracks().forEach(track => track.stop());
     this.stopRecognition();
 
     this.isRecording = false;
@@ -110,7 +101,7 @@ class RecordingManager {
 
       this.notifyTranscriptListeners(transcript);
 
-      const hasKeyword = this.triggerKeywords.some((kw) => transcript.includes(kw));
+      const hasKeyword = this.triggerKeywords.some(kw => transcript.includes(kw));
       let imageBase64 = "";
 
       if (hasKeyword) {
@@ -120,7 +111,7 @@ class RecordingManager {
       await uploadSnapshot({
         transcript,
         screenshot_base64: imageBase64,
-        lecture_id: this.lectureId
+        isKeywordTriggered: hasKeyword
       });
     };
 
@@ -154,7 +145,7 @@ class RecordingManager {
 
   getState() {
     return {
-      isRecording: this.isRecording,
+      isRecording: this.isRecording
     };
   }
 }
