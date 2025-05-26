@@ -62,7 +62,7 @@
       </div>
     </div>
 
-    <!-- 학생 질문 출력 -->
+    <!-- 학생 직접 질문 출력 -->
     <div class="card mt-5">
       <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
         <span>📩 학생이 직접 보낸 질문</span>
@@ -74,8 +74,9 @@
         </div>
         <div v-else>
           <ul class="list-group">
-            <li class="list-group-item" v-for="(q, idx) in studentQuestions" :key="idx">
-              {{ idx + 1 }}. {{ q.text }}
+            <li class="list-group-item" v-for="(q, idx) in studentQuestions" :key="q.id">
+              <div class="fw-bold">{{ idx + 1 }}. {{ q.text }}</div>
+              <small class="text-muted">🕒 {{ formatDate(q.created_at) }}</small>
             </li>
           </ul>
         </div>
@@ -122,6 +123,16 @@ export default {
     }
   },
   methods: {
+    formatDate(datetimeStr) {
+      const date = new Date(datetimeStr);
+      return date.toLocaleString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    },
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
@@ -136,7 +147,7 @@ export default {
                 text: marked.parse(item.summary || ""),
                 topic: item.topic || null
               }))
-            : [ {
+            : [{
                 text: marked.parse(summary.summary || ""),
                 topic: summary.topic || null
               }];
@@ -164,7 +175,7 @@ export default {
           this.lastQid = q_id;
           localStorage.setItem("latest_q_id", q_id);
           this.loadPopularQuestions(q_id);
-          this.loadStudentQuestions(q_id); // 학생 질문도 함께 로드
+          this.loadStudentQuestions(q_id);
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         }
@@ -204,9 +215,9 @@ export default {
       try {
         const res = await fetch(`https://project2025-backend.onrender.com/student_questions?q_id=${id}`);
         const data = await res.json();
-        if (Array.isArray(data.questions)) {
-          this.studentQuestions = data.questions;
-          console.log("✅ 학생 질문 수신:", data.questions.length);
+        if (Array.isArray(data.results)) {
+          this.studentQuestions = data.results;
+          console.log("✅ 학생 직접 질문 수신:", data.results.length);
         } else {
           console.warn("❓ 학생 질문 응답 형식 이상:", data);
         }
