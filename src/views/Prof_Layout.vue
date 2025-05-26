@@ -66,8 +66,10 @@
 }
 
 .sidebar .nav-link i {
-  margin-bottom: 4px;
-  font-size: 2rem;
+  font-size: 2rem !important; /* ⬅️ 아이콘 크기 확실히 키우기 */
+  margin-bottom: 6px;
+  line-height: 1;
+  display: block;
 }
 
 .sidebar .nav-link span {
