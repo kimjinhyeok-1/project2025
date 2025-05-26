@@ -67,7 +67,7 @@
 
 .sidebar .nav-link i {
   margin-bottom: 4px;
-  font-size: 1.2rem;
+  font-size: 2rem;
 }
 
 .sidebar .nav-link span {
