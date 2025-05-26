@@ -26,7 +26,7 @@ async def summarize_text_with_gpt(text: str) -> str:
 # ✅ 개선된 스냅샷 STT 요약 함수 (한 문장 요약)
 async def summarize_snapshot_transcript(transcript: str) -> str:
     response = await client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         messages=[
             {
                 "role": "system",
