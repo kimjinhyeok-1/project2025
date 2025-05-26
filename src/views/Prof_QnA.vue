@@ -71,7 +71,6 @@
 
             <!-- 펼쳐진 답변 -->
             <div v-if="expanded[index]" class="mt-2">
-              <p class="question-text"><strong>🤖 답변:</strong></p>
               <div class="markdown-body" v-html="renderMarkdown(msg.answer)" />
               <p class="text-muted small mb-0">{{ formatDate(msg.created_at) }}</p>
             </div>
