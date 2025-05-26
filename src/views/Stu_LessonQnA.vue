@@ -110,7 +110,6 @@ export default {
   flex-direction: column;
   align-items: center;
   margin-top: 5rem;
-  max-width: 500px;
 }
 
 .header-row {
