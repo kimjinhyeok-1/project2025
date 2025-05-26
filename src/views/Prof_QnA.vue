@@ -224,14 +224,15 @@ onMounted(() => {
 
 .markdown-body {
   font-family: 'Noto Sans', sans-serif;
-  line-height: 1.3;
+  line-height: 1.6;
   word-break: break-word;
-  white-space: pre-wrap;
+  white-space: normal; /* ✅ 핵심 수정 */
 }
 
 .markdown-body p {
-  margin: 0.01rem 0;
+  margin: 0.4rem 0;
 }
+
 
 .markdown-body pre {
   background-color: #f6f8fa;
