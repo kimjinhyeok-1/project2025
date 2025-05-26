@@ -83,6 +83,7 @@ class Snapshot(Base):
     time = Column(String, nullable=False)
     text = Column(Text, nullable=False)
     image_path = Column(String, nullable=False)
+    is_image = Column(Boolean, nullable=False, default=True)  # ✅ 추가된 필드
     created_at = Column(DateTime, default=datetime.utcnow)
     summary_text = Column(Text, nullable=True)  
 

@@ -48,7 +48,7 @@ async def summarize_snapshot_transcript(transcript: str) -> str:
     )
     return response.choices[0].message.content.strip()
 
-# ✅ 주제별 관련성 높은 스냅샷 1~2개 선택 (유효성 검사 제거됨)
+# ✅ 주제별 관련성 높은 스냅샷 1~2개 선택 (is_image=True 필터링은 상위에서 수행)
 async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2, used_paths: set[str] = set()) -> list[int]:
     valid_snapshots = []
     snapshot_map = []

@@ -1,13 +1,17 @@
+# ✅ 리팩토링 및 기능 개선된 snapshots.py
+import os
+import aiofiles
+import base64
+import uuid
+from datetime import datetime
+from typing import List, Dict, Optional, Set
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text, delete
-from typing import Optional, List, Dict
-from datetime import datetime
-import os, aiofiles, uuid, base64
-import numpy as np
 import tiktoken
 
 from app.database import get_db
@@ -23,7 +27,6 @@ router = APIRouter()
 # ─────────────────────────────
 # Settings & Paths
 # ─────────────────────────────
-
 class Settings(BaseSettings):
     base_url: str = Field(..., env="BASE_URL")
     image_dir: str = "tmp/snapshots"
@@ -42,15 +45,15 @@ _ENCODER = tiktoken.encoding_for_model("gpt-4o")
 # ─────────────────────────────
 # Pydantic Models
 # ─────────────────────────────
-
-class LectureSessionResponse(BaseModel):
-    lecture_id: int
-    created_at: datetime
-
 class SnapshotRequest(BaseModel):
     timestamp: str
     transcript: str
     screenshot_base64: str
+    is_image: bool = True  # ✅ 추가됨
+
+class LectureSessionResponse(BaseModel):
+    lecture_id: int
+    created_at: datetime
 
 class SummaryResponse(BaseModel):
     lecture_id: int
@@ -74,7 +77,6 @@ class LectureSummaryListItem(BaseModel):
 # ─────────────────────────────
 # Helper Functions
 # ─────────────────────────────
-
 def truncate_by_token(text: str, max_tokens: int = 3500) -> str:
     tokens = _ENCODER.encode(text)
     return _ENCODER.decode(tokens[:max_tokens])
@@ -87,19 +89,17 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
         input=texts,
     )
     return [e.embedding for e in resp.data]
-
+    
 # ─────────────────────────────
 # API: POST /lectures
 # ─────────────────────────────
-
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(db: AsyncSession = Depends(get_db)):
     async with db.begin():
         result = await db.execute(text("SELECT COALESCE(MAX(id), 0) FROM lectures"))
         max_id = result.scalar_one()
         await db.execute(
-            text("SELECT setval('lectures_id_seq', :new_val, false)")
-            .bindparams(new_val=max_id + 1)
+            text("SELECT setval('lectures_id_seq', :new_val, false)").bindparams(new_val=max_id + 1)
         )
         lecture = Lecture()
         db.add(lecture)
@@ -109,7 +109,6 @@ async def create_lecture(db: AsyncSession = Depends(get_db)):
 # ─────────────────────────────
 # API: POST /snapshots
 # ─────────────────────────────
-
 @router.post("/snapshots")
 async def upload_snapshot(
     data: SnapshotRequest,
@@ -121,20 +120,22 @@ async def upload_snapshot(
     except ValueError:
         raise HTTPException(400, "timestamp 형식 오류 (YYYY-MM-DD HH:MM:SS)")
 
-    try:
-        _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
-        image_bytes = base64.b64decode(encoded)
-        filename = f"{uuid.uuid4().hex}.png"
-        save_path = os.path.join(FULL_IMAGE_DIR, filename)
-        async with aiofiles.open(save_path, "wb") as f:
-            await f.write(image_bytes)
-    except Exception as e:
-        raise HTTPException(400, f"이미지 저장 실패: {e}")
+    rel_url = ""
+    abs_url = ""
 
-    rel_url = f"/static/{settings.image_dir}/{filename}"
-    abs_url = f"{settings.base_url.rstrip('/')}{rel_url}"
+    if data.is_image:
+        try:
+            _, encoded = data.screenshot_base64.split(",", 1) if "," in data.screenshot_base64 else ("", data.screenshot_base64)
+            image_bytes = base64.b64decode(encoded)
+            filename = f"{uuid.uuid4().hex}.png"
+            save_path = os.path.join(FULL_IMAGE_DIR, filename)
+            async with aiofiles.open(save_path, "wb") as f:
+                await f.write(image_bytes)
+            rel_url = f"/static/{settings.image_dir}/{filename}"
+            abs_url = f"{settings.base_url.rstrip('/')}{rel_url}"
+        except Exception as e:
+            raise HTTPException(400, f"이미지 저장 실패: {e}")
 
-    # 텍스트 로그 파일에 기록 (요약은 생성하지 않음)
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     async with aiofiles.open(log_path, "a", encoding="utf-8") as log_file:
         await log_file.write(f"{dt:%Y-%m-%d %H:%M:%S} - {data.transcript}\n")
@@ -144,8 +145,9 @@ async def upload_snapshot(
         date=dt.strftime("%Y-%m-%d"),
         time=dt.strftime("%H:%M:%S"),
         text=data.transcript,
-        summary_text=None,  # ❗ 요약은 나중에 생성
-        image_path=rel_url
+        summary_text=None,
+        image_path=rel_url,
+        is_image=data.is_image
     )
     db.add(snapshot)
     await db.commit()
@@ -241,14 +243,14 @@ async def generate_lecture_summary(
         raise HTTPException(400, "요약 토픽 없음")
 
     snapshots = (await db.execute(
-        select(Snapshot).where(Snapshot.lecture_id == lecture_id)
+        select(Snapshot).where(Snapshot.lecture_id == lecture_id, Snapshot.is_image == True)
     )).scalars().all()
     if not snapshots:
         raise HTTPException(404, "스냅샷 없음")
 
     await db.execute(delete(LectureSummary).where(LectureSummary.lecture_id == lecture_id))
     output = []
-    used_paths = set()
+    used_paths: Set[str] = set()
 
     for topic_obj in topics:
         top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots, used_paths=used_paths)
@@ -256,7 +258,7 @@ async def generate_lecture_summary(
 
         for idx in top2_indices:
             snap = snapshots[idx]
-            full_url = settings.base_url.rstrip("/") + snap.image_path
+            full_url = f"{settings.base_url.rstrip('/')}{snap.image_path}"
 
             if not snap.summary_text:
                 snap.summary_text = await summarize_snapshot_transcript(snap.text)
@@ -275,7 +277,7 @@ async def generate_lecture_summary(
             image_url_1=highlights[0]["image_url"] if len(highlights) > 0 else None,
             image_text_1=highlights[0]["text"] if len(highlights) > 0 else None,
             image_url_2=highlights[1]["image_url"] if len(highlights) > 1 else None,
-            image_text_2=highlights[1]["text"] if len(highlights) > 1 else None,
+            image_text_2=highlights[1]["text"] if len(highlights) > 1 else None
         ))
 
         output.append({
@@ -287,6 +289,7 @@ async def generate_lecture_summary(
 
     await db.commit()
     return output
+
 
 
 
