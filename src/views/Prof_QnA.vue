@@ -4,7 +4,7 @@
 
     <!-- 탭 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start; width: 950px;">
-      <li class="nav-item">
+      <li class="card-text nav-item">
         <a
           class="nav-link"
           :class="{ active: activeTab === 'summary', 'text-primary': true }"
@@ -13,7 +13,7 @@
           SUMMARY
         </a>
       </li>
-      <li class="nav-item">
+      <li class="card-text nav-item">
         <a
           class="nav-link"
           :class="{ active: activeTab === 'fullchat', 'text-primary': true }"
@@ -212,11 +212,21 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
+/* ✅ 마크다운 간격 조절 */
 .markdown-body {
   font-family: 'Noto Sans', sans-serif;
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.markdown-body p {
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.markdown-body li {
+  margin-bottom: 0.2rem;
 }
 
 .markdown-body pre {
