@@ -1,6 +1,3 @@
-<!-- ======================= -->
-<!-- 👨‍🏫 교수자용 QnA 페이지 (STT 포함 원형 복원) -->
-<!-- ======================= -->
 <template>
   <div class="lecture-container mt-5 mx-auto px-4" style="max-width: 960px;">
     <h2 class="text-center">🎤 수업 녹화 & 음성 인식</h2>
@@ -41,7 +38,7 @@
       <p v-if="triggered"><strong>🧠 질문 생성 요청이 감지되었습니다!</strong></p>
     </div>
 
-    <!-- 교수용 질문 확인 UI -->
+    <!-- AI 질문 및 좋아요 -->
     <div class="card mt-5">
       <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
         <span>🧠 AI 생성 질문 및 학생 선택 수</span>
@@ -61,6 +58,26 @@
               <span class="badge bg-info">선택 수: {{ q.likes }}</span>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 학생 질문 출력 -->
+    <div class="card mt-5">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <span>📩 학생이 직접 보낸 질문</span>
+        <button class="btn btn-sm btn-light" @click="loadStudentQuestions()">🔄 새로고침</button>
+      </div>
+      <div class="card-body">
+        <div v-if="studentQuestions.length === 0" class="text-muted text-center">
+          아직 학생 질문이 없습니다.
+        </div>
+        <div v-else>
+          <ul class="list-group">
+            <li class="list-group-item" v-for="(q, idx) in studentQuestions" :key="idx">
+              {{ idx + 1 }}. {{ q.text }}
+            </li>
+          </ul>
         </div>
       </div>
     </div>
@@ -86,7 +103,8 @@ export default {
       loadingQuestions: true,
       noQidWarning: false,
       placeholderQuestions: [],
-      lastQid: null
+      lastQid: null,
+      studentQuestions: []
     };
   },
   async mounted() {
@@ -118,7 +136,7 @@ export default {
                 text: marked.parse(item.summary || ""),
                 topic: item.topic || null
               }))
-            : [{
+            : [ {
                 text: marked.parse(summary.summary || ""),
                 topic: summary.topic || null
               }];
@@ -146,6 +164,7 @@ export default {
           this.lastQid = q_id;
           localStorage.setItem("latest_q_id", q_id);
           this.loadPopularQuestions(q_id);
+          this.loadStudentQuestions(q_id); // 학생 질문도 함께 로드
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         }
@@ -173,6 +192,26 @@ export default {
         console.error("인기 질문 조회 실패:", err);
       } finally {
         this.loadingQuestions = false;
+      }
+    },
+    async loadStudentQuestions(q_id = null) {
+      const id = q_id || this.lastQid || localStorage.getItem("latest_q_id");
+      if (!id) {
+        console.warn("q_id 없음: 학생 질문을 불러올 수 없습니다.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://project2025-backend.onrender.com/student_questions?q_id=${id}`);
+        const data = await res.json();
+        if (Array.isArray(data.questions)) {
+          this.studentQuestions = data.questions;
+          console.log("✅ 학생 질문 수신:", data.questions.length);
+        } else {
+          console.warn("❓ 학생 질문 응답 형식 이상:", data);
+        }
+      } catch (err) {
+        console.error("❌ 학생 질문 불러오기 실패:", err);
       }
     }
   }
