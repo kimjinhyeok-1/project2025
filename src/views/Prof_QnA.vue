@@ -58,16 +58,13 @@
           <li
             v-for="(msg, index) in fullChat"
             :key="index"
-            class="py-3 border-bottom"
+            class="py-3 border-bottom position-relative"
           >
-            <div class="d-flex justify-content-between align-items-start">
-              <p class="mb-1 fw-bold flex-grow-1">
-                🧑 질문: {{ msg.question }}
-              </p>
-              <button class="btn btn-sm btn-outline-secondary ms-3" @click="toggleAnswer(index)">
-                {{ expanded[index] ? '⬆️ 닫기' : '⬇️ 보기' }}
-              </button>
-            </div>
+            <p class="mb-1 fw-bold pe-5">🧑 질문: {{ msg.question }}</p>
+
+            <button class="btn btn-sm btn-outline-secondary view-button" @click="toggleAnswer(index)">
+              {{ expanded[index] ? '⬆️ 닫기' : '⬇️ 보기' }}
+            </button>
 
             <div v-if="expanded[index]" class="mt-2">
               <p class="mb-1"><strong>🤖 답변:</strong></p>
@@ -238,5 +235,16 @@ onMounted(() => {
   background-color: #f6f8fa;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
+}
+
+/* ✅ 보기 버튼 고정 정렬 */
+.view-button {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  height: 2rem;
+  font-size: 0.85rem;
+  padding: 0 0.6rem;
+  white-space: nowrap;
 }
 </style>
