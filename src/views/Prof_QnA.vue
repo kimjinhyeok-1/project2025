@@ -65,7 +65,6 @@
               @click="toggle(index)"
               style="cursor: pointer"
             >
-              <span class="question-text">🧑 질문: {{ msg.question }}</span>
               <span>{{ expanded[index] ? '▲' : '▼' }}</span>
             </div>
 
@@ -232,7 +231,6 @@ onMounted(() => {
 .markdown-body p {
   margin: 0.4rem 0;
 }
-
 
 .markdown-body pre {
   background-color: #f6f8fa;
