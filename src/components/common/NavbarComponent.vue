@@ -12,7 +12,7 @@
         <div class="user-info">
           <span class="user-id">{{ userId }}님</span>
           <span class="user-number">({{ studentNumber }})</span>
-          <i class="bi bi-person-circle user-icon"></i>
+          <i class="fas fa-user-circle user-icon"></i>
         </div>
         <router-link to="/" class="btn btn-danger">로그아웃</router-link>
       </div>
@@ -52,7 +52,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-right: 12px; /* 로그아웃 버튼과의 간격 더 넓게 */
+  margin-right: 14px; /* 로그아웃 버튼과 약간 더 넓게 */
 }
 
 .user-id {
