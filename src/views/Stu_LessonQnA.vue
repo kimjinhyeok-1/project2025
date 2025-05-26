@@ -6,12 +6,11 @@
     </div>
 
     <!-- 질문 입력 창 -->
-    <div class="question-input-box">
-      <h3 class="input-title">궁금한 것이 무엇인가요?</h3>
+    <div>
       <div class="input-row">
         <input
           v-model="newQuestion"
-          class="question-input"
+          class="input-area"
           type="text"
           placeholder="무엇이든 물어보세요"
         />
@@ -144,6 +143,17 @@ export default {
 </script>
 
 <style scoped>
+
+.input-area {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 2rem;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 600px;
+}
+
 .qna-wrapper {
   display: flex;
   flex-direction: column;
