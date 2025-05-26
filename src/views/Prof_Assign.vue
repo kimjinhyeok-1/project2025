@@ -20,7 +20,7 @@
           <input v-model="title" type="text" class="form-control" required />
         </div>
         <div class="mb-3">
-          <label class="form-label">설명 (마크다운 지원)</label>
+          <label class="form-label">설명</label>
           <textarea v-model="description" class="form-control" required></textarea>
         </div>
         <div class="mb-3">

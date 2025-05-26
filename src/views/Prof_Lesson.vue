@@ -4,7 +4,7 @@
     <div class="title-row">
       <h2 class="title">🎤 수업 녹화 & 음성 인식</h2>
       <button class="btn btn-primary" @click="toggleAudioRecording">
-        {{ isRecording ? "🔝 음성 인식 종료" : "🎙️ 음성 인식 시작" }}
+        {{ isRecording ? "🔚 종료" : "🎙️ 수업" }}
       </button>
     </div>
 
@@ -42,7 +42,7 @@
     <div v-if="activeTab === 'ai'" class="answer-wrapper">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="card-title">🧠 AI 생성 질문 및 학생 선택 수</h5>
-        <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 질문 불러오기</button>
+        <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 새로고침</button>
       </div>
       <div v-if="noQidWarning" class="text-danger text-center">
         ⚠️ q_id가 없어 질문을 불러올 수 없습니다.
