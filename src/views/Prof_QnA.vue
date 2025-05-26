@@ -26,7 +26,7 @@
 
     <!-- 탭 내용 -->
     <div class="tab-content mt-3">
-      <!-- 📋 SUMMARY -->
+      <!-- 📋 SUMMARY (그대로 유지) -->
       <div v-if="activeTab === 'summary'" class="answer-wrapper">
         <h5 class="card-title">📋 SUMMARY</h5>
 
@@ -45,9 +45,9 @@
         </div>
       </div>
 
-      <!-- 💬 전체 대화 -->
+      <!-- 💬 TOTAL: 질문 드롭다운 UI -->
       <div v-if="activeTab === 'fullchat'" class="answer-wrapper">
-        <h5 class="card-title">💬 전체 대화 내용</h5>
+        <h5 class="card-title">💬 전체 대화 목록</h5>
 
         <div v-if="chatLoading" class="d-flex align-items-center justify-content-center my-3">
           <strong role="status">불러오는 중...</strong>
@@ -58,12 +58,22 @@
           <li
             v-for="(msg, index) in fullChat"
             :key="index"
-            class="card-text mb-4 border-bottom pb-3"
+            class="border-bottom py-3"
           >
-            <p class="mb-1"><strong>🧑 질문:</strong> {{ msg.question }}</p>
-            <p class="mb-1"><strong>🤖 답변:</strong></p>
-            <div class="markdown-body" v-html="renderMarkdown(msg.answer)" />
-            <p class="text-muted small mb-0">{{ formatDate(msg.created_at) }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <p class="mb-1 fw-bold">
+                🧑 질문: {{ msg.question }}
+              </p>
+              <button class="btn btn-sm btn-outline-secondary" @click="toggleAnswer(index)">
+                {{ expanded[index] ? '⬆️ 닫기' : '⬇️ 보기' }}
+              </button>
+            </div>
+
+            <div v-if="expanded[index]" class="mt-2">
+              <p class="mb-1"><strong>🤖 답변:</strong></p>
+              <div class="markdown-body" v-html="renderMarkdown(msg.answer)" />
+              <p class="text-muted small mb-0">{{ formatDate(msg.created_at) }}</p>
+            </div>
           </li>
         </ul>
 
@@ -87,6 +97,7 @@ const summary = ref({
   summary_for_professor: '',
 })
 const fullChat = ref([])
+const expanded = ref([]) // 드롭다운 상태 관리
 
 const summaryLoading = ref(false)
 const chatLoading = ref(false)
@@ -111,17 +122,11 @@ function formatDate(dateStr) {
 
 const loadSummary = async () => {
   summaryLoading.value = true
-
   try {
     const token = localStorage.getItem('access_token')
-    if (!token) throw new Error('❌ 토큰 없음')
-
     const response = await axios.get('https://project2025-backend.onrender.com/chat_history/summary', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     })
-
     summary.value = response.data
   } catch (error) {
     console.error('❌ 요약 데이터 불러오기 실패:', error)
@@ -136,21 +141,16 @@ const loadSummary = async () => {
 
 const loadFullChat = async () => {
   activeTab.value = 'fullchat'
-
   if (hasLoadedChat.value || chatLoading.value) return
 
   chatLoading.value = true
   try {
     const token = localStorage.getItem('access_token')
-    if (!token) throw new Error('❌ 토큰 없음')
-
     const response = await axios.get('https://project2025-backend.onrender.com/chat_history/all', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     })
-
     fullChat.value = response.data || []
+    expanded.value = fullChat.value.map(() => false) // 초기화
     hasLoadedChat.value = true
   } catch (error) {
     console.error('❌ 전체 대화 불러오기 실패:', error)
@@ -158,6 +158,10 @@ const loadFullChat = async () => {
   } finally {
     chatLoading.value = false
   }
+}
+
+const toggleAnswer = (index) => {
+  expanded.value[index] = !expanded.value[index]
 }
 
 onMounted(() => {
@@ -217,6 +221,10 @@ onMounted(() => {
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.markdown-body p {
+  margin: 0.4rem 0;
 }
 
 .markdown-body pre {
