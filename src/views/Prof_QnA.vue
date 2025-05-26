@@ -26,7 +26,7 @@
 
     <!-- 탭 내용 -->
     <div class="tab-content mt-3">
-      <!-- 📋 SUMMARY (그대로 유지) -->
+      <!-- 📋 SUMMARY -->
       <div v-if="activeTab === 'summary'" class="answer-wrapper">
         <h5 class="card-title">📋 SUMMARY</h5>
 
@@ -45,7 +45,7 @@
         </div>
       </div>
 
-      <!-- 💬 TOTAL: 질문 드롭다운 UI -->
+      <!-- 💬 TOTAL -->
       <div v-if="activeTab === 'fullchat'" class="answer-wrapper">
         <h5 class="card-title">💬 전체 대화 목록</h5>
 
@@ -58,13 +58,13 @@
           <li
             v-for="(msg, index) in fullChat"
             :key="index"
-            class="border-bottom py-3"
+            class="py-3 border-bottom"
           >
-            <div class="d-flex justify-content-between align-items-center">
-              <p class="mb-1 fw-bold">
+            <div class="d-flex justify-content-between align-items-start">
+              <p class="mb-1 fw-bold flex-grow-1">
                 🧑 질문: {{ msg.question }}
               </p>
-              <button class="btn btn-sm btn-outline-secondary" @click="toggleAnswer(index)">
+              <button class="btn btn-sm btn-outline-secondary ms-3" @click="toggleAnswer(index)">
                 {{ expanded[index] ? '⬆️ 닫기' : '⬇️ 보기' }}
               </button>
             </div>
@@ -97,7 +97,7 @@ const summary = ref({
   summary_for_professor: '',
 })
 const fullChat = ref([])
-const expanded = ref([]) // 드롭다운 상태 관리
+const expanded = ref([])
 
 const summaryLoading = ref(false)
 const chatLoading = ref(false)
@@ -150,7 +150,7 @@ const loadFullChat = async () => {
       headers: { Authorization: `Bearer ${token}` }
     })
     fullChat.value = response.data || []
-    expanded.value = fullChat.value.map(() => false) // 초기화
+    expanded.value = fullChat.value.map(() => false)
     hasLoadedChat.value = true
   } catch (error) {
     console.error('❌ 전체 대화 불러오기 실패:', error)
