@@ -5,6 +5,23 @@
       <button class="btn btn-secondary" @click="loadLatestQuestions">🔄 질문 불러오기</button>
     </div>
 
+    <!-- 질문 입력 창 -->
+    <div class="question-input-box">
+      <h3 class="input-title">궁금한 것이 무엇인가요?</h3>
+      <div class="input-row">
+        <input
+          v-model="newQuestion"
+          class="question-input"
+          type="text"
+          placeholder="무엇이든 물어보세요"
+        />
+        <button class="search-button" @click="submitQuestion">
+          🌐 검색
+        </button>
+      </div>
+    </div>
+
+    <!-- 질문 목록 -->
     <div>
       <div
         v-for="(q, idx) in questions"
@@ -31,6 +48,7 @@ export default {
     return {
       q_id: null,
       selected: [],
+      newQuestion: "",
       questions: Array(5).fill({ text: "질문 로딩 중...", likes: 0, dummy: true })
     };
   },
@@ -57,6 +75,27 @@ export default {
         }
       } catch (err) {
         console.error("질문 또는 q_id 불러오기 실패:", err);
+      }
+    },
+    async submitQuestion() {
+      const trimmed = this.newQuestion.trim();
+      if (!trimmed) {
+        alert("질문 내용을 입력해주세요.");
+        return;
+      }
+
+      try {
+        await fetch("https://project2025-backend.onrender.com/questions/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: trimmed })
+        });
+
+        this.newQuestion = "";
+        await this.loadLatestQuestions();
+      } catch (err) {
+        console.error("질문 전송 실패:", err);
+        alert("질문을 전송하는 데 실패했습니다.");
       }
     },
     isSelected(index) {
@@ -118,7 +157,7 @@ export default {
   align-items: center;
   width: 100%;
   max-width: 950px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .title {
@@ -128,12 +167,60 @@ export default {
   color: #2c3e50;
 }
 
+/* 질문 입력 UI */
+.question-input-box {
+  width: 100%;
+  max-width: 950px;
+  background-color: #f8f9fb;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.input-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3e50;
+  margin-bottom: 1rem;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.question-input {
+  flex: 1;
+  padding: 0.8rem 1.2rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+}
+
+.search-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.search-button:hover {
+  background-color: #0056b3;
+}
+
+/* 질문 카드 */
 .answer-wrapper {
   position: relative;
   width: 100%;
   max-width: 950px;
   margin: 0.5rem auto;
-  background-color: #f9fafb; /* gradient 제거하고 단색 배경 */
+  background-color: #f9fafb;
   padding: 0.75rem 1rem;
   border-radius: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
