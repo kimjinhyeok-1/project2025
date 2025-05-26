@@ -2,7 +2,7 @@
   <div class="qna-wrapper">
     <!-- 제목 + 버튼 -->
     <div class="title-row">
-      <h2 class="title">🎤 수업 녹화 & 음성 인식</h2>
+      <h2 class="title">🎤 수업</h2>
       <button class="btn btn-primary" @click="toggleAudioRecording">
         {{ isRecording ? "🔚 종료" : "🎙️ 수업" }}
       </button>
