@@ -61,11 +61,11 @@
           >
             <!-- 드롭다운 토글 헤더 -->
             <div
-              class="card-text question-text d-flex justify-content-between align-items-center toggle-header"
+              class="card-text d-flex justify-content-between align-items-center toggle-header"
               @click="toggle(index)"
               style="cursor: pointer"
             >
-              <span>🧑 질문: {{ msg.question }}</span>
+              <span class="question-text">🧑 질문: {{ msg.question }}</span>
               <span>{{ expanded[index] ? '▲' : '▼' }}</span>
             </div>
 
