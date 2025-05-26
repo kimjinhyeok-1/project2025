@@ -212,21 +212,11 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
-/* ✅ 마크다운 간격 조절 */
 .markdown-body {
   font-family: 'Noto Sans', sans-serif;
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-wrap;
-}
-
-.markdown-body p {
-  margin-top: 0.1rem;
-  margin-bottom: 0.1rem;
-}
-
-.markdown-body li {
-  margin-bottom: 0.1rem;
 }
 
 .markdown-body pre {
