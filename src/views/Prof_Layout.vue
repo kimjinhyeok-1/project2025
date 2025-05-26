@@ -59,29 +59,30 @@
 
 <style scoped>
 .sidebar .nav-link {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
 }
 
 .sidebar .nav-link i {
-  margin-bottom: 6px;
-  font-size: 1.3rem;
+  margin-bottom: 4px;
+  font-size: 1.2rem;
 }
 
 .sidebar .nav-link span {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 600;
 }
 
-.nav-item.my-3 {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+.nav-item {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
 }
 
 .collapse-inner .collapse-item {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 500;
 }
 </style>
+
