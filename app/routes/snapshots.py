@@ -253,39 +253,41 @@ async def generate_lecture_summary(
     for topic_obj in topics:
         top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots, used_paths=used_paths)
         highlights = []
+
         for idx in top2_indices:
-        snap = snapshots[idx]
-        full_url = settings.base_url.rstrip("/") + snap.image_path
+            snap = snapshots[idx]
+            full_url = settings.base_url.rstrip("/") + snap.image_path
 
-        if not snap.summary_text:
-            snap.summary_text = await summarize_snapshot_transcript(snap.text)
-            db.add(snap)
-            await db.flush()
+            if not snap.summary_text:
+                snap.summary_text = await summarize_snapshot_transcript(snap.text)
+                db.add(snap)
+                await db.flush()
 
-        highlights.append({
-            "image_url": snap.image_path,
-            "text": snap.summary_text
-        })
+            highlights.append({
+                "image_url": snap.image_path,
+                "text": snap.summary_text
+            })
 
-    db.add(LectureSummary(
-        lecture_id=lecture_id,
-        topic=topic_obj["topic"],
-        summary=topic_obj["summary"],
-        image_url_1=highlights[0]["image_url"] if len(highlights) > 0 else None,
-        image_text_1=highlights[0]["text"] if len(highlights) > 0 else None,
-        image_url_2=highlights[1]["image_url"] if len(highlights) > 1 else None,
-        image_text_2=highlights[1]["text"] if len(highlights) > 1 else None,
-    ))
+        db.add(LectureSummary(
+            lecture_id=lecture_id,
+            topic=topic_obj["topic"],
+            summary=topic_obj["summary"],
+            image_url_1=highlights[0]["image_url"] if len(highlights) > 0 else None,
+            image_text_1=highlights[0]["text"] if len(highlights) > 0 else None,
+            image_url_2=highlights[1]["image_url"] if len(highlights) > 1 else None,
+            image_text_2=highlights[1]["text"] if len(highlights) > 1 else None,
+        ))
 
-    output.append({
+        output.append({
             "topic": topic_obj["topic"],
             "summary": topic_obj["summary"],
             "created_at": datetime.utcnow(),
             "highlights": highlights
-    })
+        })
 
     await db.commit()
     return output
+
 
 
 # ───────────────────────────────
