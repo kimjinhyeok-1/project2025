@@ -61,7 +61,7 @@
           >
             <!-- 드롭다운 토글 헤더 -->
             <div
-              class="card-text d-flex justify-content-between align-items-center toggle-header"
+              class="card-text question-text d-flex justify-content-between align-items-center toggle-header"
               @click="toggle(index)"
               style="cursor: pointer"
             >
@@ -245,5 +245,10 @@ onMounted(() => {
   background-color: #f6f8fa;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
+}
+
+.question-text {
+  padding-right: 7rem; /* 버튼과 겹치지 않도록 */
+  word-break: break-word;
 }
 </style>
