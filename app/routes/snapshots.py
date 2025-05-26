@@ -251,22 +251,21 @@ async def generate_lecture_summary(
     used_paths = set()
 
     for topic_obj in topics:
-        top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots, used_paths=used_paths)
-        highlights = []
-        for idx in top2_indices:
-            snap = snapshots[idx]
-            full_url = settings.base_url.rstrip("/") + snap.image_path
-            if not await is_valid_image_url(full_url):
-                continue
-            if not snap.summary_text:
-                snap.summary_text = await summarize_snapshot_transcript(snap.text)
-                db.add(snap)
-                await db.flush()  # ✅ 요약 후 DB 반영
+    top2_indices = await pick_top2_snapshots_by_topic(topic_obj["topic"], snapshots, used_paths=used_paths)
+    highlights = []
+    for idx in top2_indices:
+        snap = snapshots[idx]
+        full_url = settings.base_url.rstrip("/") + snap.image_path
 
-            highlights.append({
-                "image_url": snap.image_path,
-                "text": snap.summary_text
-            })
+        if not snap.summary_text:
+            snap.summary_text = await summarize_snapshot_transcript(snap.text)
+            db.add(snap)
+            await db.flush()
+
+        highlights.append({
+            "image_url": snap.image_path,
+            "text": snap.summary_text
+        })
 
         db.add(LectureSummary(
             lecture_id=lecture_id,

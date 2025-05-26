@@ -1,5 +1,4 @@
 import os
-import aiohttp
 from openai import AsyncOpenAI
 from app.models import Snapshot
 
@@ -49,26 +48,15 @@ async def summarize_snapshot_transcript(transcript: str) -> str:
     )
     return response.choices[0].message.content.strip()
 
-# ✅ 이미지 URL이 실제로 유효한지 확인
-async def is_valid_image_url(url: str) -> bool:
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=3) as response:
-                return response.status == 200 and response.content_type.startswith("image")
-    except Exception:
-        return False
-
-# ✅ 주제별 관련성 높은 스냅샷 1~2개 선택 (유효 이미지만)
+# ✅ 주제별 관련성 높은 스냅샷 1~2개 선택 (유효성 검사 제거됨)
 async def pick_top2_snapshots_by_topic(topic: str, snapshots: list[Snapshot], max_count: int = 2, used_paths: set[str] = set()) -> list[int]:
     valid_snapshots = []
     snapshot_map = []
     for i, snap in enumerate(snapshots):
         if not snap.image_path or snap.image_path in used_paths:
             continue
-        full_url = BASE_URL.rstrip("/") + snap.image_path
-        if await is_valid_image_url(full_url):
-            valid_snapshots.append(snap)
-            snapshot_map.append(i)
+        valid_snapshots.append(snap)
+        snapshot_map.append(i)
 
     if not valid_snapshots:
         return []
