@@ -3,7 +3,7 @@
     <div class="container-fluid">
       <!-- 왼쪽 브랜드 -->
       <div class="d-flex align-items-center">
-        <img src="/kut_logo.gif" alt="KUT Logo" class="kut-logo me-2" />
+        <img src="/kut_logo.gif" alt="KUT Logo" class="kut-logo" />
         <span class="sidebar-brand-text">KOREATECH</span>
       </div>
 
@@ -30,5 +30,6 @@ export default {
   height: 32px;
   width: auto;
   object-fit: contain;
+  margin-right: 8px;
 }
 </style>
