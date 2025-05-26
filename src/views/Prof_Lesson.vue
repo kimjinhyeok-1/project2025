@@ -1,9 +1,6 @@
 <template>
-  <div class="lecture-container mt-5 mx-auto px-4" style="max-width: 960px;">
-    <h2 class="text-center">🎤 수업 녹화 & 음성 인식</h2>
-    <p class="text-muted text-center">
-      녹음 중 키워드가 감지되면 자동으로 화면 캡처와 함께 백엔드에 전송됩니다.
-    </p>
+  <div class="qna-wrapper">
+    <h2 class="title">🎤 수업 녹화 & 음성 인식</h2>
 
     <div class="btn-group d-flex justify-content-center mt-4">
       <button class="btn btn-primary m-2" @click="toggleAudioRecording">
@@ -12,11 +9,11 @@
     </div>
 
     <!-- 실시간 요약 결과 -->
-    <div class="card mt-4">
-      <div class="card-header bg-primary text-white">
+    <div class="answer-wrapper">
+      <div class="card-header card-text">
         📘 수업 요약 결과
       </div>
-      <div class="card-body">
+      <div class="card-body card-text">
         <div v-if="loadingSummary" class="text-center text-muted">
           요약을 준비하고 있습니다.
         </div>
@@ -32,19 +29,13 @@
       </div>
     </div>
 
-    <!-- 질문 감지 출력 -->
-    <div class="alert alert-info mt-4">
-      <p><strong>🎧 최근 인식된 문장:</strong> {{ latestTranscript }}</p>
-      <p v-if="triggered"><strong>🧠 질문 생성 요청이 감지되었습니다!</strong></p>
-    </div>
-
     <!-- AI 질문 및 좋아요 -->
-    <div class="card mt-5">
-      <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+    <div class="answer-wrapper">
+      <div class="card-header card-text">
         <span>🧠 AI 생성 질문 및 학생 선택 수</span>
         <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 질문 불러오기</button>
       </div>
-      <div class="card-body">
+      <div class="card-body card-text">
         <div v-if="noQidWarning" class="text-danger text-center">
           ⚠️ q_id가 없어 질문을 불러올 수 없습니다.
         </div>
@@ -63,12 +54,12 @@
     </div>
 
     <!-- 학생 직접 질문 출력 -->
-    <div class="card mt-5">
-      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+    <div class="answer-wrapper">
+      <div class="card-header card-text">
         <span>📩 학생이 직접 보낸 질문</span>
         <button class="btn btn-sm btn-light" @click="loadStudentQuestions()">🔄 새로고침</button>
       </div>
-      <div class="card-body">
+      <div class="card-body card-text">
         <div v-if="studentQuestions.length === 0" class="text-muted text-center">
           아직 학생 질문이 없습니다.
         </div>
@@ -233,4 +224,53 @@ export default {
 .markdown-body {
   white-space: pre-wrap;
 }
+
+/* ===== 기본 레이아웃 ===== */
+.qna-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-align: left;
+  color: #2c3e50;
+  width: 950px;
+}
+
+/* ===== 카드 스타일 (과제 항목) ===== */
+.answer-wrapper {
+  position: relative;
+  width: 950px;
+  margin: 2rem auto;
+  background: linear-gradient(145deg, #f9fafb, #ffffff);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.answer-wrapper:hover {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-text {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #34495e;
+}
+
+.description-text {
+  white-space: pre-line;
+}
+
 </style>
