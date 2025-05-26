@@ -2,6 +2,7 @@
   <div class="qna-wrapper">
     <h2 class="title">❓ 학생들의 질문</h2>
 
+    <!-- 탭 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start; width: 950px;">
       <li class="card-text nav-item">
         <a
@@ -23,8 +24,8 @@
       </li>
     </ul>
 
+    <!-- SUMMARY -->
     <div class="tab-content mt-3">
-      <!-- SUMMARY -->
       <div v-if="activeTab === 'summary'" class="answer-wrapper">
         <h5 class="card-title">📋 SUMMARY</h5>
 
@@ -56,14 +57,19 @@
           <li
             v-for="(msg, index) in fullChat"
             :key="index"
-            class="py-3 border-bottom position-relative"
+            class="py-3 border-bottom"
           >
-            <p class="mb-1 fw-bold question-text">🧑 질문: {{ msg.question }}</p>
+            <!-- 드롭다운 토글 헤더 -->
+            <div
+              class="card-text d-flex justify-content-between align-items-center toggle-header"
+              @click="toggle(index)"
+              style="cursor: pointer"
+            >
+              <span>🧑 질문: {{ msg.question }}</span>
+              <span>{{ expanded[index] ? '▲' : '▼' }}</span>
+            </div>
 
-            <button class="btn btn-sm btn-outline-secondary view-button" @click="toggleAnswer(index)">
-              {{ expanded[index] ? '⬆️ 닫기' : '⬇️ 보기' }}
-            </button>
-
+            <!-- 펼쳐진 답변 -->
             <div v-if="expanded[index]" class="mt-2">
               <p class="mb-1"><strong>🤖 답변:</strong></p>
               <div class="markdown-body" v-html="renderMarkdown(msg.answer)" />
@@ -155,7 +161,7 @@ const loadFullChat = async () => {
   }
 }
 
-const toggleAnswer = (index) => {
+const toggle = (index) => {
   expanded.value[index] = !expanded.value[index]
 }
 
@@ -211,19 +217,10 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
-.question-text {
-  padding-right: 7rem; /* 버튼과 겹치지 않도록 */
-  word-break: break-word;
-}
-
-.view-button {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.5rem;
-  height: 2rem;
-  font-size: 0.85rem;
-  padding: 0 0.6rem;
-  white-space: nowrap;
+.toggle-header span {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #2c3e50;
 }
 
 .markdown-body {
