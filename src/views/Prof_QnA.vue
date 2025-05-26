@@ -230,6 +230,10 @@ onMounted(() => {
   white-space: pre-wrap;
 }
 
+.markdown-body p {
+  margin: 0.01rem 0;
+}
+
 .markdown-body pre {
   background-color: #f6f8fa;
   padding: 1rem;
