@@ -10,8 +10,9 @@
       <!-- 오른쪽 메뉴 -->
       <div class="d-flex align-items-center ms-auto gap-3">
         <div class="user-info">
-          <span class="user-id">{{ userId }}</span>
+          <span class="user-id">{{ userId }}님</span>
           <span class="user-number">({{ studentNumber }})</span>
+          <i class="bi bi-person-circle user-icon"></i>
         </div>
         <router-link to="/" class="btn btn-danger">로그아웃</router-link>
       </div>
@@ -50,16 +51,21 @@ export default {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 4px; /* 이름과 학번 사이 간격 */
-  margin-right: 8px; /* 로그아웃 버튼과의 거리 */
+  gap: 4px;
+  margin-right: 12px; /* 로그아웃 버튼과의 간격 더 넓게 */
 }
 
 .user-id {
   font-weight: 600;
-  color: #000; /* 검정색 */
+  color: #000;
 }
 
 .user-number {
-  color: #6c757d; /* 기존 회색 그대로 */
+  color: #6c757d;
+}
+
+.user-icon {
+  font-size: 20px;
+  color: #6c757d;
 }
 </style>
