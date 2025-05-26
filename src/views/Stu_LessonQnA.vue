@@ -14,7 +14,7 @@
           placeholder="무엇이든 물어보세요"
         />
         <button class="search-button" @click="submitQuestion">
-          🌐 검색
+          send
         </button>
       </div>
     </div>
