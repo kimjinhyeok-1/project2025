@@ -212,7 +212,7 @@ onMounted(() => {
 }
 
 .question-text {
-  padding-right: 5rem; /* 버튼과 겹치지 않도록 */
+  padding-right: 7rem; /* 버튼과 겹치지 않도록 */
   word-break: break-word;
 }
 
