@@ -225,7 +225,7 @@ onMounted(() => {
 
 .markdown-body {
   font-family: 'Noto Sans', sans-serif;
-  line-height: 1.6;
+  line-height: 1.0;
   word-break: break-word;
   white-space: pre-wrap;
 }
