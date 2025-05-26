@@ -1,15 +1,15 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🎤 수업 녹화 & 음성 인식</h2>
-
-    <div class="btn-group d-flex justify-content-center mt-4">
-      <button class="btn btn-primary m-2" @click="toggleAudioRecording">
+    <!-- 제목 + 버튼 -->
+    <div class="title-row">
+      <h2 class="title">🎤 수업 녹화 & 음성 인식</h2>
+      <button class="btn btn-primary" @click="toggleAudioRecording">
         {{ isRecording ? "🔝 음성 인식 종료" : "🎙️ 음성 인식 시작" }}
       </button>
     </div>
 
     <!-- 실시간 요약 결과 -->
-    <div class="answer-wrapper">
+    <div class="answer-wrapper right-aligned">
       <div class="card-header card-text">
         📘 수업 요약 결과
       </div>
@@ -138,7 +138,7 @@ export default {
                 text: marked.parse(item.summary || ""),
                 topic: item.topic || null
               }))
-            : [{
+            : [ {
                 text: marked.parse(summary.summary || ""),
                 topic: summary.topic || null
               }];
@@ -151,7 +151,6 @@ export default {
     },
     async handleTranscript(text) {
       this.latestTranscript = text;
-
       try {
         await axios.post("https://project2025-backend.onrender.com/upload_text_chunk", { text });
       } catch (error) {
@@ -233,16 +232,22 @@ export default {
   margin-top: 5rem;
 }
 
+/* 제목 + 버튼 한 줄로 */
+.title-row {
+  width: 950px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .title {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 1rem;
-  text-align: left;
   color: #2c3e50;
-  width: 950px;
 }
 
-/* ===== 카드 스타일 (과제 항목) ===== */
+/* ===== 카드 스타일 ===== */
 .answer-wrapper {
   position: relative;
   width: 950px;
@@ -256,6 +261,10 @@ export default {
 
 .answer-wrapper:hover {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.right-aligned {
+  margin-left: auto;
 }
 
 .card-title {
@@ -272,5 +281,4 @@ export default {
 .description-text {
   white-space: pre-line;
 }
-
 </style>
