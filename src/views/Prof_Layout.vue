@@ -66,7 +66,7 @@
 }
 
 .sidebar .nav-link i {
-  font-size: 2rem !important; /* ⬅️ 아이콘 크기 확실히 키우기 */
+  font-size: 1.6rem !important; /* ⬅️ 아이콘 크기 확실히 키우기 */
   margin-bottom: 6px;
   line-height: 1;
   display: block;
