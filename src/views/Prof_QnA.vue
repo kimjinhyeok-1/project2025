@@ -2,7 +2,6 @@
   <div class="qna-wrapper">
     <h2 class="title">❓ 학생들의 질문</h2>
 
-    <!-- 탭 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start; width: 950px;">
       <li class="card-text nav-item">
         <a
@@ -24,9 +23,8 @@
       </li>
     </ul>
 
-    <!-- 탭 내용 -->
     <div class="tab-content mt-3">
-      <!-- 📋 SUMMARY -->
+      <!-- SUMMARY -->
       <div v-if="activeTab === 'summary'" class="answer-wrapper">
         <h5 class="card-title">📋 SUMMARY</h5>
 
@@ -45,7 +43,7 @@
         </div>
       </div>
 
-      <!-- 💬 TOTAL -->
+      <!-- TOTAL -->
       <div v-if="activeTab === 'fullchat'" class="answer-wrapper">
         <h5 class="card-title">💬 전체 대화 목록</h5>
 
@@ -60,7 +58,7 @@
             :key="index"
             class="py-3 border-bottom position-relative"
           >
-            <p class="mb-1 fw-bold pe-5">🧑 질문: {{ msg.question }}</p>
+            <p class="mb-1 fw-bold question-text">🧑 질문: {{ msg.question }}</p>
 
             <button class="btn btn-sm btn-outline-secondary view-button" @click="toggleAnswer(index)">
               {{ expanded[index] ? '⬆️ 닫기' : '⬇️ 보기' }}
@@ -213,6 +211,21 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
+.question-text {
+  padding-right: 5rem; /* 버튼과 겹치지 않도록 */
+  word-break: break-word;
+}
+
+.view-button {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  height: 2rem;
+  font-size: 0.85rem;
+  padding: 0 0.6rem;
+  white-space: nowrap;
+}
+
 .markdown-body {
   font-family: 'Noto Sans', sans-serif;
   line-height: 1.6;
@@ -235,16 +248,5 @@ onMounted(() => {
   background-color: #f6f8fa;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
-}
-
-/* ✅ 보기 버튼 고정 정렬 */
-.view-button {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.5rem;
-  height: 2rem;
-  font-size: 0.85rem;
-  padding: 0 0.6rem;
-  white-space: nowrap;
 }
 </style>
