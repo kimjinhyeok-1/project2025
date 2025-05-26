@@ -1,9 +1,6 @@
 <template>
   <div class="qna-wrapper">
-    <div class="header-row">
-      <h2 class="title">🤖 실시간 질문 확인</h2>
-      <button class="btn btn-secondary" @click="loadLatestQuestions">🔄 질문 불러오기</button>
-    </div>
+    <h2 class="title">🤖 실시간 질문 확인</h2>
 
     <!-- 질문 입력 창 -->
     <div class="question-input-container">
@@ -15,7 +12,7 @@
           placeholder="무엇이든 물어보세요"
         />
         <button class="search-button" @click="submitQuestion">
-          🌐 검색
+          Send
         </button>
       </div>
     </div>
