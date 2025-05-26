@@ -65,6 +65,7 @@
               @click="toggle(index)"
               style="cursor: pointer"
             >
+              <span class="question-text">{{ msg.question }}</span>
               <span>{{ expanded[index] ? '▲' : '▼' }}</span>
             </div>
 
