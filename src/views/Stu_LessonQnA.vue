@@ -1,6 +1,8 @@
 <template>
   <div class="qna-wrapper">
-    <h2 class="title">🤖 실시간 질문 확인</h2>
+    <div class="header-row">
+      <h2 class="title">🤖 실시간 질문 확인</h2>
+    </div>
 
     <!-- 질문 입력 창 -->
     <div class="question-input-container">
@@ -12,7 +14,7 @@
           placeholder="무엇이든 물어보세요"
         />
         <button class="search-button" @click="submitQuestion">
-          Send
+          🌐 검색
         </button>
       </div>
     </div>
@@ -75,16 +77,19 @@ export default {
     },
     async submitQuestion() {
       const trimmed = this.newQuestion.trim();
-      if (!trimmed) {
+      if (!trimmed || !this.q_id) {
         alert("질문 내용을 입력해주세요.");
         return;
       }
 
       try {
-        await fetch("https://project2025-backend.onrender.com/questions/submit", {
+        await fetch("https://project2025-backend.onrender.com/student_question", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: trimmed })
+          body: JSON.stringify({
+            q_id: this.q_id,
+            text: trimmed
+          })
         });
 
         this.newQuestion = "";
@@ -140,17 +145,6 @@ export default {
 </script>
 
 <style scoped>
-
-.input-area {
-  display: flex;
-  align-items: center;
-  background: #fff;
-  border-radius: 2rem;
-  padding: 1rem 1.5rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  width: 600px;
-}
-
 .qna-wrapper {
   display: flex;
   flex-direction: column;
@@ -174,36 +168,32 @@ export default {
   color: #2c3e50;
 }
 
-/* 질문 입력 UI */
-.question-input-box {
-  width: 100%;
-  max-width: 950px;
-  background-color: #f8f9fb;
-  border-radius: 20px;
-  padding: 2rem;
+/* 입력창과 질문 목록 사이 여백 추가 */
+.question-input-container {
+  margin-top: 2rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
-.input-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #2d3e50;
-  margin-bottom: 1rem;
-}
-
+/* 입력 UI 스타일 */
 .input-row {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.question-input {
-  flex: 1;
-  padding: 0.8rem 1.2rem;
+.input-area {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 2rem;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 600px;
   font-size: 1rem;
   border: 1px solid #ccc;
-  border-radius: 12px;
 }
 
 .search-button {
@@ -249,12 +239,4 @@ export default {
   color: #34495e;
   margin: 0;
 }
-
-.question-input-container {
-  margin-bottom: 2rem; /* 여백 추가 */
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
 </style>
