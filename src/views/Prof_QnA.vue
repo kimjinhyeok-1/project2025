@@ -221,12 +221,12 @@ onMounted(() => {
 }
 
 .markdown-body p {
-  margin-top: 0.2rem;
-  margin-bottom: 0.2rem;
+  margin-top: 0.1rem;
+  margin-bottom: 0.1rem;
 }
 
 .markdown-body li {
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.1rem;
 }
 
 .markdown-body pre {
