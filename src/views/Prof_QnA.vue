@@ -225,13 +225,9 @@ onMounted(() => {
 
 .markdown-body {
   font-family: 'Noto Sans', sans-serif;
-  line-height: 1.0;
+  line-height: 1.3;
   word-break: break-word;
   white-space: pre-wrap;
-}
-
-.markdown-body p {
-  margin: 0.4rem 0;
 }
 
 .markdown-body pre {
