@@ -6,7 +6,7 @@
     </div>
 
     <!-- 질문 입력 창 -->
-    <div>
+    <div class="question-input-container">
       <div class="input-row">
         <input
           v-model="newQuestion"
@@ -252,4 +252,12 @@ export default {
   color: #34495e;
   margin: 0;
 }
+
+.question-input-container {
+  margin-bottom: 2rem; /* 여백 추가 */
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
 </style>
