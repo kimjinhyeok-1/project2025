@@ -257,10 +257,12 @@ async def generate_lecture_summary(
             snap = snapshots[idx]
             full_url = settings.base_url.rstrip("/") + snap.image_path
             if not await is_valid_image_url(full_url):
-                continue  # 이미지가 깨졌거나 없으면 무시
+                continue
             if not snap.summary_text:
                 snap.summary_text = await summarize_snapshot_transcript(snap.text)
-                db.add(snap)  # 요약이 새로 생성된 경우 DB 업데이트
+                db.add(snap)
+                await db.flush()  # ✅ 요약 후 DB 반영
+
             highlights.append({
                 "image_url": snap.image_path,
                 "text": snap.summary_text
@@ -285,6 +287,7 @@ async def generate_lecture_summary(
 
     await db.commit()
     return output
+
 
 # ───────────────────────────────
 # 5. GET /lecture_summary (단일)
