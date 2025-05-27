@@ -28,11 +28,11 @@
           <input v-model="deadline" type="datetime-local" class="form-control" />
         </div>
         <div class="mb-3">
-          <label class="form-label">샘플 답안</label>
+          <label class="form-label">과제 파일 첨부</label>
           <textarea v-model="sampleAnswer" class="form-control"></textarea>
         </div>
         <div class="mb-3" v-if="!editingAssignmentId">
-          <label class="form-label">파일 첨부 (PDF)</label>
+          <label class="form-label">모범 답안 첨부 (PDF)</label>
           <input type="file" class="form-control" @change="handleFileChange" accept="application/pdf" />
         </div>
         <button type="submit" class="btn btn-success">
