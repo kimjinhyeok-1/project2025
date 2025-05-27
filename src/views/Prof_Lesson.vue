@@ -52,9 +52,8 @@
       </div>
       <div v-else>
         <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="question-row">
-          <span class="question-text">질문 {{ idx + 1 }}: {{ q.text }}</span>
-          <span class="custom-badge">{{ q.likes }} students</span>
-        </div>
+          <span class="question-text">{{ q.text }}</span>
+          <span class="custom-badge">{{ q.likes }}
       </div>
     </div>
 
@@ -289,7 +288,7 @@ export default {
 
 .question-text {
   flex: 1;
-  margin-right: 1rem;
+  margin-right: 2rem;
   color: #2c3e50;
   font-size: 1rem;
 }
@@ -301,7 +300,7 @@ export default {
   font-size: 1rem;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
-  min-width: 100px;
+  min-width: 67px;
   text-align: center;
 }
 </style>
