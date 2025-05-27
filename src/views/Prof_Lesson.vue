@@ -54,7 +54,7 @@
         <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="mb-3">
           <div class="d-flex justify-content-between align-items-center">
             <span>{{ q.text }}</span>
-            <span class="likes-badge">선택 수: {{ q.likes }}</span>
+            <span class="custom-badge">선택 수: {{ q.likes }}</span>
           </div>
         </div>
       </div>
@@ -80,6 +80,149 @@
     </div>
   </div>
 </template>
+
+<script>
+import axios from "axios";
+import recordingManager from "@/managers/RecordingManager";
+import { marked } from "marked";
+import { generateLectureSummary, createLecture } from "@/api/snapshotService";
+
+export default {
+  name: "ProfessorLesson",
+  data() {
+    return {
+      activeTab: "summary",
+      summaries: [],
+      isRecording: false,
+      latestTranscript: "",
+      triggered: false,
+      transcriptCallback: null,
+      loadingSummary: true,
+      loadingQuestions: true,
+      noQidWarning: false,
+      placeholderQuestions: [],
+      lastQid: null,
+      studentQuestions: []
+    };
+  },
+  async mounted() {
+    try {
+      await createLecture();
+    } catch (err) {
+      console.error("강의 세션 생성 실패:", err);
+    }
+    this.transcriptCallback = this.handleTranscript;
+    recordingManager.subscribeToTranscript(this.transcriptCallback);
+  },
+  beforeUnmount() {
+    if (this.transcriptCallback) {
+      recordingManager.unsubscribeFromTranscript(this.transcriptCallback);
+    }
+  },
+  methods: {
+    formatDate(datetimeStr) {
+      const date = new Date(datetimeStr);
+      return date.toLocaleString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    },
+    async toggleAudioRecording() {
+      this.isRecording = !this.isRecording;
+      if (this.isRecording) {
+        this.loadingSummary = true;
+        recordingManager.startRecording();
+      } else {
+        recordingManager.stopRecording();
+        try {
+          const summary = await generateLectureSummary();
+          this.summaries = Array.isArray(summary)
+            ? summary.map(item => ({
+                text: marked.parse(item.summary || ""),
+                topic: item.topic || null
+              }))
+            : [{
+                text: marked.parse(summary.summary || ""),
+                topic: summary.topic || null
+              }];
+          this.loadingSummary = false;
+        } catch (error) {
+          this.loadingSummary = false;
+          console.error("요약 생성 실패:", error);
+        }
+      }
+    },
+    async handleTranscript(text) {
+      this.latestTranscript = text;
+      try {
+        await axios.post("https://project2025-backend.onrender.com/upload_text_chunk", { text });
+      } catch (error) {
+        console.error("❌ 텍스트 업로드 실패:", error);
+      }
+
+      if (text.includes("질문")) {
+        this.triggered = true;
+        try {
+          const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
+          const q_id = res.data.q_id;
+          this.lastQid = q_id;
+          localStorage.setItem("latest_q_id", q_id);
+          this.loadPopularQuestions(q_id);
+          this.loadStudentQuestions(q_id);
+        } catch (error) {
+          console.error("질문 생성 API 호출 실패:", error);
+        }
+      } else {
+        this.triggered = false;
+      }
+    },
+    async loadPopularQuestions(q_id = null) {
+      const id = q_id || this.lastQid || localStorage.getItem("latest_q_id");
+      if (!id) {
+        this.noQidWarning = true;
+        this.loadingQuestions = false;
+        return;
+      }
+
+      this.noQidWarning = false;
+      this.loadingQuestions = true;
+      try {
+        const res = await fetch(`https://project2025-backend.onrender.com/questions/popular_likes?q_id=${id}`);
+        const data = await res.json();
+        if (Array.isArray(data.results)) {
+          this.placeholderQuestions = data.results;
+        }
+      } catch (err) {
+        console.error("인기 질문 조회 실패:", err);
+      } finally {
+        this.loadingQuestions = false;
+      }
+    },
+    async loadStudentQuestions(q_id = null) {
+      const id = q_id || this.lastQid || localStorage.getItem("latest_q_id");
+      if (!id) {
+        console.warn("q_id 없음: 학생 질문을 불러올 수 없습니다.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://project2025-backend.onrender.com/student_questions?q_id=${id}`);
+        const data = await res.json();
+        if (Array.isArray(data.results)) {
+          this.studentQuestions = data.results;
+        } else {
+          console.warn("❓ 학생 질문 응답 형식 이상:", data);
+        }
+      } catch (err) {
+        console.error("❌ 학생 질문 불러오기 실패:", err);
+      }
+    }
+  }
+};
+</script>
 
 <style scoped>
 .qna-wrapper {
@@ -134,14 +277,12 @@
   margin-left: auto;
 }
 
-/* ✅ 새로 추가된 선택 수 스타일 */
-.likes-badge {
-  background-color: #008c99;
-  color: #ffffff;
-  font-size: 1rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 999px;
-  font-weight: 600;
-  display: inline-block;
+/* ✅ 사용자 정의 스타일 추가 */
+.custom-badge {
+  background-color: #0a6ebd;
+  color: white;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 1.2rem;
 }
 </style>
