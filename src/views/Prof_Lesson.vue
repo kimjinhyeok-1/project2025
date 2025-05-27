@@ -53,7 +53,7 @@
       <div v-else>
         <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="question-row">
           <span class="question-text">{{ q.text }}</span>
-          <span class="custom-badge">{{ q.likes }}
+          <span class="custom-badge">{{ q.likes }}</span>
       </div>
     </div>
 
