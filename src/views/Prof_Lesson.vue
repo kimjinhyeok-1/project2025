@@ -41,7 +41,7 @@
     <!-- 🧠 AI 질문 -->
     <div v-if="activeTab === 'ai'" class="answer-wrapper">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="card-title">🧠 AI 생성 질문 및 학생 선택 수</h5>
+        <h5 class="card-title">🧠 질문 선택 결과</h5>
         <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 새로고침</button>
       </div>
       <div v-if="noQidWarning" class="text-danger text-center">
@@ -51,11 +51,9 @@
         질문 생성중입니다.
       </div>
       <div v-else>
-        <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="mb-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <span>{{ q.text }}</span>
-            <span class="custom-badge">선택 수: {{ q.likes }}</span>
-          </div>
+        <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="question-row">
+          <span class="question-text">질문 {{ idx + 1 }}: {{ q.text }}</span>
+          <span class="custom-badge">{{ q.likes }} students</span>
         </div>
       </div>
     </div>
@@ -277,12 +275,33 @@ export default {
   margin-left: auto;
 }
 
-/* ✅ 사용자 정의 스타일 추가 */
+/* ✅ AI 질문 줄 정렬용 스타일 */
+.question-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.question-text {
+  flex: 1;
+  margin-right: 1rem;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+/* ✅ '선택 수' 배지 스타일 */
 .custom-badge {
   background-color: #0a6ebd;
   color: white;
-  padding: 0.4rem 0.75rem;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
   border-radius: 0.5rem;
-  font-size: 1.2rem;
+  min-width: 100px;
+  text-align: center;
 }
 </style>
