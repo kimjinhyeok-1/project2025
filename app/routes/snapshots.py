@@ -1,4 +1,3 @@
-# ✅ 리팩토링 및 기능 개선된 snapshots.py
 import os
 import aiofiles
 import base64
@@ -12,8 +11,6 @@ from pydantic_settings import BaseSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text, delete
-from sqlalchemy.orm import Session
-
 import tiktoken
 
 from app.database import get_db
@@ -24,9 +21,8 @@ from app.utils.gpt import (
     pick_top2_snapshots_by_topic
 )
 
-
-
 router = APIRouter()
+
 # ─────────────────────────────
 # Settings & Paths
 # ─────────────────────────────
@@ -44,6 +40,7 @@ FULL_IMAGE_DIR = os.path.join("static", settings.image_dir)
 os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
 os.makedirs(settings.text_log_dir, exist_ok=True)
 _ENCODER = tiktoken.encoding_for_model("gpt-4o")
+
 # ─────────────────────────────
 # Pydantic Models
 # ─────────────────────────────
@@ -51,7 +48,7 @@ class SnapshotRequest(BaseModel):
     timestamp: str
     transcript: str
     screenshot_base64: str
-    is_image: bool = True
+    is_image: bool = True  # ✅ 추가됨
 
 class LectureSessionResponse(BaseModel):
     lecture_id: int
@@ -75,10 +72,10 @@ class LectureSummaryListItem(BaseModel):
     lecture_id: int
     topic: str
     created_at: datetime
+
 # ─────────────────────────────
 # Helper Functions
 # ─────────────────────────────
-
 def truncate_by_token(text: str, max_tokens: int = 3500) -> str:
     tokens = _ENCODER.encode(text)
     return _ENCODER.decode(tokens[:max_tokens])
@@ -95,7 +92,6 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 # ─────────────────────────────
 # API: POST /lectures
 # ─────────────────────────────
-
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(db: AsyncSession = Depends(get_db)):
     async with db.begin():
@@ -108,6 +104,7 @@ async def create_lecture(db: AsyncSession = Depends(get_db)):
         db.add(lecture)
     await db.refresh(lecture)
     return LectureSessionResponse(lecture_id=lecture.id, created_at=lecture.created_at)
+
 # ─────────────────────────────
 # API: POST /snapshots
 # ─────────────────────────────
@@ -162,15 +159,13 @@ async def upload_snapshot(
         "summary": None,
         "image_url": abs_url
     }
+
 # ─────────────────────────────
-# 강의 리마인드 요약 API
+# API: GET /generate_markdown_summary
 # ─────────────────────────────
-# ✅ LectureKeySummary 저장 기능 추가됨
+
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
-async def generate_markdown_summary(
-    lecture_id: int = Query(...),
-    db: AsyncSession = Depends(get_db)
-):
+async def generate_markdown_summary(lecture_id: int = Query(...)):
     path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
         raise HTTPException(404, "요약할 텍스트 없음")
@@ -210,15 +205,10 @@ async def generate_markdown_summary(
         max_tokens=1000,
     )
 
-    summary_text = res.choices[0].message.content.strip()
-    db.add(LectureKeySummary(summary=summary_text))
-    await db.commit()
-
     return SummaryResponse(
         lecture_id=lecture_id,
-        summary=summary_text
+        summary=res.choices[0].message.content.strip()
     )
-
 
 # ─────────────────────────────
 # API: POST /lecture_summary
@@ -371,12 +361,3 @@ async def get_all_lecture_summaries_grouped(db: AsyncSession = Depends(get_db)):
         ))
 
     return grouped
-# ───────────────────────────────
-# 7. 리마인드 반환 API
-# ───────────────────────────────
-@router.get("/key_summary", response_model=dict)
-async def get_key_summary(id: int, db: Session = Depends(get_db)):
-    summary = db.query(LectureKeySummary).filter(LectureKeySummary.id == id).first()
-    if not summary:
-        raise HTTPException(status_code=404, detail="요약을 찾을 수 없습니다.")
-    return {"id": summary.id, "summary": summary.summary}

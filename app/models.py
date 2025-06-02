@@ -165,12 +165,3 @@ class StudentQuestion(Base):
     created_at = Column(DateTime, default=func.now())
 
     question_set = relationship("GeneratedQuestion", backref="student_questions")
-# ─────────────────────────────────────────────────────────────────────────────
-# 리마인드 저장
-# ───────────────────────────────────────────────────────────────────────────── 
-class LectureKeySummary(Base):
-    __tablename__ = "lecture_key_summaries"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    summary = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
