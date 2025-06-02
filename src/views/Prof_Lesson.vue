@@ -24,15 +24,10 @@
     <!-- 📘 요약 -->
     <div v-if="activeTab === 'summary'" class="answer-wrapper right-aligned">
       <h5 class="card-title">📘 수업 요약 결과</h5>
-      <div v-if="loadingSummary" class="text-center text-muted">
-        요약을 준비하고 있습니다.
-      </div>
+      <div v-if="loadingSummary" class="text-center text-muted">요약을 준비하고 있습니다.</div>
+      <div v-else-if="summaryError" class="text-danger text-center">요약을 불러오는 데 실패했습니다.</div>
       <div v-else>
         <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
-          <div v-if="summary.topic" class="mb-2">
-            <h6 class="mb-1">📌 주제</h6>
-            <span class="display-6 fw-bold text-primary">{{ summary.topic }}</span>
-          </div>
           <div v-html="summary.text"></div>
         </div>
       </div>
@@ -44,12 +39,8 @@
         <h5 class="card-title">🧠 질문 선택 결과</h5>
         <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 새로고침</button>
       </div>
-      <div v-if="noQidWarning" class="text-danger text-center">
-        ⚠️ q_id가 없어 질문을 불러올 수 없습니다.
-      </div>
-      <div v-else-if="loadingQuestions" class="text-center text-muted">
-        질문 생성중입니다.
-      </div>
+      <div v-if="noQidWarning" class="text-danger text-center">⚠️ q_id가 없어 질문을 불러올 수 없습니다.</div>
+      <div v-else-if="loadingQuestions" class="text-center text-muted">질문 생성중입니다.</div>
       <div v-else>
         <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="question-row">
           <span class="question-text">{{ q.text }}</span>
@@ -64,9 +55,7 @@
         <h5 class="card-title">📩 학생이 직접 보낸 질문</h5>
         <button class="btn btn-sm btn-light" @click="loadStudentQuestions()">🔄 새로고침</button>
       </div>
-      <div v-if="studentQuestions.length === 0" class="text-muted text-center">
-        아직 학생 질문이 없습니다.
-      </div>
+      <div v-if="studentQuestions.length === 0" class="text-muted text-center">아직 학생 질문이 없습니다.</div>
       <div v-else>
         <ul class="list-group">
           <li class="list-group-item" v-for="(q, idx) in studentQuestions" :key="q.id">
@@ -96,6 +85,7 @@ export default {
       triggered: false,
       transcriptCallback: null,
       loadingSummary: true,
+      summaryError: false,
       loadingQuestions: true,
       noQidWarning: false,
       placeholderQuestions: [],
@@ -106,6 +96,14 @@ export default {
   mounted() {
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
+    this.fetchSummaryFromBackend(); // 처음 summary 탭일 때도 조회
+  },
+  watch: {
+    activeTab(newTab) {
+      if (newTab === "summary") {
+        this.fetchSummaryFromBackend();
+      }
+    }
   },
   beforeUnmount() {
     if (this.transcriptCallback) {
@@ -125,11 +123,8 @@ export default {
     },
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
-
       if (this.isRecording) {
         this.loadingSummary = true;
-
-        // ✅ lecture_id가 없으면 생성
         const existing = localStorage.getItem("lecture_id");
         if (!existing) {
           try {
@@ -140,26 +135,37 @@ export default {
         } else {
           console.log("✅ 기존 lecture_id 사용:", existing);
         }
-
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
         try {
-          const summary = await generateLectureSummary();
-          this.summaries = Array.isArray(summary)
-            ? summary.map(item => ({
-                text: marked.parse(item.summary || ""),
-                topic: item.topic || null
-              }))
-            : [{
-                text: marked.parse(summary.summary || ""),
-                topic: summary.topic || null
-              }];
-          this.loadingSummary = false;
+          await generateLectureSummary(); // 생성은 계속 필요
         } catch (error) {
-          this.loadingSummary = false;
           console.error("요약 생성 실패:", error);
         }
+      }
+    },
+    async fetchSummaryFromBackend() {
+      const lectureId = localStorage.getItem("lecture_id");
+      if (!lectureId) {
+        this.summaryError = true;
+        return;
+      }
+      this.loadingSummary = true;
+      this.summaryError = false;
+      try {
+        const res = await fetch(`https://project2025-backend.onrender.com/snapshots/lecture_key_summary/${1}`);
+        if (!res.ok) throw new Error("요약 조회 실패");
+        const data = await res.json();
+        this.summaries = [{
+          text: marked.parse(data.summary || ""),
+          topic: null
+        }];
+      } catch (error) {
+        console.error("❌ 요약 조회 실패:", error);
+        this.summaryError = true;
+      } finally {
+        this.loadingSummary = false;
       }
     },
     async handleTranscript(text) {
@@ -193,7 +199,6 @@ export default {
         this.loadingQuestions = false;
         return;
       }
-
       this.noQidWarning = false;
       this.loadingQuestions = true;
       try {
@@ -214,7 +219,6 @@ export default {
         console.warn("q_id 없음: 학생 질문을 불러올 수 없습니다.");
         return;
       }
-
       try {
         const res = await fetch(`https://project2025-backend.onrender.com/student_questions?q_id=${id}`);
         const data = await res.json();
@@ -232,7 +236,6 @@ export default {
 </script>
 
 <style scoped>
-/* (생략 없이 그대로 유지) 기존 스타일 동일 */
 .qna-wrapper {
   display: flex;
   flex-direction: column;
