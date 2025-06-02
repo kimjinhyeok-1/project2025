@@ -14,7 +14,7 @@ from sqlalchemy import text, delete
 import tiktoken
 
 from app.database import get_db
-from app.models import Lecture, Snapshot, LectureSummary, LectureKeySummary
+from app.models import Lecture, Snapshot, LectureSummary
 from app.utils.gpt import (
     summarize_text_with_gpt,
     summarize_snapshot_transcript,
