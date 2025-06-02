@@ -111,7 +111,6 @@ async def create_lecture(db: AsyncSession = Depends(get_db)):
 # ─────────────────────────────
 # API: POST /snapshots
 # ─────────────────────────────
-
 @router.post("/snapshots")
 async def upload_snapshot(
     data: SnapshotRequest,
@@ -121,7 +120,7 @@ async def upload_snapshot(
     try:
         dt = datetime.strptime(data.timestamp, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        raise HTTPException(400, "timestamp \ud615\uc2dd \uc624\ub958 (YYYY-MM-DD HH:MM:SS)")
+        raise HTTPException(400, "timestamp 형식 오류 (YYYY-MM-DD HH:MM:SS)")
 
     rel_url = ""
     abs_url = ""
@@ -137,7 +136,7 @@ async def upload_snapshot(
             rel_url = f"/static/{settings.image_dir}/{filename}"
             abs_url = f"{settings.base_url.rstrip('/')}{rel_url}"
         except Exception as e:
-            raise HTTPException(400, f"\uc774\ubbf8\uc9c0 \uc800\uc7a5 \uc2e4\ud328: {e}")
+            raise HTTPException(400, f"이미지 저장 실패: {e}")
 
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     async with aiofiles.open(log_path, "a", encoding="utf-8") as log_file:
@@ -156,7 +155,7 @@ async def upload_snapshot(
     await db.commit()
 
     return {
-        "message": "\uc2a4\ub0a0\uc0f5 \uc800\uc7a5 \uc644\ub8cc",
+        "message": "스냅샷 저장 완료",
         "lecture_id": lecture_id,
         "date": snapshot.date,
         "time": snapshot.time,
@@ -174,7 +173,7 @@ async def generate_markdown_summary(
 ):
     path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
-        raise HTTPException(404, "\uc694\uc57d\ud560 \ud14d\uc2a4\ud2b8 \uc5c6\uc74c")
+        raise HTTPException(404, "요약할 텍스트 없음")
 
     async with aiofiles.open(path, "r", encoding="utf-8") as f:
         text = await f.read()
