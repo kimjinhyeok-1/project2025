@@ -15,15 +15,16 @@ from sqlalchemy import text, delete
 import tiktoken
 
 from app.database import get_db
-from app.models import Lecture, Snapshot, LectureSummary
+from app.models import Lecture, Snapshot, LectureSummary, LectureKeySummary
 from app.utils.gpt import (
     summarize_text_with_gpt,
     summarize_snapshot_transcript,
     pick_top2_snapshots_by_topic
 )
 
-router = APIRouter()
 
+
+router = APIRouter()
 # ─────────────────────────────
 # Settings & Paths
 # ─────────────────────────────
@@ -41,7 +42,6 @@ FULL_IMAGE_DIR = os.path.join("static", settings.image_dir)
 os.makedirs(FULL_IMAGE_DIR, exist_ok=True)
 os.makedirs(settings.text_log_dir, exist_ok=True)
 _ENCODER = tiktoken.encoding_for_model("gpt-4o")
-
 # ─────────────────────────────
 # Pydantic Models
 # ─────────────────────────────
@@ -49,7 +49,7 @@ class SnapshotRequest(BaseModel):
     timestamp: str
     transcript: str
     screenshot_base64: str
-    is_image: bool = True  # ✅ 추가됨
+    is_image: bool = True
 
 class LectureSessionResponse(BaseModel):
     lecture_id: int
@@ -73,10 +73,10 @@ class LectureSummaryListItem(BaseModel):
     lecture_id: int
     topic: str
     created_at: datetime
-
 # ─────────────────────────────
 # Helper Functions
 # ─────────────────────────────
+
 def truncate_by_token(text: str, max_tokens: int = 3500) -> str:
     tokens = _ENCODER.encode(text)
     return _ENCODER.decode(tokens[:max_tokens])
@@ -93,6 +93,7 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 # ─────────────────────────────
 # API: POST /lectures
 # ─────────────────────────────
+
 @router.post("/lectures", response_model=LectureSessionResponse)
 async def create_lecture(db: AsyncSession = Depends(get_db)):
     async with db.begin():
@@ -105,10 +106,10 @@ async def create_lecture(db: AsyncSession = Depends(get_db)):
         db.add(lecture)
     await db.refresh(lecture)
     return LectureSessionResponse(lecture_id=lecture.id, created_at=lecture.created_at)
-
 # ─────────────────────────────
 # API: POST /snapshots
 # ─────────────────────────────
+
 @router.post("/snapshots")
 async def upload_snapshot(
     data: SnapshotRequest,
@@ -118,7 +119,7 @@ async def upload_snapshot(
     try:
         dt = datetime.strptime(data.timestamp, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        raise HTTPException(400, "timestamp 형식 오류 (YYYY-MM-DD HH:MM:SS)")
+        raise HTTPException(400, "timestamp \ud615\uc2dd \uc624\ub958 (YYYY-MM-DD HH:MM:SS)")
 
     rel_url = ""
     abs_url = ""
@@ -134,7 +135,7 @@ async def upload_snapshot(
             rel_url = f"/static/{settings.image_dir}/{filename}"
             abs_url = f"{settings.base_url.rstrip('/')}{rel_url}"
         except Exception as e:
-            raise HTTPException(400, f"이미지 저장 실패: {e}")
+            raise HTTPException(400, f"\uc774\ubbf8\uc9c0 \uc800\uc7a5 \uc2e4\ud328: {e}")
 
     log_path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     async with aiofiles.open(log_path, "a", encoding="utf-8") as log_file:
@@ -153,23 +154,25 @@ async def upload_snapshot(
     await db.commit()
 
     return {
-        "message": "스냅샷 저장 완료",
+        "message": "\uc2a4\ub0a0\uc0f5 \uc800\uc7a5 \uc644\ub8cc",
         "lecture_id": lecture_id,
         "date": snapshot.date,
         "time": snapshot.time,
         "summary": None,
         "image_url": abs_url
     }
-
 # ─────────────────────────────
-# API: GET /generate_markdown_summary
+# 강의 리마인드 요약 API
 # ─────────────────────────────
-
+# ✅ LectureKeySummary 저장 기능 추가됨
 @router.get("/generate_markdown_summary", response_model=SummaryResponse)
-async def generate_markdown_summary(lecture_id: int = Query(...)):
+async def generate_markdown_summary(
+    lecture_id: int = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
     path = os.path.join(settings.text_log_dir, f"lecture_{lecture_id}.txt")
     if not os.path.exists(path):
-        raise HTTPException(404, "요약할 텍스트 없음")
+        raise HTTPException(404, "\uc694\uc57d\ud560 \ud14d\uc2a4\ud2b8 \uc5c6\uc74c")
 
     async with aiofiles.open(path, "r", encoding="utf-8") as f:
         text = await f.read()
@@ -179,7 +182,7 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         {
             "role": "system",
             "content": (
-                "당신은 Java 강의의 핵심 내용을 정리해주는 요약 비서입니다.\n"
+                "당신은 Java 강의의 핵심 키워드를 통해 수업을 정리해주는 요약 비서입니다.\n"
                 "다음 지침을 반드시 따르세요:\n"
                 "1. 핵심 키워드는 정확히 **3개만** 작성해야 하며, 3개를 초과하거나 미만으로 작성하면 안 됩니다.\n"
                 "2. 각 키워드는 Java 문법이나 개념 중심이어야 하며, 예시 없이 **2~3문장으로 설명**합니다.\n"
@@ -206,10 +209,15 @@ async def generate_markdown_summary(lecture_id: int = Query(...)):
         max_tokens=1000,
     )
 
+    summary_text = res.choices[0].message.content.strip()
+    db.add(LectureKeySummary(summary=summary_text))
+    await db.commit()
+
     return SummaryResponse(
         lecture_id=lecture_id,
-        summary=res.choices[0].message.content.strip()
+        summary=summary_text
     )
+
 
 # ─────────────────────────────
 # API: POST /lecture_summary
@@ -362,3 +370,12 @@ async def get_all_lecture_summaries_grouped(db: AsyncSession = Depends(get_db)):
         ))
 
     return grouped
+# ───────────────────────────────
+# 7. 리마인드 반환 API
+# ───────────────────────────────
+@router.get("/key_summary", response_model=dict)
+async def get_key_summary(id: int, db: Session = Depends(get_db)):
+    summary = db.query(LectureKeySummary).filter(LectureKeySummary.id == id).first()
+    if not summary:
+        raise HTTPException(status_code=404, detail="요약을 찾을 수 없습니다.")
+    return {"id": summary.id, "summary": summary.summary}
