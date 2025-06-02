@@ -12,6 +12,8 @@ from pydantic_settings import BaseSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import text, delete
+from sqlalchemy.orm import Session
+
 import tiktoken
 
 from app.database import get_db
