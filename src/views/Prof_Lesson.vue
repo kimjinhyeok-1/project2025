@@ -11,10 +11,10 @@
     <!-- 탭 버튼 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start; width: 950px;">
       <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'summary' }" @click="activeTab = 'summary'">📘 요약</a>
+        <a class="nav-link" :class="{ active: activeTab === 'summary' }" @click="activeTab = 'summary'">📘 리마인드</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'; loadPopularQuestions()">🧠 AI 질문</a>
+        <a class="nav-link" :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'; loadPopularQuestions()">🧠 퀴즈</a>
       </li>
       <li class="nav-item">
         <a class="nav-link" :class="{ active: activeTab === 'student' }" @click="activeTab = 'student'; loadStudentQuestions()">📩 학생 질문</a>
@@ -23,9 +23,9 @@
 
     <!-- 📘 요약 -->
     <div v-if="activeTab === 'summary'" class="answer-wrapper right-aligned">
-      <h5 class="card-title">📘 수업 요약 결과</h5>
+      <h5 class="card-title">📘 수업 리마인드</h5>
       <div v-if="loadingSummary" class="text-center text-muted">
-        요약을 준비하고 있습니다.
+        리마인드를 준비하고 있습니다.
       </div>
       <div v-else>
         <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
@@ -41,14 +41,14 @@
     <!-- 🧠 AI 질문 -->
     <div v-if="activeTab === 'ai'" class="answer-wrapper">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="card-title">🧠 질문 선택 결과</h5>
+        <h5 class="card-title">🧠 퀴즈 선택 결과</h5>
         <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 새로고침</button>
       </div>
       <div v-if="noQidWarning" class="text-danger text-center">
-        ⚠️ q_id가 없어 질문을 불러올 수 없습니다.
+        ⚠️ q_id가 없어 퀴즈을 불러올 수 없습니다.
       </div>
       <div v-else-if="loadingQuestions" class="text-center text-muted">
-        질문 생성중입니다.
+        퀴즈 생성중입니다.
       </div>
       <div v-else>
         <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="question-row">
