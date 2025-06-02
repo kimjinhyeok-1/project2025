@@ -146,20 +146,18 @@ export default {
       }
     },
     async fetchSummaryFromBackend() {
-      const lectureId = localStorage.getItem("lecture_id");
-      if (!lectureId) {
-        this.summaryError = true;
-        return;
-      }
+      const summaryId = 1; // ✅ 당신이 지정한 ID를 그대로 사용
+
       this.loadingSummary = true;
       this.summaryError = false;
+
       try {
-        const res = await fetch(`https://project2025-backend.onrender.com/snapshots/lecture_key_summary/${1}`);
+        const res = await fetch(`https://project2025-backend.onrender.com/snapshots/lecture_key_summary/${summaryId}`);
         if (!res.ok) throw new Error("요약 조회 실패");
         const data = await res.json();
         this.summaries = [{
           text: marked.parse(data.summary || ""),
-          topic: null
+          topic: data.topic || null
         }];
       } catch (error) {
         console.error("❌ 요약 조회 실패:", error);
