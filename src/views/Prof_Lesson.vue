@@ -103,12 +103,7 @@ export default {
       studentQuestions: []
     };
   },
-  async mounted() {
-    try {
-      await createLecture();
-    } catch (err) {
-      console.error("강의 세션 생성 실패:", err);
-    }
+  mounted() {
     this.transcriptCallback = this.handleTranscript;
     recordingManager.subscribeToTranscript(this.transcriptCallback);
   },
@@ -130,8 +125,22 @@ export default {
     },
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
+
       if (this.isRecording) {
         this.loadingSummary = true;
+
+        // ✅ lecture_id가 없으면 생성
+        const existing = localStorage.getItem("lecture_id");
+        if (!existing) {
+          try {
+            await createLecture();
+          } catch (error) {
+            console.error("❌ 강의 세션 생성 실패:", error);
+          }
+        } else {
+          console.log("✅ 기존 lecture_id 사용:", existing);
+        }
+
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
@@ -223,13 +232,13 @@ export default {
 </script>
 
 <style scoped>
+/* (생략 없이 그대로 유지) 기존 스타일 동일 */
 .qna-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: 5rem;
 }
-
 .title-row {
   width: 950px;
   display: flex;
@@ -237,13 +246,11 @@ export default {
   align-items: center;
   margin-bottom: 1rem;
 }
-
 .title {
   font-size: 2rem;
   font-weight: bold;
   color: #2c3e50;
 }
-
 .answer-wrapper {
   position: relative;
   width: 950px;
@@ -254,28 +261,22 @@ export default {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.3s ease;
 }
-
 .answer-wrapper:hover {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
-
 .card-title {
   font-size: 1.5rem;
   margin-bottom: 1rem;
   color: #2c3e50;
 }
-
 .card-text {
   font-size: 1.1rem;
   line-height: 1.7;
   color: #34495e;
 }
-
 .right-aligned {
   margin-left: auto;
 }
-
-/* ✅ AI 질문 줄 정렬용 스타일 */
 .question-row {
   display: flex;
   justify-content: space-between;
@@ -286,15 +287,12 @@ export default {
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
-
 .question-text {
   flex: 1;
   margin-right: 2rem;
   color: #2c3e50;
   font-size: 1rem;
 }
-
-/* ✅ '선택 수' 배지 스타일 */
 .custom-badge {
   background-color: #0a6ebd;
   color: white;
