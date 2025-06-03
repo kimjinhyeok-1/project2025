@@ -44,6 +44,10 @@
         <h5 class="card-title">🧠 퀴즈 선택 결과</h5>
         <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 새로고침</button>
       </div>
+
+      <div v-if="generatingQuestions" class="text-muted text-center mb-3">
+        🧠 퀴즈 생성 중입니다. 잠시만 기다려주세요...
+      </div>
       <div v-if="noQidWarning" class="text-danger text-center">
         ⚠️ q_id가 없어 퀴즈을 불러올 수 없습니다.
       </div>
@@ -94,6 +98,7 @@ export default {
       isRecording: false,
       latestTranscript: "",
       triggered: false,
+      generatingQuestions: false,
       transcriptCallback: null,
       loadingSummary: true,
       loadingQuestions: true,
@@ -152,18 +157,6 @@ export default {
           console.error("요약 생성 실패:", error);
         }
       }
-
-      // ✅ 수업 종료 후 질문 생성 트리거
-      try {
-        const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
-        const q_id = res.data.q_id;
-        this.lastQid = q_id;
-        localStorage.setItem("latest_q_id", q_id);
-        this.loadPopularQuestions(q_id);
-        this.loadStudentQuestions(q_id);
-      } catch (error) {
-        console.error("질문 생성 API 호출 실패:", error);
-      }
     },
     async handleTranscript(text) {
       this.latestTranscript = text;
@@ -173,8 +166,24 @@ export default {
         console.error("❌ 텍스트 업로드 실패:", error);
       }
 
-      this.triggered = text.includes("질문"); // 단지 flag만 업데이트
-
+      if (text.includes("질문")) {
+        this.triggered = true;
+        this.generatingQuestions = true;
+        try {
+          const res = await axios.post("https://project2025-backend.onrender.com/trigger_question_generation");
+          const q_id = res.data.q_id;
+          this.lastQid = q_id;
+          localStorage.setItem("latest_q_id", q_id);
+          this.loadPopularQuestions(q_id);
+          this.loadStudentQuestions(q_id);
+        } catch (error) {
+          console.error("질문 생성 API 호출 실패:", error);
+        } finally {
+           this.generatingQuestions = false;  // ✅ 질문 생성 완료 후 false로 변경
+        }
+      } else {
+        this.triggered = false;
+      }
     },
     async loadPopularQuestions(q_id = null) {
       const id = q_id || this.lastQid || localStorage.getItem("latest_q_id");
