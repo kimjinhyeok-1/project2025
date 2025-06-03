@@ -19,7 +19,7 @@
 
       <div v-if="alreadySubmitted" class="card-text alert alert-info d-flex justify-content-between align-items-center">
         <span>이 과제는 이미 제출되었습니다.</span>
-        <button class="btn btn-outline-primary btn-sm" @click="goToFeedback">📄 피드백 다시 보기</button>
+        <button class="btn btn-outline-primary btn-sm" @click="goToFeedback">📄 피드백 보기</button>
       </div>
 
       <form @submit.prevent="handleSubmit">
