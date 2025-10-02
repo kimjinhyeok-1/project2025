@@ -17,7 +17,10 @@ DATABASE_URL = (
 )
 
 # 비동기 엔진 생성
-engine = create_async_engine(DATABASE_URL, echo=True)
+connect_args = {
+    "ssl": "require" 
+}
+engine = create_async_engine(DATABASE_URL, echo=True, connect_args=connect_args)
 
 # Base 정의 (모든 모델이 상속할 클래스)
 Base = declarative_base()
