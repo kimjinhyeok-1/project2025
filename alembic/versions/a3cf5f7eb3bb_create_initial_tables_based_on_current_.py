@@ -1,8 +1,8 @@
-"""initial schema
+"""Create initial tables based on current models
 
-Revision ID: e1bfd7d1abb9
+Revision ID: a3cf5f7eb3bb
 Revises: 
-Create Date: 2025-05-02 15:28:33.924986
+Create Date: 2025-10-02 18:15:38.183568
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'e1bfd7d1abb9'
+revision: str = 'a3cf5f7eb3bb'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -36,27 +36,19 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('paragraph', sa.Text(), nullable=False),
     sa.Column('questions', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('likes', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_generated_questions_id'), 'generated_questions', ['id'], unique=False)
     op.create_table('lectures',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(), nullable=False),
+    sa.Column('title', sa.String(), nullable=True),
     sa.Column('description', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_lectures_id'), 'lectures', ['id'], unique=False)
-    op.create_table('pdf_summary',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('filename', sa.String(), nullable=True),
-    sa.Column('file_path', sa.String(), nullable=True),
-    sa.Column('content', sa.Text(), nullable=True),
-    sa.Column('embedding', sa.Text(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_pdf_summary_filename'), 'pdf_summary', ['filename'], unique=True)
-    op.create_index(op.f('ix_pdf_summary_id'), 'pdf_summary', ['id'], unique=False)
     op.create_table('summary',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('summary_text', sa.Text(), nullable=False),
@@ -70,24 +62,11 @@ def upgrade() -> None:
     sa.Column('password', sa.String(), nullable=False),
     sa.Column('role', sa.String(), nullable=False),
     sa.Column('is_admin', sa.Boolean(), nullable=True),
-    sa.Column('assistant_thread_id', sa.String(), nullable=True),
+    sa.Column('has_submitted_assignment', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_index(op.f('ix_users_name'), 'users', ['name'], unique=True)
-    op.create_table('assignment_questions',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('assignment_id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('question_text', sa.Text(), nullable=True),
-    sa.Column('code_snippet', sa.Text(), nullable=True),
-    sa.Column('gpt_answer', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['assignment_id'], ['assignments.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_assignment_questions_id'), 'assignment_questions', ['id'], unique=False)
     op.create_table('assignment_submissions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('assignment_id', sa.Integer(), nullable=False),
@@ -96,23 +75,13 @@ def upgrade() -> None:
     sa.Column('submitted_at', sa.DateTime(), nullable=True),
     sa.Column('gpt_feedback', sa.Text(), nullable=True),
     sa.Column('gpt_feedback_created_at', sa.DateTime(), nullable=True),
-    sa.Column('assistant_thread_id', sa.String(), nullable=True),
+    sa.Column('professor_feedback', sa.Text(), nullable=True),
+    sa.Column('professor_feedback_created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['assignment_id'], ['assignments.id'], ),
     sa.ForeignKeyConstraint(['student_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_assignment_submissions_id'), 'assignment_submissions', ['id'], unique=False)
-    op.create_table('assignment_threads',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('assignment_id', sa.Integer(), nullable=False),
-    sa.Column('student_id', sa.Integer(), nullable=False),
-    sa.Column('thread_id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['assignment_id'], ['assignments.id'], ),
-    sa.ForeignKeyConstraint(['student_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_assignment_threads_id'), 'assignment_threads', ['id'], unique=False)
     op.create_table('chat_history',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('question', sa.Text(), nullable=False),
@@ -123,16 +92,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_chat_history_id'), 'chat_history', ['id'], unique=False)
-    op.create_table('embedding',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('material_id', sa.Integer(), nullable=True),
-    sa.Column('chunk_index', sa.Integer(), nullable=True),
-    sa.Column('content', sa.Text(), nullable=True),
-    sa.Column('embedding', sa.Text(), nullable=True),
-    sa.ForeignKeyConstraint(['material_id'], ['pdf_summary.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_embedding_id'), 'embedding', ['id'], unique=False)
     op.create_table('lecture_snapshots',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('lecture_id', sa.Integer(), nullable=False),
@@ -140,85 +99,59 @@ def upgrade() -> None:
     sa.Column('time', sa.String(), nullable=False),
     sa.Column('text', sa.Text(), nullable=False),
     sa.Column('image_path', sa.String(), nullable=False),
+    sa.Column('is_image', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('summary_text', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['lecture_id'], ['lectures.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_lecture_snapshots_id'), 'lecture_snapshots', ['id'], unique=False)
-    op.create_table('question_feedback',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('question_text', sa.Text(), nullable=False),
-    sa.Column('knows', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_question_feedback_id'), 'question_feedback', ['id'], unique=False)
-    op.create_table('quiz',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('question', sa.String(), nullable=True),
-    sa.Column('options', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('answer', sa.String(), nullable=True),
-    sa.Column('material_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['material_id'], ['pdf_summary.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_quiz_id'), 'quiz', ['id'], unique=False)
-    op.create_table('recordings',
+    op.create_table('lecture_summaries',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('lecture_id', sa.Integer(), nullable=False),
-    sa.Column('file_path', sa.String(), nullable=False),
-    sa.Column('uploaded_at', sa.DateTime(), nullable=True),
+    sa.Column('topic', sa.String(), nullable=False),
+    sa.Column('summary', sa.Text(), nullable=False),
+    sa.Column('image_url_1', sa.String(), nullable=True),
+    sa.Column('image_text_1', sa.Text(), nullable=True),
+    sa.Column('image_url_2', sa.String(), nullable=True),
+    sa.Column('image_text_2', sa.Text(), nullable=True),
+    sa.Column('image_url_3', sa.String(), nullable=True),
+    sa.Column('image_text_3', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['lecture_id'], ['lectures.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_recordings_id'), 'recordings', ['id'], unique=False)
-    op.create_table('thread_messages',
+    op.create_index(op.f('ix_lecture_summaries_id'), 'lecture_summaries', ['id'], unique=False)
+    op.create_table('student_questions',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('thread_id', sa.String(), nullable=False),
-    sa.Column('role', sa.String(), nullable=False),
-    sa.Column('content', sa.Text(), nullable=False),
+    sa.Column('q_id', sa.Integer(), nullable=False),
+    sa.Column('text', sa.Text(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['q_id'], ['generated_questions.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_thread_messages_id'), 'thread_messages', ['id'], unique=False)
+    op.create_index(op.f('ix_student_questions_id'), 'student_questions', ['id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_thread_messages_id'), table_name='thread_messages')
-    op.drop_table('thread_messages')
-    op.drop_index(op.f('ix_recordings_id'), table_name='recordings')
-    op.drop_table('recordings')
-    op.drop_index(op.f('ix_quiz_id'), table_name='quiz')
-    op.drop_table('quiz')
-    op.drop_index(op.f('ix_question_feedback_id'), table_name='question_feedback')
-    op.drop_table('question_feedback')
+    op.drop_index(op.f('ix_student_questions_id'), table_name='student_questions')
+    op.drop_table('student_questions')
+    op.drop_index(op.f('ix_lecture_summaries_id'), table_name='lecture_summaries')
+    op.drop_table('lecture_summaries')
     op.drop_index(op.f('ix_lecture_snapshots_id'), table_name='lecture_snapshots')
     op.drop_table('lecture_snapshots')
-    op.drop_index(op.f('ix_embedding_id'), table_name='embedding')
-    op.drop_table('embedding')
     op.drop_index(op.f('ix_chat_history_id'), table_name='chat_history')
     op.drop_table('chat_history')
-    op.drop_index(op.f('ix_assignment_threads_id'), table_name='assignment_threads')
-    op.drop_table('assignment_threads')
     op.drop_index(op.f('ix_assignment_submissions_id'), table_name='assignment_submissions')
     op.drop_table('assignment_submissions')
-    op.drop_index(op.f('ix_assignment_questions_id'), table_name='assignment_questions')
-    op.drop_table('assignment_questions')
     op.drop_index(op.f('ix_users_name'), table_name='users')
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_table('users')
     op.drop_index(op.f('ix_summary_id'), table_name='summary')
     op.drop_table('summary')
-    op.drop_index(op.f('ix_pdf_summary_id'), table_name='pdf_summary')
-    op.drop_index(op.f('ix_pdf_summary_filename'), table_name='pdf_summary')
-    op.drop_table('pdf_summary')
     op.drop_index(op.f('ix_lectures_id'), table_name='lectures')
     op.drop_table('lectures')
     op.drop_index(op.f('ix_generated_questions_id'), table_name='generated_questions')
