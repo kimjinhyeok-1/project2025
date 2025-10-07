@@ -16,7 +16,8 @@ class RecordingManager {
       "보면", "보게 되면", "이 부분", "이걸 보면", "코드", "화면", "여기", "이쪽"
     ];
 
-    this.restartDelayMs = 200; // 음성 인식 재연결 딜레이
+    // 음성 인식 재연결 딜레이(ms)
+    this.restartDelayMs = 200;
   }
 
   setLectureId(id) {
@@ -71,16 +72,43 @@ class RecordingManager {
   stopRecording() {
     if (!this.isRecording) return;
 
-    try { this.audioRecorder?.stop(); } catch (e) {}
-    try { this.audioStream?.getTracks().forEach(track => track.stop()); } catch (e) {}
-    try { this.displayStream?.getTracks().forEach(track => track.stop()); } catch (e) {}
+    // 오디오 녹음기 정지
+    if (this.audioRecorder && this.audioRecorder.state !== "inactive") {
+      try {
+        this.audioRecorder.stop();
+      } catch (err) {
+        console.debug("ℹ️ audioRecorder.stop() 실패(이미 정지 상태일 수 있음):", err);
+      }
+    }
 
+    // 스트림 트랙 종료
+    this.safeStopStream(this.audioStream);
+    this.safeStopStream(this.displayStream);
+
+    // 음성 인식 종료
     this.stopRecognition();
 
     this.isRecording = false;
     this.notify();
 
     console.log("🔚 Recording Stopped.");
+  }
+
+  // 개별 스트림 안전 종료 유틸
+  safeStopStream(stream) {
+    if (!stream) return;
+    try {
+      const tracks = stream.getTracks ? stream.getTracks() : [];
+      tracks.forEach((t) => {
+        try {
+          t.stop();
+        } catch (err) {
+          console.debug("ℹ️ 트랙 stop 실패(이미 정지 상태일 수 있음):", err);
+        }
+      });
+    } catch (err) {
+      console.debug("ℹ️ 스트림 트랙 종료 중 예외:", err);
+    }
   }
 
   startRecognition() {
@@ -122,15 +150,26 @@ class RecordingManager {
       }
     };
 
-    // ⛑️ 핵심 수정: 즉시 재시작 금지. 에러 시 abort만 하고, 재시작은 onend에서 수행.
+    // ⛑️ 핵심: 에러에서 즉시 start 금지 → abort로 종료만 하고 재시작은 onend에서.
     this.recognition.onerror = (event) => {
       console.error("🎙️ 음성 인식 에러:", event.error);
-      if (event.error === "no-speech" || event.error === "network" || event.error === "aborted" || event.error === "audio-capture") {
-        try { this.recognition.abort(); } catch (e) {}
+      if (
+        event.error === "no-speech" ||
+        event.error === "network" ||
+        event.error === "aborted" ||
+        event.error === "audio-capture"
+      ) {
+        if (this.recognition && typeof this.recognition.abort === "function") {
+          try {
+            this.recognition.abort();
+          } catch (err) {
+            console.debug("ℹ️ recognition.abort() 실패:", err);
+          }
+        }
       }
     };
 
-    // ⛑️ 핵심 수정: 종료 이벤트에서만 재시작을 담당
+    // 종료 시점에서만 재시작 담당
     this.recognition.onend = () => {
       this.isRecognizing = false;
       if (this.isRecording) {
@@ -148,12 +187,32 @@ class RecordingManager {
   }
 
   stopRecognition() {
-    if (this.recognition) {
-      try { this.recognition.onend = null; } catch (e) {}
-      try { this.recognition.stop(); } catch (e) {}
-      try { this.recognition.abort(); } catch (e) {}
-      this.recognition = null;
+    if (!this.recognition) {
+      this.isRecognizing = false;
+      return;
     }
+
+    // onend를 비활성화(수동 종료 시 재연결 방지)
+    try {
+      this.recognition.onend = null;
+    } catch (err) {
+      console.debug("ℹ️ recognition.onend null 처리 실패:", err);
+    }
+
+    // stop → abort 순서로 종료 시도
+    try {
+      if (typeof this.recognition.stop === "function") this.recognition.stop();
+    } catch (err) {
+      console.debug("ℹ️ recognition.stop() 실패:", err);
+    }
+
+    try {
+      if (typeof this.recognition.abort === "function") this.recognition.abort();
+    } catch (err) {
+      console.debug("ℹ️ recognition.abort() 실패:", err);
+    }
+
+    this.recognition = null;
     this.isRecognizing = false;
   }
 
