@@ -123,6 +123,16 @@ export default {
     }
   },
   methods: {
+    // ⏱️ ms를 mm.ss.cc(1/100초) 형식 문자열로 변환
+    formatElapsed(ms) {
+      const safe = Math.max(0, Math.round(ms));
+      const mm = Math.floor(safe / 60000);
+      const ss = Math.floor((safe % 60000) / 1000);
+      const cc = Math.floor((safe % 1000) / 10);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${pad(mm)}.${pad(ss)}.${pad(cc)}초`;
+    },
+
     formatDate(datetimeStr) {
       const date = new Date(datetimeStr);
       return date.toLocaleString("ko-KR", {
@@ -133,6 +143,7 @@ export default {
         minute: "2-digit"
       });
     },
+
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
@@ -142,6 +153,7 @@ export default {
         recordingManager.stopRecording();
         try {
           const summary = await generateLectureSummary();
+
           this.summaries = Array.isArray(summary)
             ? summary.map(item => ({
                 text: marked.parse(item.summary || ""),
@@ -151,13 +163,28 @@ export default {
                 text: marked.parse(summary.summary || ""),
                 topic: summary.topic || null
               }];
+
           this.loadingSummary = false;
+
+          // ✅ 요약 생성 완료까지의 경과 시간 계산 및 로그
+          const startStr = sessionStorage.getItem("summary_timing_start");
+          let elapsedText = "측정 불가";
+          if (startStr) {
+            const start = Number(startStr);
+            const now = (typeof performance !== "undefined" && typeof performance.now === "function")
+              ? performance.now()
+              : Date.now();
+            elapsedText = this.formatElapsed(now - start);
+            sessionStorage.removeItem("summary_timing_start");
+          }
+          console.log(`✅ 요약 생성 및 저장 완료: 요약 생성 소요 시간(${elapsedText})`);
         } catch (error) {
           this.loadingSummary = false;
           console.error("요약 생성 실패:", error);
         }
       }
     },
+
     async handleTranscript(text) {
       this.latestTranscript = text;
       try {
@@ -179,12 +206,13 @@ export default {
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         } finally {
-           this.generatingQuestions = false;  // ✅ 질문 생성 완료 후 false로 변경
+          this.generatingQuestions = false; // ✅ 질문 생성 완료 후 false로 변경
         }
       } else {
         this.triggered = false;
       }
     },
+
     async loadPopularQuestions(q_id = null) {
       const id = q_id || this.lastQid || localStorage.getItem("latest_q_id");
       if (!id) {
@@ -207,6 +235,7 @@ export default {
         this.loadingQuestions = false;
       }
     },
+
     async loadStudentQuestions(q_id = null) {
       const id = q_id || this.lastQid || localStorage.getItem("latest_q_id");
       if (!id) {
