@@ -92,6 +92,17 @@ class RecordingManager {
     this.notify();
 
     console.log("🔚 Recording Stopped.");
+
+    // ⏱️ 요약 시간 측정 시작(Prof_Lesson.vue에서 성공 시점에 읽어 사용)
+    try {
+      const t = (typeof performance !== "undefined" && typeof performance.now === "function")
+        ? performance.now()
+        : Date.now();
+      sessionStorage.setItem("summary_timing_start", String(t));
+      console.log("⏱️ 요약 타이머 시작:", t);
+    } catch (err) {
+      console.debug("ℹ️ 요약 타이머 시작 실패:", err);
+    }
   }
 
   // 개별 스트림 안전 종료 유틸
