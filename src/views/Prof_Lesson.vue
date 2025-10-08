@@ -194,6 +194,16 @@ export default {
       }
 
       if (text.includes("질문")) {
+        // ✅ 질문 생성 측정 시작
+        try {
+          const __qStart = (typeof performance !== "undefined" && typeof performance.now === "function")
+            ? performance.now()
+            : Date.now();
+          sessionStorage.setItem("question_timing_start", String(__qStart));
+        } catch (e) {
+          console.warn("질문 생성 시작시간 기록 실패:", e);
+        }
+
         this.triggered = true;
         this.generatingQuestions = true;
         try {
@@ -206,6 +216,22 @@ export default {
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         } finally {
+          // ✅ 질문 생성 완료까지의 경과 시간 계산 및 로그
+          try {
+            const startStr = sessionStorage.getItem("question_timing_start");
+            let elapsedText = "측정 불가";
+            if (startStr) {
+              const start = Number(startStr);
+              const now = (typeof performance !== "undefined" && typeof performance.now === "function")
+                ? performance.now()
+                : Date.now();
+              elapsedText = this.formatElapsed(now - start);
+              sessionStorage.removeItem("question_timing_start");
+            }
+            console.log(`✅ 질문 생성 및 저장 완료: 질문 생성 소요 시간(${elapsedText})`);
+          } catch (e) {
+            console.warn("질문 생성 시간 로깅 실패:", e);
+          }
           this.generatingQuestions = false; // ✅ 질문 생성 완료 후 false로 변경
         }
       } else {
