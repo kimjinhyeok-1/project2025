@@ -151,6 +151,17 @@ export default {
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
+
+        // ⏱️ 리마인드(요약) 생성 시작 시각 저장
+        try {
+          const t = (typeof performance !== "undefined" && typeof performance.now === "function")
+            ? performance.now()
+            : Date.now();
+          sessionStorage.setItem("summary_timing_start", String(t));
+        } catch (e) {
+          console.warn("리마인드 시작시간 기록 실패:", e);
+        }
+
         try {
           const summary = await generateLectureSummary();
 
@@ -166,7 +177,7 @@ export default {
 
           this.loadingSummary = false;
 
-          // ✅ 요약 생성 완료까지의 경과 시간 계산 및 로그
+          // ✅ 리마인드 생성 완료까지의 경과 시간 계산 및 로그
           const startStr = sessionStorage.getItem("summary_timing_start");
           let elapsedText = "측정 불가";
           if (startStr) {
@@ -177,10 +188,25 @@ export default {
             elapsedText = this.formatElapsed(now - start);
             sessionStorage.removeItem("summary_timing_start");
           }
-          console.log(`✅ 요약 생성 및 저장 완료: 요약 생성 소요 시간(${elapsedText})`);
+          console.log(`✅ 리마인드 생성 및 저장 완료: 리마인드 생성 소요 시간(${elapsedText})`);
         } catch (error) {
           this.loadingSummary = false;
-          console.error("요약 생성 실패:", error);
+          // ❌ 실패 시에도 경과 시간 참고 로그
+          try {
+            const startStr = sessionStorage.getItem("summary_timing_start");
+            if (startStr) {
+              const start = Number(startStr);
+              const now = (typeof performance !== "undefined" && typeof performance.now === "function")
+                ? performance.now()
+                : Date.now();
+              const elapsedText = this.formatElapsed(now - start);
+              console.log(`❌ 리마인드 생성 실패: 시도 시간(${elapsedText})`);
+              sessionStorage.removeItem("summary_timing_start");
+            }
+          } catch (e) {
+            console.warn("리마인드 실패 시간 로깅 실패:", e);
+          }
+          console.error("리마인드 생성 실패:", error);
         }
       }
     },
