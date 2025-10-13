@@ -159,52 +159,87 @@ export default {
           return;
         }
 
+        // 시작 전에 중복 폴링 정리
+        if (this.lectureSummaryPoll) clearInterval(this.lectureSummaryPoll);
+
         const t0 = (typeof performance !== "undefined" && typeof performance.now === "function")
           ? performance.now()
           : Date.now();
         this.lectureSummaryStartedAt = t0;
         sessionStorage.setItem("lecture_summary_timing_start", String(t0));
 
-        const POLL_MS = 2000;             // 2초 간격
+        const POLL_MS = 2000;              // 2초 간격
         const TIMEOUT_MS = 10 * 60 * 1000; // 최대 10분
         const deadline = t0 + TIMEOUT_MS;
+        const url = `https://project2025-backend.onrender.com/snapshots/lecture_summary?lecture_id=${lectureId}`;
 
-        if (this.lectureSummaryPoll) clearInterval(this.lectureSummaryPoll);
+        const handleOnce = async () => {
+          const now = (typeof performance !== "undefined" && typeof performance.now === "function")
+            ? performance.now()
+            : Date.now();
 
-        this.lectureSummaryPoll = setInterval(async () => {
+          // 타임아웃 처리
+          if (now > deadline) {
+            const startStr = sessionStorage.getItem("lecture_summary_timing_start");
+            const start = startStr ? Number(startStr) : (this.lectureSummaryStartedAt || now);
+            console.warn(`⏱️ 요약 생성 타임아웃: 대기 시간(${this.formatElapsed(now - start)})`);
+            sessionStorage.removeItem("lecture_summary_timing_start");
+            if (this.lectureSummaryPoll) clearInterval(this.lectureSummaryPoll);
+            this.lectureSummaryPoll = null;
+            return true; // stop
+          }
+
+          // 폴링 요청 (세션 쿠키 포함)
+          let res;
           try {
-            const now = (typeof performance !== "undefined" && typeof performance.now === "function")
-              ? performance.now()
-              : Date.now();
+            res = await fetch(url, {
+              cache: "no-store",
+              credentials: "include",      // 🔥 쿠키 포함 (중요)
+              headers: { Accept: "application/json" }
+            });
+          } catch (netErr) {
+            console.warn("요약 생성 폴링 네트워크 오류:", netErr);
+            return false;
+          }
 
-            if (now > deadline) {
-              clearInterval(this.lectureSummaryPoll);
-              this.lectureSummaryPoll = null;
-              console.warn("⏱️ 요약 생성 대기 타임아웃(10분 경과)");
-              sessionStorage.removeItem("lecture_summary_timing_start");
-              return;
-            }
+          if (!res.ok) {
+            console.warn(`요약 생성 폴링 실패: HTTP ${res.status}`);
+            return false;
+          }
 
-            const res = await fetch(
-              `https://project2025-backend.onrender.com/snapshots/lecture_summary?lecture_id=${lectureId}`,
-              { cache: "no-store" }
-            );
-            const data = await res.json();
+          let data;
+          try {
+            data = await res.json();
+          } catch (parseErr) {
+            console.warn("요약 응답 파싱 실패:", parseErr);
+            return false;
+          }
 
-            if (Array.isArray(data) && data.length > 0) {
-              clearInterval(this.lectureSummaryPoll);
-              this.lectureSummaryPoll = null;
+          if (Array.isArray(data) && data.length > 0) {
+            const startStr = sessionStorage.getItem("lecture_summary_timing_start");
+            const start = startStr ? Number(startStr) : (this.lectureSummaryStartedAt || now);
+            const elapsedText = this.formatElapsed(now - start);
 
-              const startStr = sessionStorage.getItem("lecture_summary_timing_start");
-              const start = startStr ? Number(startStr) : (this.lectureSummaryStartedAt || now);
-              const elapsedMs = now - start;
-              const elapsedText = this.formatElapsed(elapsedMs);
+            console.log(`✅ 요약 생성 완료: 요약 생성 소요 시간(${elapsedText}) — 항목 ${data.length}개`);
+            sessionStorage.removeItem("lecture_summary_timing_start");
+            if (this.lectureSummaryPoll) clearInterval(this.lectureSummaryPoll);
+            this.lectureSummaryPoll = null;
+            return true; // stop
+          }
 
-              console.log(`✅ 요약 생성 완료: 요약 생성 소요 시간(${elapsedText}) — 항목 ${data.length}개`);
-              sessionStorage.removeItem("lecture_summary_timing_start");
-            }
-          } catch (e) {
-            console.warn("요약 생성 폴링 중 오류:", e);
+          // 아직 생성 안 됨 → 계속 폴링
+          return false;
+        };
+
+        // 🔎 즉시 1회 체크 (2초 기다리지 않도록)
+        handleOnce();
+
+        // 이후 주기 폴링
+        this.lectureSummaryPoll = setInterval(async () => {
+          const stop = await handleOnce();
+          if (stop) {
+            clearInterval(this.lectureSummaryPoll);
+            this.lectureSummaryPoll = null;
           }
         }, POLL_MS);
       } catch (e) {
