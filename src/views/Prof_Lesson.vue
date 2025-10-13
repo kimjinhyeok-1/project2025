@@ -21,7 +21,7 @@
       </li>
     </ul>
 
-    <!-- 📘 요약(리마인드) -->
+    <!-- 📘 요약 -->
     <div v-if="activeTab === 'summary'" class="answer-wrapper right-aligned">
       <h5 class="card-title">📘 수업 리마인드</h5>
       <div v-if="loadingSummary" class="text-center text-muted">
@@ -105,11 +105,7 @@ export default {
       noQidWarning: false,
       placeholderQuestions: [],
       lastQid: null,
-      studentQuestions: [],
-
-      // ✅ 요약(lecture_summary) 생성 감지용 상태
-      lectureSummaryPoll: null,
-      lectureSummaryStartedAt: null,
+      studentQuestions: []
     };
   },
   async mounted() {
@@ -125,8 +121,6 @@ export default {
     if (this.transcriptCallback) {
       recordingManager.unsubscribeFromTranscript(this.transcriptCallback);
     }
-    // ✅ 폴링 정리
-    this.stopLectureSummaryWatch();
   },
   methods: {
     // ⏱️ ms를 mm.ss.cc(1/100초) 형식 문자열로 변환
@@ -150,111 +144,6 @@ export default {
       });
     },
 
-    // ✅ 요약(lecture_summary) 생성 완료를 감지하는 폴링 시작
-    startLectureSummaryWatch() {
-      try {
-        const lectureId = localStorage.getItem("lecture_id");
-        if (!lectureId) {
-          console.warn("요약 측정 불가: lecture_id 없음");
-          return;
-        }
-
-        // 시작 전에 중복 폴링 정리
-        if (this.lectureSummaryPoll) clearInterval(this.lectureSummaryPoll);
-
-        const t0 = (typeof performance !== "undefined" && typeof performance.now === "function")
-          ? performance.now()
-          : Date.now();
-        this.lectureSummaryStartedAt = t0;
-        sessionStorage.setItem("lecture_summary_timing_start", String(t0));
-
-        const POLL_MS = 2000;              // 2초 간격
-        const TIMEOUT_MS = 10 * 60 * 1000; // 최대 10분
-        const deadline = t0 + TIMEOUT_MS;
-        const url = `https://project2025-backend.onrender.com/snapshots/lecture_summary?lecture_id=${lectureId}`;
-
-        const handleOnce = async () => {
-          const now = (typeof performance !== "undefined" && typeof performance.now === "function")
-            ? performance.now()
-            : Date.now();
-
-          // 타임아웃 처리
-          if (now > deadline) {
-            const startStr = sessionStorage.getItem("lecture_summary_timing_start");
-            const start = startStr ? Number(startStr) : (this.lectureSummaryStartedAt || now);
-            console.warn(`⏱️ 요약 생성 타임아웃: 대기 시간(${this.formatElapsed(now - start)})`);
-            sessionStorage.removeItem("lecture_summary_timing_start");
-            if (this.lectureSummaryPoll) clearInterval(this.lectureSummaryPoll);
-            this.lectureSummaryPoll = null;
-            return true; // stop
-          }
-
-          // 폴링 요청 (세션 쿠키 포함)
-          let res;
-          try {
-            res = await fetch(url, {
-              cache: "no-store",
-              credentials: "include",      // 🔥 쿠키 포함 (중요)
-              headers: { Accept: "application/json" }
-            });
-          } catch (netErr) {
-            console.warn("요약 생성 폴링 네트워크 오류:", netErr);
-            return false;
-          }
-
-          if (!res.ok) {
-            console.warn(`요약 생성 폴링 실패: HTTP ${res.status}`);
-            return false;
-          }
-
-          let data;
-          try {
-            data = await res.json();
-          } catch (parseErr) {
-            console.warn("요약 응답 파싱 실패:", parseErr);
-            return false;
-          }
-
-          if (Array.isArray(data) && data.length > 0) {
-            const startStr = sessionStorage.getItem("lecture_summary_timing_start");
-            const start = startStr ? Number(startStr) : (this.lectureSummaryStartedAt || now);
-            const elapsedText = this.formatElapsed(now - start);
-
-            console.log(`✅ 요약 생성 완료: 요약 생성 소요 시간(${elapsedText}) — 항목 ${data.length}개`);
-            sessionStorage.removeItem("lecture_summary_timing_start");
-            if (this.lectureSummaryPoll) clearInterval(this.lectureSummaryPoll);
-            this.lectureSummaryPoll = null;
-            return true; // stop
-          }
-
-          // 아직 생성 안 됨 → 계속 폴링
-          return false;
-        };
-
-        // 🔎 즉시 1회 체크 (2초 기다리지 않도록)
-        handleOnce();
-
-        // 이후 주기 폴링
-        this.lectureSummaryPoll = setInterval(async () => {
-          const stop = await handleOnce();
-          if (stop) {
-            clearInterval(this.lectureSummaryPoll);
-            this.lectureSummaryPoll = null;
-          }
-        }, POLL_MS);
-      } catch (e) {
-        console.warn("요약 측정 시작 실패:", e);
-      }
-    },
-
-    // ✅ 요약 폴링 정리
-    stopLectureSummaryWatch() {
-      if (this.lectureSummaryPoll) {
-        clearInterval(this.lectureSummaryPoll);
-        this.lectureSummaryPoll = null;
-      }
-    },
-
     async toggleAudioRecording() {
       this.isRecording = !this.isRecording;
       if (this.isRecording) {
@@ -262,20 +151,6 @@ export default {
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
-
-        // ⏱️ 요약(lecture_summary) 생성 감지 폴링 시작
-        this.startLectureSummaryWatch();
-
-        // ⏱️ 리마인드(요약 탭) 생성 시작 시각 저장
-        try {
-          const t = (typeof performance !== "undefined" && typeof performance.now === "function")
-            ? performance.now()
-            : Date.now();
-          sessionStorage.setItem("remind_timing_start", String(t));
-        } catch (e) {
-          console.warn("리마인드 시작시간 기록 실패:", e);
-        }
-
         try {
           const summary = await generateLectureSummary();
 
@@ -291,8 +166,8 @@ export default {
 
           this.loadingSummary = false;
 
-          // ✅ 리마인드 생성 완료까지의 경과 시간 계산 및 로그
-          const startStr = sessionStorage.getItem("remind_timing_start");
+          // ✅ 요약 생성 완료까지의 경과 시간 계산 및 로그
+          const startStr = sessionStorage.getItem("summary_timing_start");
           let elapsedText = "측정 불가";
           if (startStr) {
             const start = Number(startStr);
@@ -300,26 +175,11 @@ export default {
               ? performance.now()
               : Date.now();
             elapsedText = this.formatElapsed(now - start);
-            sessionStorage.removeItem("remind_timing_start");
+            sessionStorage.removeItem("summary_timing_start");
           }
           console.log(`✅ 리마인드 생성 및 저장 완료: 리마인드 생성 소요 시간(${elapsedText})`);
         } catch (error) {
           this.loadingSummary = false;
-          // ❌ 실패 시에도 경과 시간 참고 로그
-          try {
-            const startStr = sessionStorage.getItem("remind_timing_start");
-            if (startStr) {
-              const start = Number(startStr);
-              const now = (typeof performance !== "undefined" && typeof performance.now === "function")
-                ? performance.now()
-                : Date.now();
-              const elapsedText = this.formatElapsed(now - start);
-              console.log(`❌ 리마인드 생성 실패: 시도 시간(${elapsedText})`);
-              sessionStorage.removeItem("remind_timing_start");
-            }
-          } catch (e) {
-            console.warn("리마인드 실패 시간 로깅 실패:", e);
-          }
           console.error("리마인드 생성 실패:", error);
         }
       }
