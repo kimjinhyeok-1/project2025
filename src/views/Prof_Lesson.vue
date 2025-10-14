@@ -11,26 +11,32 @@
     <!-- 탭 버튼 -->
     <ul class="nav nav-tabs mt-4" style="justify-content: flex-start; width: 950px;">
       <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'summary' }" @click="activeTab = 'summary'">📘 리마인드</a>
+        <a class="nav-link" :class="{ active: activeTab === 'summary' }" @click="activeTab = 'summary'">
+          📘 핵심 키워드
+        </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'; loadPopularQuestions()">🧠 퀴즈</a>
+        <a class="nav-link" :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'; loadPopularQuestions()">
+          🧠 이해도 확인 질문
+        </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'student' }" @click="activeTab = 'student'; loadStudentQuestions()">📩 학생 질문</a>
+        <a class="nav-link" :class="{ active: activeTab === 'student' }" @click="activeTab = 'student'; loadStudentQuestions()">
+          📩 학생 질문
+        </a>
       </li>
     </ul>
 
-    <!-- 📘 요약 -->
+    <!-- 📘 핵심 키워드 -->
     <div v-if="activeTab === 'summary'" class="answer-wrapper right-aligned">
-      <h5 class="card-title">📘 수업 리마인드</h5>
+      <h5 class="card-title">📘 오늘의 핵심 키워드</h5>
       <div v-if="loadingSummary" class="text-center text-muted">
-        리마인드를 준비하고 있습니다.
+        오늘의 핵심 키워드를 준비하고 있습니다.
       </div>
       <div v-else>
         <div v-for="(summary, idx) in summaries" :key="idx" class="mb-4">
           <div v-if="summary.topic" class="mb-2">
-            <h6 class="mb-1">📌 주제</h6>
+            <h6 class="mb-1">📌 키워드 {{ idx + 1 }}</h6>
             <span class="display-6 fw-bold text-primary">{{ summary.topic }}</span>
           </div>
           <div v-html="summary.text"></div>
@@ -38,21 +44,21 @@
       </div>
     </div>
 
-    <!-- 🧠 AI 질문 -->
+    <!-- 🧠 이해도 확인 질문 -->
     <div v-if="activeTab === 'ai'" class="answer-wrapper">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="card-title">🧠 퀴즈 선택 결과</h5>
+        <h5 class="card-title">🧠 이해도 확인 질문 결과</h5>
         <button class="btn btn-sm btn-light" @click="loadPopularQuestions()">🔄 새로고침</button>
       </div>
 
       <div v-if="generatingQuestions" class="text-muted text-center mb-3">
-        🧠 퀴즈 생성 중입니다. 잠시만 기다려주세요...
+        🧠 이해도 확인 질문을 생성 중입니다. 잠시만 기다려주세요...
       </div>
       <div v-if="noQidWarning" class="text-danger text-center">
-        ⚠️ q_id가 없어 퀴즈을 불러올 수 없습니다.
+        ⚠️ q_id가 없어 이해도 확인 질문을 불러올 수 없습니다.
       </div>
       <div v-else-if="loadingQuestions" class="text-center text-muted">
-        퀴즈 생성중입니다.
+        이해도 확인 질문을 불러오는 중입니다.
       </div>
       <div v-else>
         <div v-for="(q, idx) in placeholderQuestions" :key="idx" class="question-row">
@@ -123,7 +129,6 @@ export default {
     }
   },
   methods: {
-    // ⏱️ ms를 mm.ss.cc(1/100초) 형식 문자열로 변환
     formatElapsed(ms) {
       const safe = Math.max(0, Math.round(ms));
       const mm = Math.floor(safe / 60000);
@@ -155,32 +160,34 @@ export default {
           const summary = await generateLectureSummary();
 
           this.summaries = Array.isArray(summary)
-            ? summary.map(item => ({
+            ? summary.map((item) => ({
                 text: marked.parse(item.summary || ""),
                 topic: item.topic || null
               }))
-            : [{
-                text: marked.parse(summary.summary || ""),
-                topic: summary.topic || null
-              }];
+            : [
+                {
+                  text: marked.parse(summary.summary || ""),
+                  topic: summary.topic || null
+                }
+              ];
 
           this.loadingSummary = false;
 
-          // ✅ 요약 생성 완료까지의 경과 시간 계산 및 로그
           const startStr = sessionStorage.getItem("summary_timing_start");
           let elapsedText = "측정 불가";
           if (startStr) {
             const start = Number(startStr);
-            const now = (typeof performance !== "undefined" && typeof performance.now === "function")
-              ? performance.now()
-              : Date.now();
+            const now =
+              typeof performance !== "undefined" && typeof performance.now === "function"
+                ? performance.now()
+                : Date.now();
             elapsedText = this.formatElapsed(now - start);
             sessionStorage.removeItem("summary_timing_start");
           }
-          console.log(`✅ 리마인드 생성 및 저장 완료: 리마인드 생성 소요 시간(${elapsedText})`);
+          console.log(`✅ 핵심 키워드 생성 완료: 소요 시간(${elapsedText})`);
         } catch (error) {
           this.loadingSummary = false;
-          console.error("리마인드 생성 실패:", error);
+          console.error("핵심 키워드 생성 실패:", error);
         }
       }
     },
@@ -194,11 +201,11 @@ export default {
       }
 
       if (text.includes("질문")) {
-        // ✅ 질문 생성 측정 시작
         try {
-          const __qStart = (typeof performance !== "undefined" && typeof performance.now === "function")
-            ? performance.now()
-            : Date.now();
+          const __qStart =
+            typeof performance !== "undefined" && typeof performance.now === "function"
+              ? performance.now()
+              : Date.now();
           sessionStorage.setItem("question_timing_start", String(__qStart));
         } catch (e) {
           console.warn("질문 생성 시작시간 기록 실패:", e);
@@ -216,23 +223,23 @@ export default {
         } catch (error) {
           console.error("질문 생성 API 호출 실패:", error);
         } finally {
-          // ✅ 질문 생성 완료까지의 경과 시간 계산 및 로그
           try {
             const startStr = sessionStorage.getItem("question_timing_start");
             let elapsedText = "측정 불가";
             if (startStr) {
               const start = Number(startStr);
-              const now = (typeof performance !== "undefined" && typeof performance.now === "function")
-                ? performance.now()
-                : Date.now();
+              const now =
+                typeof performance !== "undefined" && typeof performance.now === "function"
+                  ? performance.now()
+                  : Date.now();
               elapsedText = this.formatElapsed(now - start);
               sessionStorage.removeItem("question_timing_start");
             }
-            console.log(`✅ 질문 생성 및 저장 완료: 질문 생성 소요 시간(${elapsedText})`);
+            console.log(`✅ 이해도 확인 질문 생성 완료: 소요 시간(${elapsedText})`);
           } catch (e) {
             console.warn("질문 생성 시간 로깅 실패:", e);
           }
-          this.generatingQuestions = false; // ✅ 질문 생성 완료 후 false로 변경
+          this.generatingQuestions = false;
         }
       } else {
         this.triggered = false;
@@ -256,7 +263,7 @@ export default {
           this.placeholderQuestions = data.results;
         }
       } catch (err) {
-        console.error("인기 질문 조회 실패:", err);
+        console.error("이해도 확인 질문 조회 실패:", err);
       } finally {
         this.loadingQuestions = false;
       }
@@ -338,7 +345,6 @@ export default {
   margin-left: auto;
 }
 
-/* ✅ AI 질문 줄 정렬용 스타일 */
 .question-row {
   display: flex;
   justify-content: space-between;
@@ -357,7 +363,6 @@ export default {
   font-size: 1rem;
 }
 
-/* ✅ '선택 수' 배지 스타일 */
 .custom-badge {
   background-color: #0a6ebd;
   color: white;
