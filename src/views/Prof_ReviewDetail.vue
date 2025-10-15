@@ -87,6 +87,36 @@ const closeModal = () => {
   modalImageUrl.value = '';
 };
 
+// ✅ 시간 포맷 함수 (ProfessorLesson.vue와 동일)
+const formatElapsed = (ms) => {
+  const safe = Math.max(0, Math.round(ms));
+  const mm = Math.floor(safe / 60000);
+  const ss = Math.floor((safe % 60000) / 1000);
+  const cc = Math.floor((safe % 1000) / 10);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(mm)}.${pad(ss)}.${pad(cc)}초`;
+};
+
+// ✅ 리뷰 생성 완료 시간 측정 및 콘솔 출력
+const logReviewGenerationTime = () => {
+  const startStr = sessionStorage.getItem('review_timing_start');
+  if (startStr) {
+    const start = Number(startStr);
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+
+    const elapsed = now - start;
+    sessionStorage.removeItem('review_timing_start');
+
+    console.log(`✅ 리뷰 결과 생성 완료: 소요 시간(${formatElapsed(elapsed)})`);
+  } else {
+    console.warn('⚠️ review_timing_start가 없어 리뷰 생성 시간 측정을 건너뜁니다.');
+  }
+};
+
+// ✅ 강의 요약 데이터 불러오기
 const fetchLectureSummary = async () => {
   try {
     const response = await axios.get(
@@ -97,9 +127,12 @@ const fetchLectureSummary = async () => {
     console.error('❌ 요약 불러오기 실패:', error);
   } finally {
     loading.value = false;
+    // 📍 데이터 로드 완료 후 시간 측정 로그 실행
+    logReviewGenerationTime();
   }
 };
 
+// ✅ 마운트 시 데이터 요청
 onMounted(fetchLectureSummary);
 </script>
 
