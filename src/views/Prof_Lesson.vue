@@ -156,16 +156,6 @@ export default {
         recordingManager.startRecording();
       } else {
         recordingManager.stopRecording();
-
-        // 📍 리뷰 생성 시작 시점 기록 추가
-        try {
-          const __reviewStart = performance.now();
-          sessionStorage.setItem("review_timing_start", String(__reviewStart));
-          console.log("🕒 리뷰 결과 생성 시작 시점 기록됨");
-        } catch (e) {
-          console.warn("⚠️ 리뷰 생성 시작시간 기록 실패:", e);
-        }
-
         try {
           const summary = await generateLectureSummary();
 
